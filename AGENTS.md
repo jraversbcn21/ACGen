@@ -41,7 +41,7 @@ No tests configured.
 - System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — instructions for generating Jira wiki formatted bug reports for Bershka ecommerce. Output uses six separate `{panel}` blocks with specific titles: `*DESCRIPCIÓN:*`, `*PRECONDICION:*`, `*PASOS DE REPRODUCCIÓN:*`, `*RESULTADO ACTUAL*`, `*RESULTADO ESPERADO*`, `*Criterios aceptación*` (the last one containing a `{quote}` with Dado/Cuando/Entonces markers).
 - Title format: `[CategoríaFuncional] - Descripción breve`. Categories are constrained to 18 predefined functional areas (Home, Catálogo, Búsqueda, PDP, Tallas, Carrito, Checkout, Pagos, Mi Cuenta, Wishlist, Newsletter, Store Finder, Login/Registro, Navegación, SEO, Push Notifications, Deep Links, General).
 - `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData` (description, platform, market, browser/URL or app version/device/OS), injects current date via `new Date().toISOString().split('T')[0]`, calls `generateWithGroq()` with empty markers and `tool='criteria'`. Returns `GroqResponse`.
-- Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Platform selection dynamically switches form fields (browser+URL vs app version+device+OS).
+- Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Platform selection dynamically switches form fields. For app platforms, the **device** field is a `<select>` dropdown populated from `IOS_DEVICES` (iPhone XR, iPhone 11) or `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G). Switching platforms resets device to the first entry.
 - Platform-aware language: mobile interaction terms (tap, swipe) for app platforms, web terms (click, hover, scroll) for web platforms.
 - Optional Jira context: if a related ticket URL is provided and Jira credentials exist, fetches ticket data via the proxy and includes it as context in the prompt.
 - Output: Jira wiki format bug report, copyable to clipboard. Reasoning is captured and displayed when available.
@@ -50,7 +50,10 @@ No tests configured.
 
 - System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — instructions for generating realistic test data per market for Bershka ecommerce. Supports 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
 - `generateTestData()` in `apiService.ts` — builds user message from `TestDataFormData` (dataType, market, quantity), calls `generateWithGroq()` with empty markers and `tool='testcase'` (reasoning hidden), parses JSON response via `extractJsonArray()`. Returns `{ data: Record<string, string>[], model }`.
-- Data type schemas defined in the prompt: `shipping-address` (nombre, apellidos, direccion, codigoPostal, ciudad, provincia, pais, telefono), `billing-data` (adds documentoId, tipoDocumento, email), `user-registration` (adds password, fechaNacimiento, genero), `payment-cards` (tipo, numero, titular, expiracion, cvv — uses Adyen test card numbers: Visa `4111 1111 1111 1111`, Mastercard `5500 0000 0000 0004`, Amex `3700 0000 0000 002`), `promo-codes` (codigo, tipo, valor, condiciones, validoHasta).
+- Data type schemas: `shipping-address` (nombre, apellidos, direccion, codigoPostal, ciudad, provincia, pais, telefono), `billing-data` (adds documentoId, tipoDocumento, email), `user-registration` (adds password, fechaNacimiento, genero), `payment-cards` (tipo, numero, titular, expiracion, cvv — uses Adyen test card numbers), `promo-codes` (codigo, tipo, valor, condiciones, validoHasta).
+- **User-registration specific rules** (rules 8-9 in the prompt):
+  - Emails must use a short lowercase first name from the selected market's country (no surnames, no numbers, no dots/underscores) followed by a rotating QA domain: `@qa`, `@qa1`, `@qa2`, `@qa.1`, `@qa.2`, `@qa.3`, `@qa.4`, etc. Examples: `maria@qa`, `jean@qa1`, `luca@qa2`.
+  - Password is ALWAYS `Test1234` for every record. No variations.
 - Output rendered as HTML table with Spanish column headers via `LABEL_MAP`. Individual row copy as formatted text (`Label: value` lines), "Copiar todo como tabla" (TSV for spreadsheets/Jira), "Descargar CSV" (with BOM `\uFEFF` for Excel compatibility).
 - Optional Jira context for scenario-relevant data generation.
 
@@ -92,13 +95,13 @@ The dual-input flow differs per tool:
 
 ### Landing screen
 
-- Four-button card layout in a 2×2 CSS grid rendered by `LandingScreen.tsx`. Buttons: "Criterios de aceptación" (📋), "Test Case Generator" (🧪), "Bug Report Generator" (🐛), and "Datos de Prueba" (📊). Each with a subtitle description. Container max-width 600px, cards fill grid cells. Responsive: stacks to single column below 768px.
+- Four-button card layout in a 2×2 CSS grid rendered by `LandingScreen.tsx`. Buttons: "Criterios de aceptación" (📋), "Test Case Generator" (🧪), "Bug Report Generator" (🐛), and "Datos de Prueba" (📊). Each with a subtitle description. Heading text: "¿En qué quieres trabajar hoy Jorgito?". Container max-width 600px, cards fill grid cells. Responsive: stacks to single column below 768px.
 
 ### Acceptance Criteria Tool (`AcceptanceCriteriaTool.tsx`)
 
 - **Config area** (rendered by `App.tsx`, above the tool):
   - Row 1: API Key input (monospace, password-masked) + Model selector dropdown.
-  - Row 2: Jira config section within the tool — compact row with left border accent (`3px solid #cbd5e1`, `.ac-jira-section`). "Jira (opcional)" label in muted uppercase. Two side-by-side fields: URL base (text input, placeholder `https://jira.tuempresa.com/jira`) and PAT token (password input, placeholder `Tu Personal Access Token`). Both with 11px uppercase labels.
+  - Row 2: Jira config section within the tool — compact row with left border accent (`3px solid #cbd5e1`, `.ac-jira-section`). "Jira (opcional)" label in muted uppercase. Two side-by-side fields: URL base (text input) and PAT token (password input). Both with 11px uppercase labels.
 - **Main content** — asymmetric two-column grid (`.ac-main`, `grid-template-columns: 3fr 2fr`, gap 24px):
   - **Left column (~60%)** — stacked vertically with 16px gap: input textarea (`.ac-input-ta`, `min-height: 80px`), output textarea (`.ac-output-ta`, `min-height: 400px`, monospace), "Copiar al portapapeles" button (`.copy-row`, right-aligned, visible only when output exists). No visible labels.
   - **Right column (~40%)** — reasoning collapsible (`<details>/<summary>` "Razonamiento del modelo"), aligned with top of output via `margin-top: 96px`. Only rendered when reasoning exists. Expanded content: `max-height: 500px; overflow-y: auto`. Expand triggers `scrollIntoView({ block: 'center' })` via `requestAnimationFrame`, respects `prefers-reduced-motion`.
@@ -117,8 +120,8 @@ The dual-input flow differs per tool:
 
 - **Jira config** — if Jira credentials exist in localStorage, shows a compact green indicator `.br-jira-indicator` "Jira configurado ✓" with "Editar" toggle. Otherwise shows the same Jira config section as acceptance tool (`.ac-jira-section`, left border accent, URL base + PAT token).
 - **Structured form** (`.br-form-grid`, gap 16px):
-  - Row 1 (two columns): Platform selector (`PLATFORMS` — 4 types) and Market selector (`BERSHKA_MARKETS`, 13 markets).
-  - Row 2 (two columns, dynamic): Web → Browser (select: Chrome/Firefox/Safari/Edge + Samsung Internet for web-mobile) and URL (pre-filled `https://localhost:3443/`). App → app version and device fields.
+  - Row 1 (two columns): Platform selector (`PLATFORMS` — 4 types) and Market selector (`BERSHKA_MARKETS` — 22 markets).
+  - Row 2 (two columns, dynamic): Web → Browser (select: Chrome/Firefox/Safari/Edge + Samsung Internet for web-mobile) and URL (pre-filled `https://localhost:3443/`). App → app version and **device** (`<select>` dropdown from `IOS_DEVICES` or `ANDROID_DEVICES` constant).
   - Row 3 (single column, app only): OS version field (Android/iOS).
   - Row 4 (single column): Optional Jira ticket URL input.
   - Row 5 (single column): Bug description textarea (`min-height: 120px`).
@@ -130,7 +133,7 @@ The dual-input flow differs per tool:
 
 - **Jira config** — same indicator pattern as BugReportTool (green "Jira configurado ✓" with edit toggle when credentials exist, otherwise Jira URL base + PAT token fields).
 - **Structured form** (`.td-form-grid`, gap 16px):
-  - Row 1 (three columns): Data type selector (`DATA_TYPES` — 5 types), Market selector (`BERSHKA_MARKETS`), Quantity selector (1–10).
+  - Row 1 (three columns): Data type selector (`DATA_TYPES` — 5 types), Market selector (`BERSHKA_MARKETS` — 22 markets), Quantity selector (1–10).
   - Row 2 (single column): Optional Jira ticket URL input.
 - **Action buttons** (`.bottom-actions`): "Generar datos de prueba" (primary, disabled when API key empty), loading status, "Limpiar".
 - **Output area** (`.td-output-section`, shown when data exists):
@@ -161,13 +164,13 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 |---|---|
 | `server/index.js` | Express proxy entry: CORS (`http://localhost:5173`), JSON middleware, mounts Jira routes at `/api/jira` |
 | `server/jiraRoutes.js` | `GET /api/jira/issue/:issueKey` — proxies to Jira REST API, returns cleaned `JiraTicketData` |
-| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVALIABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS`, `PLATFORMS`, `DATA_TYPES` |
+| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVALIABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
 | `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning extraction + decommissioned-model + 401/429 error handling), `getReasoningParams()` (model-aware), `generateCriteria()`, `generateTestCases()` (`extractJsonArray` + `validateTestCases`, returns `TestCaseResponse`), `generateBugReport()` (date injection, returns `GroqResponse`), `generateTestData()` (`extractJsonArray`, returns `{ data, model }`) |
 | `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()` |
 | `src/App.tsx` | View state routing; renders LandingScreen / AcceptanceCriteriaTool / TestCaseTool / BugReportTool / TestDataTool + shared ApiKeyConfig + ModelSelector |
 | `src/components/AcceptanceCriteriaTool.tsx` | Criteria UI: Jira config section, two-column grid (input→output→copy left, reasoning right), generate/clear/copy, dual input flow (Jira URL → fetch → format → generate, or plain text) |
 | `src/components/TestCaseTool.tsx` | Test case UI: single-column, input → generate/clear → HTML table with badges + Jira copy + PDF download; no JSON parsing |
-| `src/components/BugReportTool.tsx` | Bug report UI: structured form (platform, market, dynamic web/app fields, description), Jira config with toggle, output textarea + copy + reasoning, generate/clear |
+| `src/components/BugReportTool.tsx` | Bug report UI: structured form (platform, market, dynamic web/app fields with device dropdowns per platform), Jira config with toggle, output textarea + copy + reasoning, generate/clear |
 | `src/components/TestDataTool.tsx` | Test data UI: structured form (dataType, market, quantity), Jira config with toggle, output HTML table with row copy + TSV copy + CSV download, generate/clear |
 | `src/components/LandingScreen.tsx` | Four-button card entry screen in 2×2 grid |
 | `src/components/GenerateButton.tsx` | Reusable button with spinner; accepts `label`/`loadingLabel` props |
@@ -196,7 +199,7 @@ Edit `BUG_REPORT_PROMPT` in `constants.ts`. The prompt defines the exact Jira wi
 
 ## Changing output format — Test Data
 
-Edit `TEST_DATA_PROMPT` in `constants.ts`. Keep JSON-only constraint and per-data-type schemas. If new data types are added, add an entry to `DATA_TYPES` in `constants.ts`, add the schema to the prompt, and add field mappings to `LABEL_MAP` in `TestDataTool.tsx`. The prompt uses `extractJsonArray()` so the JSON structure must be an array of objects.
+Edit `TEST_DATA_PROMPT` in `constants.ts`. Keep JSON-only constraint and per-data-type schemas. If new data types are added, add an entry to `DATA_TYPES` in `constants.ts`, add the schema to the prompt, and add field mappings to `LABEL_MAP` in `TestDataTool.tsx`. The prompt uses `extractJsonArray()` so the JSON structure must be an array of objects. If user-registration email/password rules change, update rules 8 and 9.
 
 ## Notable
 

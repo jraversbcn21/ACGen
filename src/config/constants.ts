@@ -74,19 +74,28 @@ export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'te
 export const JIRA_URL_REGEX = /https:\/\/(?:[^/]+\/)?(?:jira\/)?browse\/([A-Z]+-\d+)/i;
 
 export const BERSHKA_MARKETS = [
+  { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },
+  { code: 'DE', label: 'Alemania', currency: '€', locale: 'de' },
+  { code: 'AD', label: 'Andorra', currency: '€', locale: 'ca' },
+  { code: 'SA', label: 'Arabia Saudita', currency: 'SAR', locale: 'ar' },
+  { code: 'BE', label: 'Bélgica', currency: '€', locale: 'fr' },
+  { code: 'CR', label: 'Costa Rica', currency: 'CRC', locale: 'es' },
+  { code: 'EG', label: 'Egipto', currency: 'EGP', locale: 'ar' },
+  { code: 'AE', label: 'Emiratos Árabes', currency: 'AED', locale: 'ar' },
   { code: 'ES', label: 'España', currency: '€', locale: 'es' },
   { code: 'FR', label: 'Francia', currency: '€', locale: 'fr' },
-  { code: 'IT', label: 'Italia', currency: '€', locale: 'it' },
-  { code: 'PT', label: 'Portugal', currency: '€', locale: 'pt' },
-  { code: 'DE', label: 'Alemania', currency: '€', locale: 'de' },
-  { code: 'UK', label: 'Reino Unido', currency: '£', locale: 'en' },
-  { code: 'PL', label: 'Polonia', currency: 'PLN', locale: 'pl' },
-  { code: 'NL', label: 'Países Bajos', currency: '€', locale: 'nl' },
-  { code: 'BE', label: 'Bélgica', currency: '€', locale: 'fr' },
-  { code: 'IE', label: 'Irlanda', currency: '€', locale: 'en' },
   { code: 'GR', label: 'Grecia', currency: '€', locale: 'el' },
+  { code: 'IE', label: 'Irlanda', currency: '€', locale: 'en' },
+  { code: 'IL', label: 'Israel', currency: 'ILS', locale: 'he' },
+  { code: 'IT', label: 'Italia', currency: '€', locale: 'it' },
+  { code: 'MX', label: 'México', currency: 'MXN', locale: 'es' },
+  { code: 'NL', label: 'Países Bajos', currency: '€', locale: 'nl' },
+  { code: 'PL', label: 'Polonia', currency: 'PLN', locale: 'pl' },
+  { code: 'PT', label: 'Portugal', currency: '€', locale: 'pt' },
+  { code: 'UK', label: 'Reino Unido', currency: '£', locale: 'en' },
   { code: 'RO', label: 'Rumanía', currency: 'RON', locale: 'ro' },
   { code: 'TR', label: 'Turquía', currency: 'TRY', locale: 'tr' },
+  { code: 'US', label: 'United States', currency: '$', locale: 'en' },
 ] as const;
 
 export const PLATFORMS = [
@@ -94,6 +103,16 @@ export const PLATFORMS = [
   { id: 'web-mobile', label: 'Web Mobile' },
   { id: 'app-android', label: 'App Android' },
   { id: 'app-ios', label: 'App iOS' },
+] as const;
+
+export const IOS_DEVICES = [
+  { id: 'iphone-xr', label: 'iPhone XR' },
+  { id: 'iphone-11', label: 'iPhone 11' },
+] as const;
+
+export const ANDROID_DEVICES = [
+  { id: 'redmi-note-11-pro', label: 'Redmi Note 11 Pro' },
+  { id: 'moto-g35-5g', label: 'Moto g35 5G' },
 ] as const;
 
 export const DATA_TYPES = [
@@ -125,6 +144,8 @@ REGLAS:
    - Variar el tipo de tarjeta entre registros
 6. Para cupones/códigos promocionales, genera códigos con formato realista (WELCOME10, SUMMER2026, FREESHIP, BERSHKA20, etc.) e indica tipo (porcentaje, monto fijo, envío gratis), valor, y condiciones de uso.
 7. Los códigos postales, formatos de teléfono y formatos de dirección DEBEN ser válidos para el país seleccionado.
+8. Para datos de tipo "user-registration": los emails DEBEN seguir este formato: un nombre corto y común del país en minúsculas (sin apellidos, sin números, sin puntos, sin guiones) seguido de un dominio de prueba QA. Rota los dominios en este orden: @qa, @qa1, @qa2, @qa.1, @qa.2, @qa.3, @qa.4, etc. Ejemplos: maria@qa, jean@qa1, luca@qa2, anna@qa.1, pedro@qa.2.
+9. Para datos de tipo "user-registration": la contraseña SIEMPRE debe ser exactamente "Test1234" para TODOS los registros generados. Sin excepciones ni variaciones.
 
 ESQUEMA JSON POR TIPO DE DATO:
 
@@ -135,7 +156,7 @@ Para "billing-data":
 [{"nombre":"...","apellidos":"...","documentoId":"...","tipoDocumento":"...","direccion":"...","codigoPostal":"...","ciudad":"...","provincia":"...","pais":"...","telefono":"...","email":"..."}]
 
 Para "user-registration":
-[{"nombre":"...","apellidos":"...","email":"...","password":"...","telefono":"...","fechaNacimiento":"...","genero":"..."}]
+[{"nombre":"...","apellidos":"...","email":"nombre@qa","password":"Test1234","telefono":"...","fechaNacimiento":"...","genero":"..."}]
 
 Para "payment-cards":
 [{"tipo":"...","numero":"...","titular":"...","expiracion":"...","cvv":"..."}]

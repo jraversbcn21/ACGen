@@ -13,23 +13,17 @@ Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-merca
 
 ---
 
-## 🛠️ Herramientas
+## Herramientas
 
-### 📋 Criterios de Aceptación
-Genera criterios de aceptación en formato **Confluence wiki** a partir de una URL de ticket de Jira o texto libre. El modelo analiza los requisitos y produce criterios con la estructura `Dado/Cuando/Entonces` que tu equipo ya conoce. Soporta visualización del razonamiento del modelo.
-
-### 🧪 Test Case Generator
-Genera casos de prueba estructurados en español a partir de una descripción del área o flujo a cubrir. La salida se muestra como una tabla HTML con badges de prioridad (Alta/Media/Baja) y tipo (Positivo/Negativo). Permite copiar al portapapeles en **formato tabla Jira** o descargar como **PDF en orientación apaisada**.
-
-### 🐛 Bug Report Generator
-Convierte una descripción informal de un defecto en un **bug report profesional en formato Jira wiki**. Soporta cuatro plataformas (Web Desktop, Web Mobile, App Android, App iOS) y adapta dinámicamente los campos del formulario según la plataforma seleccionada (navegador + URL para web, versión + dispositivo + SO para app). Incluye sección de criterios de aceptación con formato Dado/Cuando/Entonces y categorías funcionales predefinidas para el título.
-
-### 📊 Datos de Prueba
+### Criterios de Aceptación
+### Test Case Generator
+### Bug Report Generator
+### Datos de Prueba
 Genera datos de prueba realistas y con formato válido para cada mercado europeo. Cinco tipos de dato: direcciones de envío, datos de facturación, registros de usuario, tarjetas de pago (con números de prueba de Adyen) y códigos promocionales. La salida se muestra en una tabla HTML con cabeceras en español, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
 
 ---
 
-## 🧰 Stack Tecnológico
+## Stack Tecnológico
 
 | Capa | Tecnología |
 |---|---|
@@ -41,7 +35,7 @@ Genera datos de prueba realistas y con formato válido para cada mercado europeo
 
 ---
 
-## 📋 Requisitos
+## Requisitos
 
 - **Node.js 18+**
 - **npm**
@@ -50,7 +44,7 @@ Genera datos de prueba realistas y con formato válido para cada mercado europeo
 
 ---
 
-## 📦 Instalación
+## Instalación
 
 ```bash
 git clone https://github.com/jraversbcn21/ACGen.git
@@ -58,7 +52,7 @@ cd ACGen/acgen
 npm install
 ```
 
-## 🚀 Uso
+## Uso
 
 ### Desarrollo (con servidor proxy de Jira)
 
@@ -92,7 +86,7 @@ npm run lint
 
 ---
 
-## 🔌 Integración con Jira
+## Integración con Jira
 
 ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
@@ -105,7 +99,7 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
 ---
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 acgen/
@@ -129,7 +123,7 @@ acgen/
 
 ---
 
-## 🤖 Modelos Disponibles
+## Modelos Disponibles
 
 Los modelos se ejecutan a través de la API de Groq:
 
@@ -143,12 +137,12 @@ Los modelos se ejecutan a través de la API de Groq:
 
 ---
 
-## 🤝 Contribuir
+## Contribuir
 
 Consulta [`AGENTS.md`](./AGENTS.md) para conocer la arquitectura completa del proyecto, los detalles de implementación de cada herramienta, y las guías para modificar prompts, formatos de salida o modelos.
 
 ---
 
-## 📄 Licencia
+## Licencia
 
 MIT

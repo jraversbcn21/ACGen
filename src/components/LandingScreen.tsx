@@ -5,7 +5,7 @@ interface LandingScreenProps {
 export function LandingScreen({ onSelect }: LandingScreenProps) {
   return (
     <div className="landing">
-      <h2 className="landing-question">¿En qué quieres trabajar hoy?</h2>
+      <h2 className="landing-question">¿En qué quieres trabajar hoy Jorgito?</h2>
       <div className="landing-buttons">
         <button
           type="button"

@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { generateBugReport } from '../services/apiService';
-import { BERSHKA_MARKETS, PLATFORMS, STORAGE_KEYS } from '../config/constants';
+import { BERSHKA_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { BugReportFormData, PlatformId } from '../types';
@@ -127,12 +127,15 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
     const p = platform as PlatformId;
     setFormData(prev => {
       const browsers = getAvailableBrowsers(p);
+      let device = '';
+      if (p === 'app-ios') device = IOS_DEVICES[0].label;
+      else if (p === 'app-android') device = ANDROID_DEVICES[0].label;
       return {
         ...prev,
         platform: p,
         browser: browsers.includes(prev.browser || '') ? prev.browser : browsers[0],
         appVersion: '',
-        device: '',
+        device,
         osVersion: '',
         url: p.startsWith('web-') ? 'https://localhost:3443/' : prev.url,
       };
@@ -273,14 +276,21 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
               </div>
               <div className="br-form-field">
                 <label htmlFor="br-device" className="br-form-label">Dispositivo</label>
-                <input
+                <select
                   id="br-device"
-                  type="text"
                   value={formData.device || ''}
                   onChange={(e) => updateForm('device', e.target.value)}
-                  placeholder={formData.platform === 'app-android' ? 'ej: Samsung Galaxy S24' : 'ej: iPhone 15 Pro'}
-                  className="br-form-input"
-                />
+                  className="br-form-select"
+                >
+                  {formData.platform === 'app-ios'
+                    ? IOS_DEVICES.map(d => (
+                        <option key={d.id} value={d.label}>{d.label}</option>
+                      ))
+                    : ANDROID_DEVICES.map(d => (
+                        <option key={d.id} value={d.label}>{d.label}</option>
+                      ))
+                  }
+                </select>
               </div>
             </>
           )}
