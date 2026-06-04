@@ -38,9 +38,10 @@ No tests configured.
 
 ### Bug Report Generator
 
-- System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — instructions for generating Jira wiki formatted bug reports for Bershka ecommerce. Output uses six separate `{panel}` blocks with specific titles: `*DESCRIPCIÓN:*`, `*PRECONDICION:*`, `*PASOS DE REPRODUCCIÓN:*`, `*RESULTADO ACTUAL*`, `*RESULTADO ESPERADO*`, `*Criterios aceptación*` (the last one containing a `{quote}` with Dado/Cuando/Entonces markers).
-- Title format: `[CategoríaFuncional] - Descripción breve`. Categories are constrained to 18 predefined functional areas (Home, Catálogo, Búsqueda, PDP, Tallas, Carrito, Checkout, Pagos, Mi Cuenta, Wishlist, Newsletter, Store Finder, Login/Registro, Navegación, SEO, Push Notifications, Deep Links, General).
-- `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData` (description, platform, market, browser/URL or app version/device/OS), injects current date via `new Date().toISOString().split('T')[0]`, calls `generateWithGroq()` with empty markers and `tool='criteria'`. Returns `GroqResponse`.
+- System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — instructions for generating Jira wiki formatted bug reports for Bershka ecommerce. Output uses six `{panel}` blocks with titles: `DESCRIPCIÓN:`, `PRECONDICION:`, `PASOS DE REPRODUCCIÓN:`, `RESULTADO ACTUAL`, `RESULTADO ESPERADO`, `Criterios aceptación` (the last containing a `{quote}` with Dado/Cuando/Entonces markers).
+- Output starts directly with the first `{panel}` — no standalone title line before it. The DESCRIPCIÓN panel contains ONLY two fields: `Entorno/País` and `Versión`. No Plataforma, Dispositivo, URL, or descriptive paragraph.
+- The Criterios aceptación block uses: `ResultadoQA: (/)/(x)`, date in `DD-MM-YYYY` format, and `Validado por: Jorge-QA`.
+- `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData` (description, platform, market, browser/URL or app version/device/OS), injects current date in `DD-MM-YYYY` format via explicit `padStart` formatting, calls `generateWithGroq()` with empty markers and `tool='criteria'`. Returns `GroqResponse`.
 - Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Platform selection dynamically switches form fields. For app platforms, the **device** field is a `<select>` dropdown populated from `IOS_DEVICES` (iPhone XR, iPhone 11) or `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G). Switching platforms resets device to the first entry.
 - Platform-aware language: mobile interaction terms (tap, swipe) for app platforms, web terms (click, hover, scroll) for web platforms.
 - Optional Jira context: if a related ticket URL is provided and Jira credentials exist, fetches ticket data via the proxy and includes it as context in the prompt.
@@ -195,7 +196,7 @@ Edit `TESTCASE_PROMPT` in `constants.ts`. Keep JSON-only constraint and field sc
 
 ## Changing output format — Bug Report
 
-Edit `BUG_REPORT_PROMPT` in `constants.ts`. The prompt defines the exact Jira wiki panel structure and functional area categories. If the output format changes (new panels, different field names), update the FORMATO DE SALIDA block. If the title categories change, update rule 8. The date is injected in `generateBugReport()` via `new Date().toISOString()` — no prompt change needed for date format.
+Edit `BUG_REPORT_PROMPT` in `constants.ts`. The prompt defines the exact Jira wiki panel structure. If the output format changes (new panels, different field names), update the FORMATO DE SALIDA block. The date is injected in `generateBugReport()` in `apiService.ts` — if the date format needs to change, update the `padStart` formatting call there.
 
 ## Changing output format — Test Data
 

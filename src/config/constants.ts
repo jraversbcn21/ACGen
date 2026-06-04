@@ -181,53 +181,46 @@ REGLAS:
 3. Genera pasos de reproducción detallados, numerados con #, específicos y basados en la descripción proporcionada.
 4. Si la plataforma es App Android o App iOS, usa lenguaje de interacción móvil/app: "tap en", "swipe", "navegar al tab de", "pull to refresh", etc.
 5. Si la plataforma es Web, usa lenguaje web: "clic en", "hover sobre", "scroll hasta", "navegar a", etc.
-6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (x) ya que es un bug. La Fecha debe ser la fecha actual. El campo "Validado por:" debe quedar como "QA Team".
+6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD-MM-YYYY. El campo "Validado por:" debe quedar como "Jorge-QA".
 7. Si se proporciona contexto de un ticket de Jira relacionado, úsalo para enriquecer la descripción, precondiciones y criterios.
-8. El título debe ser conciso y descriptivo. La categoría entre corchetes debe ser el ÁREA FUNCIONAL real del ecommerce donde ocurre el bug. Usa SOLO estas categorías: [Home], [Catálogo], [Búsqueda], [PDP], [Tallas], [Carrito], [Checkout], [Pagos], [Mi Cuenta], [Wishlist], [Newsletter], [Store Finder], [Login/Registro], [Navegación], [SEO], [Push Notifications], [Deep Links], [General]. Elige la que mejor corresponda al bug descrito. NUNCA inventes categorías.
 
 FORMATO DE SALIDA — usa EXACTAMENTE esta estructura, rellenando cada sección:
 
-[Categoría del área funcional — ver lista en regla 8] - Descripción breve y precisa del defecto
-
-{panel:title=*DESCRIPCIÓN:*}
-- Entorno/País: [Mercado proporcionado por el usuario]
-- Versión: [Versión de la app si es app, o "Web" si es web + navegador]
-- Plataforma: [Web Desktop / Web Mobile / App Android / App iOS]
-- Dispositivo: [Si aplica, dispositivo proporcionado]
-- URL: [Si aplica, URL proporcionada]
-[Descripción detallada del bug en 2-3 frases]
+{panel:title=DESCRIPCIÓN:}
+- Entorno/País: [Market from form]
+- Versión: [App version if app platform, or "Web - Browser" if web platform]
 {panel}
-{panel:title=*PRECONDICION:*}
-[Lista de precondiciones necesarias para reproducir el bug, cada una en una línea separada con - ]
+{panel:title=PRECONDICION:}
+[Preconditions needed to reproduce the bug, each on its own line with - prefix]
 {panel}
-{panel:title=*PASOS DE REPRODUCCIÓN:*}
+{panel:title=PASOS DE REPRODUCCIÓN:}
 # [Paso 1 detallado]
 # [Paso 2 detallado]
 # [Paso 3 detallado]
 # [Continuar con todos los pasos necesarios]
 {panel}
-{panel:title=*RESULTADO ACTUAL*}
-[Descripción precisa de lo que ocurre actualmente — el comportamiento defectuoso]
+{panel:title=RESULTADO ACTUAL}
+[What actually happens — the defective behavior]
 {panel}
-{panel:title=*RESULTADO ESPERADO*}
-[Descripción precisa de lo que debería ocurrir correctamente]
+{panel:title=RESULTADO ESPERADO}
+[What should happen correctly]
 {panel}
-{panel:title=*Criterios aceptación*}
+{panel:title=Criterios aceptación}
 {quote}
-*Dado* [contexto/estado inicial relevante al bug]
-*Cuando* [acción que desencadena el bug]
-*Entonces* [comportamiento esperado correcto]
-*ResultadoQA:* (x)
-*Pais/Entorno:* [Mercado y plataforma]
-*Fecha:* [Fecha actual en formato YYYY-MM-DD]
-*Evidencia:* [Dejar como "Adjuntar captura de pantalla"]
-*Validado por:* QA Team
+Dado [relevant initial context/state]
+Cuando [action that triggers the bug]
+Entonces [expected correct behavior]
+ResultadoQA: (/)/(x)
+Pais/Entorno: [Market and platform]
+Fecha: [Current date DD-MM-YYYY]
+Evidencia: Adjuntar captura de pantalla
+Validado por: Jorge-QA
 {quote}
 {panel}
 
-IMPORTANTE: 
-- Devuelve SOLO el título seguido del contenido en formato Jira wiki. 
-- No añadas explicaciones, comentarios ni texto fuera de la estructura.
-- No uses markdown. Solo Jira wiki markup.
-- No envuelvas la respuesta en un panel adicional externo.
-- El título va ANTES del primer {panel}, como texto plano (no dentro de un panel).`;
+IMPORTANTE:
+- Output must start directly with {panel:title=DESCRIPCIÓN:}. No title, no text before the first panel.
+- Do NOT add any content outside of the panel structure.
+- Do NOT add extra fields to the DESCRIPCIÓN panel beyond Entorno/País and Versión.
+- Do NOT add a descriptive paragraph inside DESCRIPCIÓN.
+- Do NOT use markdown. Only Jira wiki markup.`;

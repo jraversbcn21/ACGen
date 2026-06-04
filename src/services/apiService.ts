@@ -197,7 +197,8 @@ export async function generateBugReport(
   formData: BugReportFormData,
   jiraContext?: string,
 ): Promise<GroqResponse> {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
   let userMessage = `Descripción del bug: ${formData.description}\n\n`;
   userMessage += `Plataforma: ${formData.platform}\n`;
   userMessage += `Mercado: ${formData.market}\n`;
