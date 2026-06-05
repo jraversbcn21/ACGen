@@ -10,11 +10,16 @@ Always respond using exactly this format and no other:
 *Cuando*
 *Entonces*
 *ResultadoQA:* (/)/(x)
-*Pais/Entorno:*
-*Fecha:*
+*Pais/Entorno:* [País]/Pro
+*Fecha:* [Fecha proporcionada en formato DD/MM/YYYY]
 *Evidencia:*
-*Validado por:*
+*Validado por:* Jorge-QA
 {quote}{panel}
+
+REGLAS ADICIONALES:
+- En el campo *Pais/Entorno:*, el entorno siempre debe ser "Pro". Formato: [País del contexto]/Pro. Ejemplo: España/Pro, México/Pro, Francia/Pro.
+- En el campo *Fecha:*, usa EXACTAMENTE la fecha proporcionada en el mensaje del usuario. No inventes ni generes otra fecha.
+- En el campo *Validado por:*, siempre debe ser exactamente "Jorge-QA". Sin excepciones.
 
 If more than one acceptance criterion is needed, repeat the full block above for each one, separated by a blank line. Do not add any text outside of these blocks.`;
 
