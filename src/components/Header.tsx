@@ -1,20 +1,46 @@
+import { Icon } from './Icons';
+
 interface HeaderProps {
   onBack?: () => void;
   subtitle?: string;
+  model: string;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
-export function Header({ onBack, subtitle }: HeaderProps) {
+export function Header({ onBack, subtitle, model, theme, onToggleTheme }: HeaderProps) {
   return (
-    <header className="header">
-      <div className="header-top">
-        {onBack && (
-          <button type="button" className="btn btn-back" onClick={onBack}>
-            ← Volver
-          </button>
+    <header className="topbar">
+      <div className="brand">
+        {onBack ? (
+          <>
+            <button type="button" className="topbar-back" onClick={onBack} title="Volver">
+              <Icon.back size={20} />
+            </button>
+            <span className="brand-name" style={{ marginLeft: 4 }}>{subtitle}</span>
+          </>
+        ) : (
+          <>
+            <span className="brand-mark" style={{ width: 38, height: 38, fontSize: 17 }}>A</span>
+            <span className="brand-name">ACGen</span>
+            <span className="brand-sub">Generador de artefactos QA</span>
+          </>
         )}
-        <h1>ACGen</h1>
       </div>
-      <p className="subtitle">{subtitle || 'Generador automático de criterios de aceptación para QA'}</p>
+      <div className="topbar-right">
+        <span className="model-chip">
+          <Icon.spark size={14} />
+          {model}
+        </span>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        >
+          {theme === 'dark' ? <Icon.sun size={18} /> : <Icon.moon size={18} />}
+        </button>
+      </div>
     </header>
   );
 }

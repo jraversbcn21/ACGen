@@ -1,10 +1,3 @@
-export interface GroqRequest {
-  apiKey: string;
-  model: string;
-  userInput: string;
-  systemPrompt: string;
-}
-
 export interface GroqResponse {
   content: string;
   model: string;

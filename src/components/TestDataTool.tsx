@@ -196,50 +196,50 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
   const columns = hasOutput ? Object.keys(generatedData[0]) : [];
 
   return (
-    <div className="td-wrapper">
+    <div>
       {/* Jira config section */}
       {jiraConfigured && !jiraConfigExpanded ? (
-        <div className="br-jira-indicator">
-          <span className="br-jira-check">Jira configurado ✓</span>
+        <div className="jira-indicator">
+          <span className="jira-indicator-text">Jira configurado ✓</span>
           <button
             type="button"
-            className="btn btn-copy"
+            className="btn-ghost"
             onClick={() => setJiraConfigExpanded(true)}
           >
             Editar
           </button>
         </div>
       ) : (
-        <div className="ac-jira-section">
-          <span className="ac-jira-label">Jira (opcional)</span>
-          <div className="ac-jira-row">
-            <div className="ac-jira-field">
-              <label htmlFor="td-jira-base-url" className="ac-config-label">URL base de Jira</label>
+        <div className="jira-config">
+          <span className="jira-config-title">Jira (opcional)</span>
+          <div className="jira-fields">
+            <div>
+              <label htmlFor="td-jira-base-url" className="field-label">URL base de Jira</label>
               <input
                 id="td-jira-base-url"
                 type="text"
                 value={jiraBaseUrl}
                 onChange={(e) => setJiraBaseUrl(e.target.value)}
                 placeholder="https://jira.tuempresa.com/jira"
-                className="ac-config-input"
+                className="field-input"
               />
             </div>
-            <div className="ac-jira-field">
-              <label htmlFor="td-jira-token" className="ac-config-label">Token PAT de Jira</label>
+            <div>
+              <label htmlFor="td-jira-token" className="field-label">Token PAT de Jira</label>
               <input
                 id="td-jira-token"
                 type="password"
                 value={jiraToken}
                 onChange={(e) => setJiraToken(e.target.value)}
                 placeholder="Tu Personal Access Token"
-                className="ac-config-input"
+                className="field-input"
               />
             </div>
           </div>
           {jiraConfigured && (
             <button
               type="button"
-              className="btn btn-copy"
+              className="btn-ghost"
               onClick={() => setJiraConfigExpanded(false)}
               style={{ alignSelf: 'flex-end', marginTop: '4px' }}
             >
@@ -254,64 +254,73 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
         {/* Row 1: Data type + Market + Quantity */}
         <div className="td-form-row">
           <div className="td-form-field">
-            <label htmlFor="td-data-type" className="td-form-label">Tipo de dato</label>
-            <select
-              id="td-data-type"
-              value={formData.dataType}
-              onChange={(e) => updateForm('dataType', e.target.value as TestDataFormData['dataType'])}
-              className="td-form-select"
-            >
-              {DATA_TYPES.map(dt => (
-                <option key={dt.id} value={dt.id}>{dt.label}</option>
-              ))}
-            </select>
+            <label htmlFor="td-data-type" className="field-label">Tipo de dato</label>
+            <div className="input-wrap">
+              <select
+                id="td-data-type"
+                value={formData.dataType}
+                onChange={(e) => updateForm('dataType', e.target.value as TestDataFormData['dataType'])}
+                className="field-select"
+              >
+                {DATA_TYPES.map(dt => (
+                  <option key={dt.id} value={dt.id}>{dt.label}</option>
+                ))}
+              </select>
+              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
           </div>
           <div className="td-form-field">
-            <label htmlFor="td-market" className="td-form-label">Mercado</label>
-            <select
-              id="td-market"
-              value={formData.market}
-              onChange={(e) => updateForm('market', e.target.value)}
-              className="td-form-select"
-            >
-              {BERSHKA_MARKETS.map(m => (
-                <option key={m.code} value={m.code}>{m.label} ({m.code})</option>
-              ))}
-            </select>
+            <label htmlFor="td-market" className="field-label">Mercado</label>
+            <div className="input-wrap">
+              <select
+                id="td-market"
+                value={formData.market}
+                onChange={(e) => updateForm('market', e.target.value)}
+                className="field-select"
+              >
+                {BERSHKA_MARKETS.map(m => (
+                  <option key={m.code} value={m.code}>{m.label} ({m.code})</option>
+                ))}
+              </select>
+              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
           </div>
           <div className="td-form-field">
-            <label htmlFor="td-quantity" className="td-form-label">Cantidad</label>
-            <select
-              id="td-quantity"
-              value={formData.quantity}
-              onChange={(e) => updateForm('quantity', Number(e.target.value))}
-              className="td-form-select"
-            >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
+            <label htmlFor="td-quantity" className="field-label">Cantidad</label>
+            <div className="input-wrap">
+              <select
+                id="td-quantity"
+                value={formData.quantity}
+                onChange={(e) => updateForm('quantity', Number(e.target.value))}
+                className="field-select"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
           </div>
         </div>
 
         {/* Row 2: Related Jira ticket */}
         <div className="td-form-row-single">
           <div className="td-form-field">
-            <label htmlFor="td-jira-ticket" className="td-form-label">Ticket relacionado (opcional)</label>
+            <label htmlFor="td-jira-ticket" className="field-label">Ticket relacionado (opcional)</label>
             <input
               id="td-jira-ticket"
               type="text"
               value={jiraTicketUrl}
               onChange={(e) => setJiraTicketUrl(e.target.value)}
               placeholder="URL del ticket de Jira para contextualizar los datos (opcional)"
-              className="td-form-input"
+              className="field-input"
             />
           </div>
         </div>
       </div>
 
       {/* Action buttons */}
-      <div className="bottom-actions" style={{ marginTop: '24px' }}>
+      <div className="actions-bar" style={{ marginTop: '24px' }}>
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate}
@@ -324,7 +333,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
         )}
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!formData.dataType && !hasOutput}
         >
@@ -337,28 +346,28 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
         <div className="td-output-section">
           {generatedModel && (
             <div className="output-header" style={{ marginBottom: '12px' }}>
-              <span className="section-label">Datos generados</span>
-              <span className="model-badge">Modelo: {generatedModel}</span>
+              <span className="field-label">Datos generados</span>
+              <span className="model-badge-new">Modelo: {generatedModel}</span>
             </div>
           )}
           <div className="td-actions-bar">
             <button
               type="button"
-              className={`btn btn-copy ${copied ? 'btn-copied' : ''}`}
+              className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyTable}
             >
               {copied ? '¡Copiado!' : 'Copiar todo como tabla'}
             </button>
             <button
               type="button"
-              className="btn btn-copy"
+              className="btn-ghost"
               onClick={handleDownloadCsv}
             >
               Descargar CSV
             </button>
           </div>
-          <div className="td-table-wrapper">
-            <table className="td-table">
+          <div className="data-table-wrap">
+            <table className="data-table">
               <thead>
                 <tr>
                   {columns.map(col => (

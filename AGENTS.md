@@ -17,9 +17,13 @@ No tests configured.
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata'`) in `App.tsx` — no router library.
-- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Model validated against `AVALIABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme` (via `STORAGE_KEYS.THEME`). Model validated against `AVALIABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
 - **Shared config**: all four tools receive API key and model as props from `App.tsx`. Response parsing and validation are centralized in the **service layer** — components only render.
+- **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
+- **Theme**: light/dark via `[data-theme]` attribute on `<html>`. Toggle button in Header topbar. State managed in `App.tsx` via `useLocalStorage<'light'|'dark'>(STORAGE_KEYS.THEME, 'light')` + `useEffect` that syncs attribute. Initialized from stored value, falls back to `prefers-color-scheme`.
+- **SVG Icons**: `src/components/Icons.tsx` exports an `Icon` object with named components (criterios, testcase, bug, datos, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All are 24×24, stroke-based, `currentColor`, `strokeWidth` 1.6. No emojis used as icons.
+- **Shared CSS primitives**: form fields (`.field-input`, `.field-select`, `.field-textarea`, `.field-label`), buttons (`.btn-primary`, `.btn-ghost`, `.btn-icon-new`), tables (`.data-table-wrap`, `.data-table`), badges (`.badge` + `.badge-high/medium/low/positive/negative/info`), output panels (`.panel`, `.panel-header`, `.panel-body`), reasoning sections (`.reasoning` with `<details>/<summary>`), Jira config (`.jira-indicator`, `.jira-config`, `.jira-config-title`, `.jira-fields`), action bar (`.actions-bar`), model badge (`.model-badge-new`).
 
 ### Acceptance Criteria
 
@@ -32,7 +36,7 @@ No tests configured.
 - System prompt (`TESTCASE_PROMPT` in `constants.ts`) — instructions + JSON schema, entirely in Spanish. Requires the model to return a raw JSON array (`key`, `summary`, `priority`, `type`, `preconditions`, `testSteps`, `expectedResult`).
 - `generateTestCases()` calls `generateWithGroq()` with **empty markers** (no marker validation), then runs `extractJsonArray()` (robust — strips markdown fences, finds first `[` / last `]`) + `validateTestCases()` (field-by-field check against `TestCaseData`). Throws descriptive error on missing fields.
 - Returns `TestCaseResponse` (`{ testCases: TestCaseData[], model }`) — raw content never exposed to component.
-- Rendered as styled HTML table with colored priority badges (Alta=red, Media=amber, Baja=green) and type badges (Positivo=green, Negativo=red), numbered step lists.
+- Rendered as styled HTML table with colored priority badges (`.badge-high`, `.badge-medium`, `.badge-low`) and type badges (`.badge-positive`, `.badge-negative`), numbered step lists.
 - Action buttons: "Copiar como tabla Jira" (Confluence wiki table format) and "Descargar PDF" (landscape PDF via jsPDF + jspdf-autotable).
 - Priority/type rendering handles both Spanish and English values for backward compat.
 
@@ -94,53 +98,67 @@ The dual-input flow differs per tool:
 
 ## Layout
 
+### App shell
+
+App shell uses `<div className="page">` > `<header className="topbar">` + `<main className="container">`. The `.page` is full viewport with `--bg-grad`. The `.container` has `max-width: 1260px` with responsive padding. Landing page inner elements (`.hero`, `.config-strip`) have their own `max-width: 760px` so they don't stretch.
+
 ### Landing screen
 
-- Four-button card layout in a 2×2 CSS grid rendered by `LandingScreen.tsx`. Buttons: "Criterios de aceptación" (📋), "Test Case Generator" (🧪), "Bug Report Generator" (🐛), and "Datos de Prueba" (📊). Each with a subtitle description. Heading text: "¿En qué quieres trabajar hoy Jorgito?". Container max-width 600px, cards fill grid cells. Responsive: stacks to single column below 768px.
+- Editorial layout rendered by `LandingScreen.tsx`. Hero section with eyebrow "Sesión de QA · Jorgito" and mixed-weight title ("**AC**Gen *¿En qué quieres trabajar hoy?*") using Manrope bold + Newsreader italic.
+- Config strip: ApiKeyConfig and ModelSelector in a 1.5fr 1fr grid (`.config-strip`), no longer stacked above all tools.
+- Section header "Generadores" with count badge "04" (`.sec-head`).
+- Numbered tool list (`.tool-list`): each tool as a grid row with italic number (`.row-num`), SVG icon in a purple rounded box (`.tool-ico`), title/description (`.row-body`), tag pill (`.row-tag`), and hover arrow (`.row-arrow`). Tools: Criterios de aceptación, Test Case Generator, Bug Report Generator, Datos de Prueba.
+- Extensibility slot (`.add-slot`): dashed border "+ Más generadores próximamente".
+- Responsive: below 680px, `.brand-sub`, `.model-chip`, `.row-tag`, `.row-arrow` hide; `.config-strip` stacks to single column; `.tool-row` collapses to 3 columns.
+
+### Header / Topbar (`Header.tsx`)
+
+- Sticky topbar (`.topbar`) with backdrop blur and border-bottom. Two modes:
+  - **Landing mode**: brand mark "A" (purple gradient, `.brand-mark`), brand name "ACGen" (`.brand-name`), subtitle "Generador de artefactos QA" (`.brand-sub`), model chip (`.model-chip`, shows current model with spark icon), theme toggle (`.theme-toggle`, sun/moon SVG).
+  - **Tool mode**: back button (`.topbar-back`, chevron-left SVG), tool name as text, model chip, theme toggle.
+- Props: `onBack?`, `subtitle?`, `model`, `theme`, `onToggleTheme`.
 
 ### Acceptance Criteria Tool (`AcceptanceCriteriaTool.tsx`)
 
-- **Config area** (rendered by `App.tsx`, above the tool):
-  - Row 1: API Key input (monospace, password-masked) + Model selector dropdown.
-  - Row 2: Jira config section within the tool — compact row with left border accent (`3px solid #cbd5e1`, `.ac-jira-section`). "Jira (opcional)" label in muted uppercase. Two side-by-side fields: URL base (text input) and PAT token (password input). Both with 11px uppercase labels.
-- **Main content** — asymmetric two-column grid (`.ac-main`, `grid-template-columns: 3fr 2fr`, gap 24px):
-  - **Left column (~60%)** — stacked vertically with 16px gap: input textarea (`.ac-input-ta`, `min-height: 80px`), output textarea (`.ac-output-ta`, `min-height: 400px`, monospace), "Copiar al portapapeles" button (`.copy-row`, right-aligned, visible only when output exists). No visible labels.
-  - **Right column (~40%)** — reasoning collapsible (`<details>/<summary>` "Razonamiento del modelo"), aligned with top of output via `margin-top: 96px`. Only rendered when reasoning exists. Expanded content: `max-height: 500px; overflow-y: auto`. Expand triggers `scrollIntoView({ block: 'center' })` via `requestAnimationFrame`, respects `prefers-reduced-motion`.
-- **Action buttons** — centered (`.ac-bottom-actions`, `margin-top: 32px`): "Generar criterios de aceptación" (primary), loading status text, "Limpiar" (secondary, `window.confirm`).
+- **Jira config**: `.jira-config` (left border accent), `.jira-config-title` ("Jira (opcional)"), `.jira-fields` containing two `.field-input` fields (URL base + PAT token with `.field-label`).
+- **Main content** — asymmetric two-column grid (`.criteria-grid`, `grid-template-columns: 3fr 2fr`, gap 24px):
+  - **Left column** (`.criteria-left`) — stacked: input textarea (`.field-textarea.criteria-input-ta`), output textarea (`.field-textarea.criteria-output-ta`, editable), "Copiar al portapapeles" button (`.btn-ghost` with `.copy-row`, right-aligned, visible only when output exists).
+  - **Right column** (`.criteria-right`) — reasoning collapsible (`.reasoning` with `<details>/<summary>` + `.reasoning-body`). Only rendered when reasoning exists. Expand triggers `scrollIntoView` via `requestAnimationFrame`.
+- **Action buttons**: `.actions-bar` with GenerateButton (`.btn-primary`), loading status (`.loading-status`), "Limpiar" (`.btn-ghost`).
 - **Error handling**: `ErrorBanner` at the bottom.
-- **Responsive**: stacks to single column below 768px; reasoning margin-top resets to 0.
+- **Responsive**: below 768px, `.criteria-grid` stacks to single column.
 
 ### Test Case Generator (`TestCaseTool.tsx`)
 
-- Single-column layout: full-width input textarea (`min-height: 200px`, label "Instrucciones para casos de prueba") → Generate/Limpiar buttons → output area.
-- "Generar casos de prueba" button + "Limpiar" (same `window.confirm` pattern).
-- Output area (shown only when test cases exist): model badge, action bar ("Copiar como tabla Jira" + "Descargar PDF"), then styled HTML table with 7 columns (Key, Summary, Priority, Type, Preconditions, Test Steps, Expected Result).
-- PDF: landscape, column widths preset, blue header row, filename `casos-de-prueba-bershka.pdf`.
+- Single-column layout: input textarea (`.field-textarea`, `min-height: 200px`, label `.field-label`) → Generate/Limpiar buttons (`.actions-bar`) → output area.
+- "Generar casos de prueba" button (`.btn-primary`) + "Limpiar" (`.btn-ghost`).
+- Output area (shown only when test cases exist): label + model badge (`.model-badge-new`), action bar (`.btn-ghost` for "Copiar como tabla Jira" + "Descargar PDF"), then styled HTML table (`.data-table-wrap` > `.data-table`) with 7 columns. Priority badges: `.badge-high`, `.badge-medium`, `.badge-low`. Type badges: `.badge-positive`, `.badge-negative`. Steps rendered as `<ol className="steps-list">`.
+- PDF: landscape via jsPDF + jspdf-autotable, filename `casos-de-prueba-bershka.pdf`.
 
 ### Bug Report Tool (`BugReportTool.tsx`)
 
-- **Jira config** — if Jira credentials exist in localStorage, shows a compact green indicator `.br-jira-indicator` "Jira configurado ✓" with "Editar" toggle. Otherwise shows the same Jira config section as acceptance tool (`.ac-jira-section`, left border accent, URL base + PAT token).
-- **Structured form** (`.br-form-grid`, gap 16px):
-  - Row 1 (two columns): Platform selector (`PLATFORMS` — 4 types) and Market selector (`BERSHKA_MARKETS` — 22 markets).
-  - Row 2 (two columns, dynamic): Web → Browser (select: Chrome/Firefox/Safari/Edge + Samsung Internet for web-mobile) and URL (pre-filled `https://localhost:3443/`). App → app version and **device** (`<select>` dropdown from `IOS_DEVICES` or `ANDROID_DEVICES` constant).
-  - Row 3 (single column, app only): OS version field (Android/iOS).
-  - Row 4 (single column): Optional Jira ticket URL input.
-  - Row 5 (single column): Bug description textarea (`min-height: 120px`).
-- **Output area** (`.br-output-section`): read-only textarea (`.br-output-ta`, `min-height: 350px`, monospace), "Copiar al portapapeles" button, reasoning collapsible below.
-- **Action buttons** (`.bottom-actions`): "Generar bug report" (primary, disabled when API key or description empty), loading status, "Limpiar".
+- **Jira config**: `.jira-indicator` (green "Jira configurado ✓" with "Editar" `.btn-ghost`) when configured, else `.jira-config` with `.field-input` fields.
+- **Structured form** (`.br-form-grid`):
+  - Row 1 (`.br-form-row`, two columns): Platform selector (`.field-select` with `.select-chev`) and Market selector (`.field-select`).
+  - Row 2 (`.br-form-row`, dynamic): Web → Browser (`.field-select`) and URL (`.field-input`). App → App version (`.field-input`) and Device (`.field-select`).
+  - Row 3 (`.br-form-row-single`, app only): OS version (`.field-input`).
+  - Row 4 (`.br-form-row-single`): Optional Jira ticket URL (`.field-input`).
+  - Row 5 (`.br-form-row-single`): Bug description (`.field-textarea`).
+- **Output area** (`.br-output-section`): read-only textarea (`.field-textarea`, `min-height: 350px`), "Copiar al portapapeles" button (`.btn-ghost`), reasoning collapsible (`.reasoning`) below.
+- **Action buttons** (`.actions-bar`): GenerateButton, loading status, "Limpiar" (`.btn-ghost`).
 - **Error handling**: `ErrorBanner` at the bottom.
 
 ### Test Data Tool (`TestDataTool.tsx`)
 
-- **Jira config** — same indicator pattern as BugReportTool (green "Jira configurado ✓" with edit toggle when credentials exist, otherwise Jira URL base + PAT token fields).
-- **Structured form** (`.td-form-grid`, gap 16px):
-  - Row 1 (three columns): Data type selector (`DATA_TYPES` — 5 types), Market selector (`BERSHKA_MARKETS` — 22 markets), Quantity selector (1–10).
-  - Row 2 (single column): Optional Jira ticket URL input.
-- **Action buttons** (`.bottom-actions`): "Generar datos de prueba" (primary, disabled when API key empty), loading status, "Limpiar".
+- **Jira config** — same `.jira-indicator`/`.jira-config` pattern as BugReportTool.
+- **Structured form** (`.td-form-grid`):
+  - Row 1 (`.td-form-row`, three columns): Data type selector (`.field-select`), Market selector (`.field-select`), Quantity selector (`.field-select`). All wrapped in `.input-wrap` with `.select-chev`.
+  - Row 2 (`.td-form-row-single`): Optional Jira ticket URL (`.field-input`).
+- **Action buttons** (`.actions-bar`): GenerateButton, loading status, "Limpiar" (`.btn-ghost`).
 - **Output area** (`.td-output-section`, shown when data exists):
-  - Model badge + "Datos generados" label.
-  - Action bar: "Copiar todo como tabla" (TSV for spreadsheets/Jira) + "Descargar CSV" (BOM for Excel, filename `datos-prueba-{dataType}-{market}.csv`).
-  - HTML table (`.td-table`) with Spanish column headers via `LABEL_MAP`. Each row has a "Copiar" button that copies that record as formatted text (`Label: value` lines).
+  - Model badge (`.model-badge-new`) + "Datos generados" label.
+  - Action bar: "Copiar todo como tabla" (`.btn-ghost`, TSV format) + "Descargar CSV" (`.btn-ghost`).
+  - HTML table (`.data-table-wrap` > `.data-table`) with Spanish column headers via `LABEL_MAP`. Each row has a "Copiar" button (`.td-copy-row-btn`, `.td-copy-col`) that copies that record as formatted text.
 - **Error handling**: `ErrorBanner` at the bottom.
 
 ## Models
@@ -165,22 +183,23 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 |---|---|
 | `server/index.js` | Express proxy entry: CORS (`http://localhost:5173`), JSON middleware, mounts Jira routes at `/api/jira` |
 | `server/jiraRoutes.js` | `GET /api/jira/issue/:issueKey` — proxies to Jira REST API, returns cleaned `JiraTicketData` |
-| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVALIABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
+| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVALIABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL, THEME), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
 | `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning extraction + decommissioned-model + 401/429 error handling), `getReasoningParams()` (model-aware), `generateCriteria()`, `generateTestCases()` (`extractJsonArray` + `validateTestCases`, returns `TestCaseResponse`), `generateBugReport()` (date injection, returns `GroqResponse`), `generateTestData()` (`extractJsonArray`, returns `{ data, model }`) |
 | `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()` |
-| `src/App.tsx` | View state routing; renders LandingScreen / AcceptanceCriteriaTool / TestCaseTool / BugReportTool / TestDataTool + shared ApiKeyConfig + ModelSelector |
-| `src/components/AcceptanceCriteriaTool.tsx` | Criteria UI: Jira config section, two-column grid (input→output→copy left, reasoning right), generate/clear/copy, dual input flow (Jira URL → fetch → format → generate, or plain text) |
-| `src/components/TestCaseTool.tsx` | Test case UI: single-column, input → generate/clear → HTML table with badges + Jira copy + PDF download; no JSON parsing |
-| `src/components/BugReportTool.tsx` | Bug report UI: structured form (platform, market, dynamic web/app fields with device dropdowns per platform), Jira config with toggle, output textarea + copy + reasoning, generate/clear |
-| `src/components/TestDataTool.tsx` | Test data UI: structured form (dataType, market, quantity), Jira config with toggle, output HTML table with row copy + TSV copy + CSV download, generate/clear |
-| `src/components/LandingScreen.tsx` | Four-button card entry screen in 2×2 grid |
-| `src/components/GenerateButton.tsx` | Reusable button with spinner; accepts `label`/`loadingLabel` props |
-| `src/components/ErrorBanner.tsx` | Dismissible error alert with icon |
-| `src/components/Header.tsx` | Title + optional back button and subtitle |
-| `src/components/RequirementInput.tsx` | Textarea wrapper with label prop (currently **unused** — textareas rendered directly in AcceptanceCriteriaTool) |
-| `src/components/CriteriaOutput.tsx` | Output textarea + model badge wrapper (currently **unused** — rendered directly in AcceptanceCriteriaTool) |
+| `src/App.tsx` | View state routing; renders LandingScreen / AcceptanceCriteriaTool / TestCaseTool / BugReportTool / TestDataTool. Theme state via `useLocalStorage` + `useEffect` for `data-theme` attribute. Shell: `.page` > `<main className="container">`. ApiKeyConfig and ModelSelector rendered inside LandingScreen only, not above tools. |
+| `src/components/Icons.tsx` | SVG icon library — `Icon` object with named components (criterios, testcase, bug, datos, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All 24×24, stroke-based, `currentColor`. |
+| `src/components/Header.tsx` | Sticky topbar: brand mark (purple gradient "A"), brand name, subtitle, model chip, theme toggle. Two modes: landing (full brand) and tool (back arrow + tool name). |
+| `src/components/LandingScreen.tsx` | Editorial landing: hero (eyebrow + mixed-font title), config strip (ApiKeyConfig + ModelSelector), numbered tool list with SVG icons, extensibility slot. |
+| `src/components/AcceptanceCriteriaTool.tsx` | Criteria UI: `.jira-config` section, `.criteria-grid` asymmetric columns (input→output→copy left, reasoning right), generate/clear/copy, dual input flow (Jira URL → fetch → format → generate, or plain text) |
+| `src/components/TestCaseTool.tsx` | Test case UI: single-column, input → generate/clear → `.data-table` with badges + Jira copy + PDF download |
+| `src/components/BugReportTool.tsx` | Bug report UI: structured form (`.br-form-grid`, platform/market, dynamic web/app fields with `.field-select` device dropdowns), `.jira-indicator`/`.jira-config` for Jira, output textarea + copy + reasoning, generate/clear |
+| `src/components/TestDataTool.tsx` | Test data UI: structured form (`.td-form-grid`, dataType/market/quantity), `.jira-indicator`/`.jira-config`, output `.data-table` with row copy + TSV copy + CSV download |
+| `src/components/GenerateButton.tsx` | Reusable button using `.btn-primary` + `.spinner-new`; accepts `label`/`loadingLabel` props |
+| `src/components/ErrorBanner.tsx` | Dismissible error alert with SVG dismiss icon, uses `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn` |
+| `src/components/ApiKeyConfig.tsx` | API key input with show/hide toggle using `Icon.eye`/`Icon.eyeOff` SVGs; uses `.field-input` + `.adorn-btn` |
+| `src/components/ModelSelector.tsx` | Model dropdown using `.field-select` + `.select-chev` with SVG chevron |
 | `src/hooks/useLocalStorage.ts` | Generic localStorage hook; validates `acgen_model` against `AVALIABLE_MODELS` on read, discards stale values to `DEFAULT_MODEL` |
-| `src/types/index.ts` | `GroqRequest`, `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData` |
+| `src/types/index.ts` | `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData` |
 
 ## Changing model
 
@@ -206,11 +225,11 @@ Edit `TEST_DATA_PROMPT` in `constants.ts`. Keep JSON-only constraint and per-dat
 
 - Entrypoint: `src/main.tsx` → `App.tsx`.
 - `jspdf` + `jspdf-autotable` are static imports in `TestCaseTool.tsx`.
-- `GroqRequest` is unused but kept as-is. `ModelOption` was deleted — models are plain strings.
-- `RequirementInput.tsx` and `CriteriaOutput.tsx` still exist in the codebase but are no longer imported anywhere (dead code); textareas are rendered directly in `AcceptanceCriteriaTool.tsx`.
-- Reasoning section CSS: `.reasoning-section`, `.reasoning-summary`, `.reasoning-content`, `.ac-main-right .reasoning-section`, `.ac-main-right .reasoning-content` in `App.css`.
-- Acceptance tool CSS: `.ac-*` prefixed classes (`.ac-wrapper`, `.ac-jira-section`, `.ac-jira-label`, `.ac-jira-row`, `.ac-jira-field`, `.ac-config-label`, `.ac-config-input`, `.ac-main`, `.ac-main-left`, `.ac-main-right`, `.ac-input-ta`, `.ac-output-ta`, `.ac-bottom-actions`).
-- Bug report tool CSS: `.br-*` prefixed classes (`.br-wrapper`, `.br-jira-indicator`, `.br-jira-check`, `.br-form-grid`, `.br-form-row`, `.br-form-row-single`, `.br-form-field`, `.br-form-label`, `.br-form-input`, `.br-form-select`, `.br-description-ta`, `.br-output-section`, `.br-output-ta`).
-- Test data tool CSS: `.td-*` prefixed classes (`.td-wrapper`, `.td-form-grid`, `.td-form-row`, `.td-form-row-single`, `.td-form-field`, `.td-form-label`, `.td-form-input`, `.td-form-select`, `.td-output-section`, `.td-actions-bar`, `.td-table`, `.td-table-wrapper`, `.td-copy-col`, `.td-copy-row-btn`).
-- Jira CSS (unused legacy): `.jira-config-section`, `.jira-config-label`, `.jira-config-fields` — from an earlier layout iteration, not referenced by current components.
+- Models are plain strings. `ModelOption` interface was deleted.
+- `Icons.tsx` exports an `Icon` object with named icon components and a base `Svg` helper.
+- App shell uses `<div className="page">` > `<header className="topbar">` + `<main className="container">`.
+- Theme persisted as `acgen_theme` in localStorage via `STORAGE_KEYS.THEME`.
+- Remaining per-tool layout classes in `App.css`: `.criteria-grid`, `.criteria-left`, `.criteria-right`, `.criteria-input-ta`, `.criteria-output-ta` (acceptance criteria asymmetric grid), `.br-form-grid`, `.br-form-row`, `.br-form-row-single`, `.br-form-field`, `.br-output-section` (bug report form layout), `.td-form-grid`, `.td-form-row`, `.td-form-row-single`, `.td-form-field`, `.td-output-section`, `.td-actions-bar`, `.td-copy-col`, `.td-copy-row-btn` (test data form/table layout), `.output-section`, `.output-header` (generic output area), `.copy-row` (copy button alignment), `.btn-copied` (copy success state), `.loading-status` (inline loading text), `.steps-list` (ordered step list).
+- Shared primitives in `App.css`: `.field-input`, `.field-select`, `.field-textarea`, `.field-label`, `.input-wrap`, `.select-chev`, `.adorn-btn`, `.btn-primary`, `.btn-ghost`, `.btn-icon-new`, `.btn-loading`, `.spinner-new`, `.data-table-wrap`, `.data-table`, `.badge` + variants, `.panel`, `.panel-header`, `.panel-body`, `.reasoning`, `.jira-indicator`, `.jira-indicator-text`, `.jira-config`, `.jira-config-title`, `.jira-fields`, `.actions-bar`, `.model-badge-new`, `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn`.
+- CSS custom properties in `App.css`: invariants in `:root`, light theme in `[data-theme="light"]` (also `:root`), dark theme in `[data-theme="dark"]`. All token names use `var(--*)` exclusively — no aliased old names (alias bridge removed in Phase 5).
 - Dependencies: `express` + `cors` + `concurrently` are devDependencies (proxy server); `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).

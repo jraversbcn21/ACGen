@@ -145,50 +145,50 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   const browserOptions = getAvailableBrowsers(formData.platform);
 
   return (
-    <div className="br-wrapper">
+    <div>
       {/* Jira config section */}
       {jiraConfigured && !jiraConfigExpanded ? (
-        <div className="br-jira-indicator">
-          <span className="br-jira-check">Jira configurado ✓</span>
+        <div className="jira-indicator">
+          <span className="jira-indicator-text">Jira configurado ✓</span>
           <button
             type="button"
-            className="btn btn-copy"
+            className="btn-ghost"
             onClick={() => setJiraConfigExpanded(true)}
           >
             Editar
           </button>
         </div>
       ) : (
-        <div className="ac-jira-section">
-          <span className="ac-jira-label">Jira (opcional)</span>
-          <div className="ac-jira-row">
-            <div className="ac-jira-field">
-              <label htmlFor="br-jira-base-url" className="ac-config-label">URL base de Jira</label>
+        <div className="jira-config">
+          <span className="jira-config-title">Jira (opcional)</span>
+          <div className="jira-fields">
+            <div>
+              <label htmlFor="br-jira-base-url" className="field-label">URL base de Jira</label>
               <input
                 id="br-jira-base-url"
                 type="text"
                 value={jiraBaseUrl}
                 onChange={(e) => setJiraBaseUrl(e.target.value)}
                 placeholder="https://jira.tuempresa.com/jira"
-                className="ac-config-input"
+                className="field-input"
               />
             </div>
-            <div className="ac-jira-field">
-              <label htmlFor="br-jira-token" className="ac-config-label">Token PAT de Jira</label>
+            <div>
+              <label htmlFor="br-jira-token" className="field-label">Token PAT de Jira</label>
               <input
                 id="br-jira-token"
                 type="password"
                 value={jiraToken}
                 onChange={(e) => setJiraToken(e.target.value)}
                 placeholder="Tu Personal Access Token"
-                className="ac-config-input"
+                className="field-input"
               />
             </div>
           </div>
           {jiraConfigured && (
             <button
               type="button"
-              className="btn btn-copy"
+              className="btn-ghost"
               onClick={() => setJiraConfigExpanded(false)}
               style={{ alignSelf: 'flex-end', marginTop: '4px' }}
             >
@@ -203,30 +203,36 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         {/* Row 1: Platform + Market */}
         <div className="br-form-row">
           <div className="br-form-field">
-            <label htmlFor="br-platform" className="br-form-label">Plataforma</label>
-            <select
-              id="br-platform"
-              value={formData.platform}
-              onChange={(e) => handlePlatformChange(e.target.value)}
-              className="br-form-select"
-            >
-              {PLATFORMS.map(p => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-            </select>
+            <label htmlFor="br-platform" className="field-label">Plataforma</label>
+            <div className="input-wrap">
+              <select
+                id="br-platform"
+                value={formData.platform}
+                onChange={(e) => handlePlatformChange(e.target.value)}
+                className="field-select"
+              >
+                {PLATFORMS.map(p => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
           </div>
           <div className="br-form-field">
-            <label htmlFor="br-market" className="br-form-label">Mercado</label>
-            <select
-              id="br-market"
-              value={formData.market}
-              onChange={(e) => updateForm('market', e.target.value)}
-              className="br-form-select"
-            >
-              {BERSHKA_MARKETS.map(m => (
-                <option key={m.code} value={m.code}>{m.label} ({m.code})</option>
-              ))}
-            </select>
+            <label htmlFor="br-market" className="field-label">Mercado</label>
+            <div className="input-wrap">
+              <select
+                id="br-market"
+                value={formData.market}
+                onChange={(e) => updateForm('market', e.target.value)}
+                className="field-select"
+              >
+                {BERSHKA_MARKETS.map(m => (
+                  <option key={m.code} value={m.code}>{m.label} ({m.code})</option>
+                ))}
+              </select>
+              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
           </div>
         </div>
 
@@ -235,34 +241,37 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
           {isWeb ? (
             <>
               <div className="br-form-field">
-                <label htmlFor="br-browser" className="br-form-label">Navegador</label>
-                <select
-                  id="br-browser"
-                  value={formData.browser}
-                  onChange={(e) => updateForm('browser', e.target.value)}
-                  className="br-form-select"
-                >
-                  {browserOptions.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <label htmlFor="br-browser" className="field-label">Navegador</label>
+                <div className="input-wrap">
+                  <select
+                    id="br-browser"
+                    value={formData.browser}
+                    onChange={(e) => updateForm('browser', e.target.value)}
+                    className="field-select"
+                  >
+                    {browserOptions.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                  <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                </div>
               </div>
               <div className="br-form-field">
-                <label htmlFor="br-url" className="br-form-label">URL</label>
+                <label htmlFor="br-url" className="field-label">URL</label>
                 <input
                   id="br-url"
                   type="text"
                   value={formData.url || ''}
                   onChange={(e) => updateForm('url', e.target.value)}
                   placeholder="https://localhost:3443/"
-                  className="br-form-input"
+                  className="field-input"
                 />
               </div>
             </>
           ) : (
             <>
               <div className="br-form-field">
-                <label htmlFor="br-app-version" className="br-form-label">
+                <label htmlFor="br-app-version" className="field-label">
                   {formData.platform === 'app-android' ? 'Versión APK' : 'Versión Build'}
                 </label>
                 <input
@@ -271,26 +280,29 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
                   value={formData.appVersion || ''}
                   onChange={(e) => updateForm('appVersion', e.target.value)}
                   placeholder={formData.platform === 'app-android' ? 'ej: v2024.12.1' : 'ej: v2024.12.1'}
-                  className="br-form-input"
+                  className="field-input"
                 />
               </div>
               <div className="br-form-field">
-                <label htmlFor="br-device" className="br-form-label">Dispositivo</label>
-                <select
-                  id="br-device"
-                  value={formData.device || ''}
-                  onChange={(e) => updateForm('device', e.target.value)}
-                  className="br-form-select"
-                >
-                  {formData.platform === 'app-ios'
-                    ? IOS_DEVICES.map(d => (
-                        <option key={d.id} value={d.label}>{d.label}</option>
-                      ))
-                    : ANDROID_DEVICES.map(d => (
-                        <option key={d.id} value={d.label}>{d.label}</option>
-                      ))
-                  }
-                </select>
+                <label htmlFor="br-device" className="field-label">Dispositivo</label>
+                <div className="input-wrap">
+                  <select
+                    id="br-device"
+                    value={formData.device || ''}
+                    onChange={(e) => updateForm('device', e.target.value)}
+                    className="field-select"
+                  >
+                    {formData.platform === 'app-ios'
+                      ? IOS_DEVICES.map(d => (
+                          <option key={d.id} value={d.label}>{d.label}</option>
+                        ))
+                      : ANDROID_DEVICES.map(d => (
+                          <option key={d.id} value={d.label}>{d.label}</option>
+                        ))
+                    }
+                  </select>
+                  <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                </div>
               </div>
             </>
           )}
@@ -300,7 +312,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         {isApp && (
           <div className="br-form-row-single">
             <div className="br-form-field">
-              <label htmlFor="br-os-version" className="br-form-label">
+              <label htmlFor="br-os-version" className="field-label">
                 {formData.platform === 'app-android' ? 'Versión Android' : 'Versión iOS'}
               </label>
               <input
@@ -309,7 +321,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
                 value={formData.osVersion || ''}
                 onChange={(e) => updateForm('osVersion', e.target.value)}
                 placeholder={formData.platform === 'app-android' ? 'ej: Android 14' : 'ej: iOS 18'}
-                className="br-form-input"
+                className="field-input"
               />
             </div>
           </div>
@@ -318,14 +330,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         {/* Row 4: Related Jira ticket */}
         <div className="br-form-row-single">
           <div className="br-form-field">
-            <label htmlFor="br-jira-ticket" className="br-form-label">Ticket relacionado (opcional)</label>
+            <label htmlFor="br-jira-ticket" className="field-label">Ticket relacionado (opcional)</label>
             <input
               id="br-jira-ticket"
               type="text"
               value={formData.jiraTicketUrl || ''}
               onChange={(e) => updateForm('jiraTicketUrl', e.target.value)}
               placeholder="URL del ticket de Jira relacionado (opcional)"
-              className="br-form-input"
+              className="field-input"
             />
           </div>
         </div>
@@ -333,13 +345,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         {/* Row 5: Bug description */}
         <div className="br-form-row-single">
           <div className="br-form-field">
-            <label htmlFor="br-description" className="br-form-label">Descripción del bug</label>
+            <label htmlFor="br-description" className="field-label">Descripción del bug</label>
             <textarea
               id="br-description"
               value={formData.description}
               onChange={(e) => updateForm('description', e.target.value)}
               placeholder='Describe el bug de forma informal, ej: "Al añadir talla M al carrito desde mobile, el precio se muestra como 0€ en la minicesta"'
-              className="textarea br-description-ta"
+              className="field-textarea"
+              style={{ minHeight: 120 }}
             />
           </div>
         </div>
@@ -351,14 +364,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
           id="br-output"
           value={output}
           readOnly
-          className="textarea textarea-output br-output-ta"
+          className="field-textarea br-output-ta"
           placeholder="El bug report generado aparecerá aquí..."
         />
         {output && (
           <div className="copy-row">
             <button
               type="button"
-              className={`btn btn-copy ${copied ? 'btn-copied' : ''}`}
+              className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopy}
             >
               {copied ? '¡Copiado!' : 'Copiar al portapapeles'}
@@ -366,15 +379,15 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
           </div>
         )}
         {reasoning && (
-          <details ref={reasoningRef} className="reasoning-section" onToggle={handleReasoningToggle}>
-            <summary className="reasoning-summary">Razonamiento del modelo</summary>
-            <div className="reasoning-content">{reasoning}</div>
+          <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
+            <summary>Razonamiento del modelo</summary>
+            <div className="reasoning-body">{reasoning}</div>
           </details>
         )}
       </div>
 
       {/* Action buttons */}
-      <div className="bottom-actions">
+      <div className="actions-bar">
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate}
@@ -387,7 +400,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         )}
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!formData.description && !output}
         >

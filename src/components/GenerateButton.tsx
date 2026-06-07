@@ -10,13 +10,13 @@ export function GenerateButton({ onClick, disabled, loading, label, loadingLabel
   return (
     <button
       type="button"
-      className={`btn btn-generate ${loading ? 'btn-loading' : ''}`}
+      className={`btn-primary ${loading ? 'btn-loading' : ''}`}
       onClick={onClick}
       disabled={disabled || loading}
     >
       {loading ? (
         <>
-          <span className="spinner" />
+          <span className="spinner-new" />
           {loadingLabel || 'Generando...'}
         </>
       ) : (

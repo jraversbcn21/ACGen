@@ -9,7 +9,6 @@ ACGen es una aplicación web (SPA) que integra cuatro herramientas impulsadas po
 
 Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-mercado europeo con pruebas en web (https://localhost:3443/) y apps nativas (Android APK, iOS IPA).
 
-<!-- TODO: Add screenshot of landing page -->
 
 ---
 

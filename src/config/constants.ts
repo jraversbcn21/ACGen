@@ -20,6 +20,7 @@ REGLAS ADICIONALES:
 - En el campo *Pais/Entorno:*, el entorno siempre debe ser "Pro". Formato: [País del contexto]/Pro. Ejemplo: España/Pro, México/Pro, Francia/Pro.
 - En el campo *Fecha:*, usa EXACTAMENTE la fecha proporcionada en el mensaje del usuario. No inventes ni generes otra fecha.
 - En el campo *Validado por:*, siempre debe ser exactamente "Jorge-QA". Sin excepciones.
+- En el campo *ResultadoQA:*, siempre debe aparecer exactamente "(/)/(x)". Sin excepciones ni variaciones.
 
 If more than one acceptance criterion is needed, repeat the full block above for each one, separated by a blank line. Do not add any text outside of these blocks.`;
 
@@ -70,6 +71,7 @@ export const STORAGE_KEYS = {
   MODEL: 'acgen_model',
   JIRA_TOKEN: 'acgen_jira_token',
   JIRA_BASE_URL: 'acgen_jira_base_url',
+  THEME: 'acgen_theme',
 } as const;
 
 export const TEMPERATURE = 0.2;

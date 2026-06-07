@@ -97,49 +97,49 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
   }, [criteria]);
 
   return (
-    <div className="ac-wrapper">
-      <div className="ac-jira-section">
-        <span className="ac-jira-label">Jira (opcional)</span>
-        <div className="ac-jira-row">
-          <div className="ac-jira-field">
-            <label htmlFor="jira-base-url" className="ac-config-label">URL base de Jira</label>
+    <div>
+      <div className="jira-config">
+        <span className="jira-config-title">Jira (opcional)</span>
+        <div className="jira-fields">
+          <div>
+            <label htmlFor="jira-base-url" className="field-label">URL base de Jira</label>
             <input
               id="jira-base-url"
               type="text"
               value={jiraBaseUrl}
               onChange={(e) => setJiraBaseUrl(e.target.value)}
               placeholder="https://jira.tuempresa.com/jira"
-              className="ac-config-input"
+              className="field-input"
             />
           </div>
-          <div className="ac-jira-field">
-            <label htmlFor="jira-token" className="ac-config-label">Token PAT de Jira</label>
+          <div>
+            <label htmlFor="jira-token" className="field-label">Token PAT de Jira</label>
             <input
               id="jira-token"
               type="password"
               value={jiraToken}
               onChange={(e) => setJiraToken(e.target.value)}
               placeholder="Tu Personal Access Token"
-              className="ac-config-input"
+              className="field-input"
             />
           </div>
         </div>
       </div>
 
-      <div className="ac-main">
-        <div className="ac-main-left">
+      <div className="criteria-grid">
+        <div className="criteria-left">
           <textarea
             id="requirements"
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
             placeholder="Pega la URL del ticket de Jira o escribe los requisitos..."
-            className="textarea ac-input-ta"
+            className="field-textarea criteria-input-ta"
           />
           <textarea
             id="criteria-output"
             value={criteria}
             onChange={(e) => setCriteria(e.target.value)}
-            className="textarea textarea-output ac-output-ta"
+            className="field-textarea criteria-output-ta"
             readOnly={false}
             placeholder={!criteria ? 'Los criterios generados aparecerán aquí...' : ''}
           />
@@ -147,7 +147,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
             <div className="copy-row">
               <button
                 type="button"
-                className={`btn btn-copy ${copied ? 'btn-copied' : ''}`}
+                className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
                 onClick={handleCopy}
               >
                 {copied ? '¡Copiado!' : 'Copiar al portapapeles'}
@@ -155,24 +155,24 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
             </div>
           )}
         </div>
-        <div className="ac-main-right">
+        <div className="criteria-right">
           {reasoning && (
-            <details ref={reasoningRef} className="reasoning-section" onToggle={handleReasoningToggle}>
-              <summary className="reasoning-summary">Razonamiento del modelo</summary>
-              <div className="reasoning-content">{reasoning}</div>
+            <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
+              <summary>Razonamiento del modelo</summary>
+              <div className="reasoning-body">{reasoning}</div>
             </details>
           )}
         </div>
       </div>
 
-      <div className="ac-bottom-actions">
+      <div className="actions-bar">
         <GenerateButton onClick={handleGenerate} disabled={!canGenerate} loading={status === 'loading'} />
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!requirements && !criteria}
         >

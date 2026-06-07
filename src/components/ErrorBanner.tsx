@@ -12,11 +12,13 @@ export function ErrorBanner({ message, onDismiss }: ErrorBannerProps) {
       <span className="error-text">{message}</span>
       <button
         type="button"
-        className="btn btn-icon btn-dismiss"
+        className="adorn-btn dismiss-btn"
         onClick={onDismiss}
         title="Cerrar"
       >
-        ✕
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+        </svg>
       </button>
     </div>
   );

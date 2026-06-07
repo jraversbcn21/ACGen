@@ -10,13 +10,13 @@ import autoTable from 'jspdf-autotable';
 const INPUT_PLACEHOLDER = 'Describe el área o flujo que quieres cubrir (ej: Home, Búsqueda, PDP, Carrito, Checkout...)';
 
 function priorityClass(p: string): string {
-  if (p === 'Alta' || p === 'High') return 'priority-high';
-  if (p === 'Media' || p === 'Medium') return 'priority-medium';
-  return 'priority-low';
+  if (p === 'Alta' || p === 'High') return 'badge-high';
+  if (p === 'Media' || p === 'Medium') return 'badge-medium';
+  return 'badge-low';
 }
 
 function typeClass(t: string): string {
-  return (t === 'Positivo' || t === 'Positive') ? 'type-positive' : 'type-negative';
+  return (t === 'Positivo' || t === 'Positive') ? 'badge-positive' : 'badge-negative';
 }
 
 function generateJiraTable(testCases: TestCaseData[]): string {
@@ -122,9 +122,9 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
   }, [testCases]);
 
   return (
-    <div className="testcase-layout">
-      <div className="section">
-        <label htmlFor="testcase-input" className="section-label">
+    <div>
+      <div>
+        <label htmlFor="testcase-input" className="field-label">
           Instrucciones para casos de prueba
         </label>
         <textarea
@@ -132,11 +132,12 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={INPUT_PLACEHOLDER}
-          className="textarea testcase-textarea"
+          className="field-textarea"
+          style={{ minHeight: 200 }}
         />
       </div>
 
-      <div className="bottom-actions">
+      <div className="actions-bar">
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate}
@@ -146,7 +147,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
         />
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!input && !hasOutput}
         >
@@ -155,33 +156,33 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
       </div>
 
       {hasOutput && (
-        <div className="testcase-output-section">
+        <div className="output-section">
           <div className="output-header">
-            <label className="section-label">Casos de prueba generados</label>
+            <span className="field-label">Casos de prueba generados</span>
             {generatedModel && (
-              <span className="model-badge">Modelo: {generatedModel}</span>
+              <span className="model-badge-new">Modelo: {generatedModel}</span>
             )}
           </div>
 
-          <div className="testcase-actions-bar">
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
-              className={`btn btn-copy ${copied ? 'btn-copied' : ''}`}
+              className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyJira}
             >
               {copied ? '¡Copiado!' : 'Copiar como tabla Jira'}
             </button>
             <button
               type="button"
-              className="btn btn-copy"
+              className="btn-ghost"
               onClick={handleDownloadPdf}
             >
               Descargar PDF
             </button>
           </div>
 
-          <div className="testcase-table-wrapper">
-            <table className="testcase-table">
+          <div className="data-table-wrap">
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Key</th>
@@ -196,7 +197,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
               <tbody>
                 {testCases.map((tc, idx) => (
                   <tr key={tc.key || idx}>
-                    <td className="cell-key">{tc.key}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{tc.key}</td>
                     <td>{tc.summary}</td>
                     <td><span className={`badge ${priorityClass(tc.priority)}`}>{tc.priority}</span></td>
                     <td><span className={`badge ${typeClass(tc.type)}`}>{tc.type}</span></td>

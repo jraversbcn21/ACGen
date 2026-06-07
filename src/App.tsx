@@ -1,8 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import { Header } from './components/Header';
-import { ApiKeyConfig } from './components/ApiKeyConfig';
-import { ModelSelector } from './components/ModelSelector';
 import { LandingScreen } from './components/LandingScreen';
 import { AcceptanceCriteriaTool } from './components/AcceptanceCriteriaTool';
 import { TestCaseTool } from './components/TestCaseTool';
@@ -12,33 +10,41 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import type { ViewType } from './config/constants';
 
+const toolNames: Record<string, string> = {
+  acceptance: 'Criterios de aceptación',
+  testcase: 'Test Case Generator',
+  bugreport: 'Bug Report',
+  testdata: 'Datos de Prueba',
+};
+
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
   const [view, setView] = useState<ViewType>('landing');
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
 
-  const headerProps = view === 'landing'
-    ? {}
-    : {
-        onBack: () => setView('landing'),
-        subtitle: view === 'acceptance'
-          ? 'Criterios de aceptación'
-          : view === 'testcase'
-          ? 'Test Case Generator'
-          : view === 'bugreport'
-          ? 'Bug Report'
-          : 'Datos de Prueba',
-      };
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
-    <div className="app">
-      <Header {...headerProps} />
-      <main className="main">
-        <ApiKeyConfig apiKey={apiKey} onChange={setApiKey} />
-        <ModelSelector model={model} onChange={setModel} />
-
+    <div className="page">
+      <Header
+        onBack={view !== 'landing' ? () => setView('landing') : undefined}
+        subtitle={view !== 'landing' ? toolNames[view] : undefined}
+        model={model}
+        theme={theme}
+        onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+      />
+      <main className="container">
         {view === 'landing' && (
-          <LandingScreen onSelect={setView} />
+          <LandingScreen
+            onSelect={setView}
+            apiKey={apiKey}
+            onApiKeyChange={setApiKey}
+            model={model}
+            onModelChange={setModel}
+          />
         )}
 
         {view === 'acceptance' && (
