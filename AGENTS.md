@@ -17,7 +17,7 @@ No tests configured.
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata'`) in `App.tsx` — no router library.
-- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme` (via `STORAGE_KEYS.THEME`). Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme` (via `STORAGE_KEYS.THEME`). History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history` (via `useHistory` hook). Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
 - **Shared config**: all four tools receive API key and model as props from `App.tsx`. Response parsing and validation are centralized in the **service layer** — components only render.
 - **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
@@ -30,6 +30,7 @@ No tests configured.
 - System prompt (`HARDCODED_PROMPT` in `constants.ts`) — instructions + Confluence wiki format template with `{panel}`, `{quote}`, `*Dado*`, `*Cuando*`, `*Entonces*` markers.
 - `generateCriteria()` calls `generateWithGroq()` with `REQUIRED_MARKERS`. Post-response markers validated against `content` only. Missing markers → error with list of missing elements.
 - Returns `GroqResponse` (`{ content, model, reasoning? }`). Reasoning text captured from API and passed to component for display — never marker-validated.
+- **History**: `AcceptanceCriteriaTool` saves the last 10 successful generations to localStorage (`acgen_criteria_history`) via `useHistory()` hook. A "Historial" button in the actions bar opens a modal overlay (`HistoryModal`) listing saved entries. Clicking "Cargar" loads the output back into the textarea. History persists across browser sessions.
 
 ### Test Cases
 
@@ -50,6 +51,7 @@ No tests configured.
 - Platform-aware language: mobile interaction terms (tap, swipe) for app platforms, web terms (click, hover, scroll) for web platforms.
 - Optional Jira context: if a related ticket URL is provided and Jira credentials exist, fetches ticket data via the proxy and includes it as context in the prompt.
 - Output: Jira wiki format bug report, copyable to clipboard. Reasoning is captured and displayed when available.
+- **History**: Same history feature as the Criteria tool — last 10 successful bug reports saved to localStorage (`acgen_bug_history`) via `useHistory()`. "Historial" button in actions bar opens `HistoryModal` with saved entries.
 
 ### Test Data Generator
 
@@ -124,7 +126,8 @@ App shell uses `<div className="page">` > `<header className="topbar">` + `<main
 - **Main content** — asymmetric two-column grid (`.criteria-grid`, `grid-template-columns: 3fr 2fr`, gap 24px):
   - **Left column** (`.criteria-left`) — stacked: input textarea (`.field-textarea.criteria-input-ta`), output textarea (`.field-textarea.criteria-output-ta`, editable), "Copiar al portapapeles" button (`.btn-ghost` with `.copy-row`, right-aligned, visible only when output exists).
   - **Right column** (`.criteria-right`) — reasoning collapsible (`.reasoning` with `<details>/<summary>` + `.reasoning-body`). Only rendered when reasoning exists. Expand triggers `scrollIntoView` via `requestAnimationFrame`.
-- **Action buttons**: `.actions-bar` with GenerateButton (`.btn-primary`), loading status (`.loading-status`), "Limpiar" (`.btn-ghost`).
+- **Action buttons**: `.actions-bar` with GenerateButton (`.btn-primary`), loading status (`.loading-status`), "Historial" (`.btn-ghost` with `.history-count` badge showing entry count), "Limpiar" (`.btn-ghost`).
+- **History modal**: `HistoryModal` overlay rendered at the bottom. Clicking "Cargar" on an entry sets `criteria` to that output and closes the modal. "Borrar todo" clears all entries with confirmation.
 - **Error handling**: `ErrorBanner` at the bottom.
 - **Responsive**: below 768px, `.criteria-grid` stacks to single column.
 
@@ -145,7 +148,8 @@ App shell uses `<div className="page">` > `<header className="topbar">` + `<main
   - Row 4 (`.br-form-row-single`): Optional Jira ticket URL (`.field-input`).
   - Row 5 (`.br-form-row-single`): Bug description (`.field-textarea`).
 - **Output area** (`.br-output-section`): read-only textarea (`.field-textarea`, `min-height: 350px`), "Copiar al portapapeles" button (`.btn-ghost`), reasoning collapsible (`.reasoning`) below.
-- **Action buttons** (`.actions-bar`): GenerateButton, loading status, "Limpiar" (`.btn-ghost`).
+- **Action buttons** (`.actions-bar`): GenerateButton, loading status, "Historial" (`.btn-ghost` with `.history-count` badge), "Limpiar" (`.btn-ghost`).
+- **History modal**: Same `HistoryModal` as Criteria tool. "Cargar" sets `output` to the saved entry. "Borrar todo" clears bug report history.
 - **Error handling**: `ErrorBanner` at the bottom.
 
 ### Test Data Tool (`TestDataTool.tsx`)
@@ -183,23 +187,25 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 |---|---|
 | `server/index.js` | Express proxy entry: CORS (`http://localhost:5173`), JSON middleware, mounts Jira routes at `/api/jira` |
 | `server/jiraRoutes.js` | `GET /api/jira/issue/:issueKey` — proxies to Jira REST API, returns cleaned `JiraTicketData` |
-| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVAILABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL, THEME), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
+| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVAILABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL, THEME, CRITERIA_HISTORY, BUG_HISTORY), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
 | `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning extraction + decommissioned-model + 401/429 error handling), `getReasoningParams()` (model-aware), `generateCriteria()`, `generateTestCases()` (`extractJsonArray` + `validateTestCases`, returns `TestCaseResponse`), `generateBugReport()` (date injection, returns `GroqResponse`), `generateTestData()` (`extractJsonArray`, returns `{ data, model }`) |
 | `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()` |
 | `src/App.tsx` | View state routing; renders LandingScreen / AcceptanceCriteriaTool / TestCaseTool / BugReportTool / TestDataTool. Theme state via `useLocalStorage` + `useEffect` for `data-theme` attribute. Shell: `.page` > `<main className="container">`. ApiKeyConfig and ModelSelector rendered inside LandingScreen only, not above tools. |
 | `src/components/Icons.tsx` | SVG icon library — `Icon` object with named components (criterios, testcase, bug, datos, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All 24×24, stroke-based, `currentColor`. |
 | `src/components/Header.tsx` | Sticky topbar: brand mark (purple gradient "A"), brand name, subtitle, model chip, theme toggle. Two modes: landing (full brand) and tool (back arrow + tool name). |
 | `src/components/LandingScreen.tsx` | Editorial landing: hero (eyebrow + mixed-font title), config strip (ApiKeyConfig + ModelSelector), numbered tool list with SVG icons, extensibility slot. |
-| `src/components/AcceptanceCriteriaTool.tsx` | Criteria UI: `.jira-config` section, `.criteria-grid` asymmetric columns (input→output→copy left, reasoning right), generate/clear/copy, dual input flow (Jira URL → fetch → format → generate, or plain text) |
+| `src/components/AcceptanceCriteriaTool.tsx` | Criteria UI: `.jira-config` section, `.criteria-grid` asymmetric columns (input→output→copy left, reasoning right), generate/clear/copy, history modal ("Historial" button with `.history-count` badge), dual input flow (Jira URL → fetch → format → generate, or plain text) |
 | `src/components/TestCaseTool.tsx` | Test case UI: single-column, input → generate/clear → `.data-table` with badges + Jira copy + PDF download |
-| `src/components/BugReportTool.tsx` | Bug report UI: structured form (`.br-form-grid`, platform/market, dynamic web/app fields with `.field-select` device dropdowns), `.jira-indicator`/`.jira-config` for Jira, output textarea + copy + reasoning, generate/clear |
+| `src/components/BugReportTool.tsx` | Bug report UI: structured form (`.br-form-grid`, platform/market, dynamic web/app fields with `.field-select` device dropdowns), `.jira-indicator`/`.jira-config` for Jira, output textarea + copy + reasoning, history modal, generate/clear |
 | `src/components/TestDataTool.tsx` | Test data UI: structured form (`.td-form-grid`, dataType/market/quantity), `.jira-indicator`/`.jira-config`, output `.data-table` with row copy + TSV copy + CSV download |
+| `src/components/HistoryModal.tsx` | History modal overlay: lists saved entries with date, input preview, and "Cargar" button. Opens on outside click close. Empty state message. "Borrar todo" with confirm. |
 | `src/components/GenerateButton.tsx` | Reusable button using `.btn-primary` + `.spinner-new`; accepts `label`/`loadingLabel` props |
 | `src/components/ErrorBanner.tsx` | Dismissible error alert with SVG dismiss icon, uses `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn` |
 | `src/components/ApiKeyConfig.tsx` | API key input with show/hide toggle using `Icon.eye`/`Icon.eyeOff` SVGs; uses `.field-input` + `.adorn-btn` |
 | `src/components/ModelSelector.tsx` | Model dropdown using `.field-select` + `.select-chev` with SVG chevron |
 | `src/hooks/useLocalStorage.ts` | Generic localStorage hook; validates `acgen_model` against `AVAILABLE_MODELS` on read, discards stale values to `DEFAULT_MODEL` |
-| `src/types/index.ts` | `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData` |
+| `src/hooks/useHistory.ts` | History hook — `useHistory(storageKey)` returns `{ history, addEntry, clearHistory }`. Stores up to 10 `HistoryEntry` objects in localStorage. `addEntry(input, output)` creates an entry with `crypto.randomUUID()` id, `Date.now()` timestamp, and 60-char input preview. |
+| `src/types/index.ts` | `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData`, `HistoryEntry` (id, timestamp, inputPreview, output) |
 
 ## Changing model
 
@@ -230,6 +236,7 @@ Edit `TEST_DATA_PROMPT` in `constants.ts`. Keep JSON-only constraint and per-dat
 - App shell uses `<div className="page">` > `<header className="topbar">` + `<main className="container">`.
 - Theme persisted as `acgen_theme` in localStorage via `STORAGE_KEYS.THEME`.
 - Remaining per-tool layout classes in `App.css`: `.criteria-grid`, `.criteria-left`, `.criteria-right`, `.criteria-input-ta`, `.criteria-output-ta` (acceptance criteria asymmetric grid), `.br-form-grid`, `.br-form-row`, `.br-form-row-single`, `.br-form-field`, `.br-output-section` (bug report form layout), `.td-form-grid`, `.td-form-row`, `.td-form-row-single`, `.td-form-field`, `.td-output-section`, `.td-actions-bar`, `.td-copy-col`, `.td-copy-row-btn` (test data form/table layout), `.output-section`, `.output-header` (generic output area), `.copy-row` (copy button alignment), `.btn-copied` (copy success state), `.loading-status` (inline loading text), `.steps-list` (ordered step list).
-- Shared primitives in `App.css`: `.field-input`, `.field-select`, `.field-textarea`, `.field-label`, `.input-wrap`, `.select-chev`, `.adorn-btn`, `.btn-primary`, `.btn-ghost`, `.btn-icon-new`, `.btn-loading`, `.spinner-new`, `.data-table-wrap`, `.data-table`, `.badge` + variants, `.panel`, `.panel-header`, `.panel-body`, `.reasoning`, `.jira-indicator`, `.jira-indicator-text`, `.jira-config`, `.jira-config-title`, `.jira-fields`, `.actions-bar`, `.model-badge-new`, `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn`.
+- Shared primitives in `App.css`: `.field-input`, `.field-select`, `.field-textarea`, `.field-label`, `.input-wrap`, `.select-chev`, `.adorn-btn`, `.btn-primary`, `.btn-ghost`, `.btn-icon-new`, `.btn-loading`, `.spinner-new`, `.data-table-wrap`, `.data-table`, `.badge` + variants, `.panel`, `.panel-header`, `.panel-body`, `.reasoning`, `.jira-indicator`, `.jira-indicator-text`, `.jira-config`, `.jira-config-title`, `.jira-fields`, `.actions-bar`, `.model-badge-new`, `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn`, `.history-overlay`, `.history-modal`, `.history-entry`, `.history-count`.
+- History CSS classes in `App.css`: `.history-overlay` (fixed overlay with backdrop blur), `.history-modal` (600px max-width, 70vh max-height), `.history-modal-header`/`.history-modal-title`/`.history-close-btn`, `.history-modal-body`, `.history-empty`, `.history-entry` (2-column grid: date + preview left, "Cargar" button right), `.history-entry-meta`/`-date`/`-preview`, `.history-entry-load`, `.history-count` (accent badge on button).
 - CSS custom properties in `App.css`: invariants in `:root`, light theme in `[data-theme="light"]` (also `:root`), dark theme in `[data-theme="dark"]`. All token names use `var(--*)` exclusively — no aliased old names (alias bridge removed in Phase 5).
 - Dependencies: `express` + `cors` + `concurrently` are devDependencies (proxy server); `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
