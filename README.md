@@ -1,5 +1,7 @@
 # ACGen — Suite de herramientas de QA automatizadas con IA
 
+![ACGen landing](public/screenshot.png)
+
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
