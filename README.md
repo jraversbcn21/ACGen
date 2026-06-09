@@ -11,6 +11,15 @@ ACGen es una aplicación web (SPA) que integra cuatro herramientas impulsadas po
 
 Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-mercado europeo con pruebas en web (https://localhost:3443/) y apps nativas (Android APK, iOS IPA).
 
+## Características
+
+- **Criterios de Aceptación** — Genera criterios Dado/Cuando/Entonces desde tickets de Jira o requisitos. Validación automática de formato. Historial persistente de las últimas 10 generaciones.
+- **Test Case Generator** — Genera casos de prueba QA estructurados (JSON) con prioridad, tipo, pasos y resultado esperado. Exporta como tabla Jira o PDF.
+- **Bug Report Generator** — Genera bug reports en formato Jira wiki con paneles estructurados, selección de plataforma (web/App Android/App iOS), campos dinámicos y contexto de tickets Jira. Historial persistente de las últimas 10 generaciones.
+- **Datos de Prueba** — Genera datos realistas (direcciones, facturación, registros, tarjetas, cupones) adaptados a 22 mercados europeos. Exporta como TSV o CSV.
+- **Tema oscuro** — Alterna entre modo claro y oscuro. Persistencia en localStorage.
+- **Integración Jira** — Conexión opcional mediante proxy local para leer tickets y enriquecer generaciones.
+
 
 ---
 
@@ -63,7 +72,7 @@ npm run dev:all
 
 Esto inicia simultáneamente:
 - **Vite dev server** en `http://localhost:5173`
-- **Express proxy** en `http://localhost:3001`
+- **Express proxy** en `http://localhost:3002`
 
 ### Solo Vite (sin integración Jira)
 
@@ -96,7 +105,7 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 3. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
 4. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
 
-> El proxy se ejecuta localmente en el puerto 3001. Las credenciales nunca se envían a servidores externos — solo viajan desde tu navegador al proxy local y de ahí a tu instancia de Jira.
+> El proxy se ejecuta localmente en el puerto 3002. Las credenciales nunca se envían a servidores externos — solo viajan desde tu navegador al proxy local y de ahí a tu instancia de Jira.
 
 ---
 
