@@ -61,3 +61,10 @@ export interface TestDataFormData {
   quantity: number;
   jiraTicketUrl?: string;
 }
+
+export interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  inputPreview: string;
+  output: string;
+}

@@ -72,6 +72,8 @@ export const STORAGE_KEYS = {
   JIRA_TOKEN: 'acgen_jira_token',
   JIRA_BASE_URL: 'acgen_jira_base_url',
   THEME: 'acgen_theme',
+  CRITERIA_HISTORY: 'acgen_criteria_history',
+  BUG_HISTORY: 'acgen_bug_history',
 } as const;
 
 export const TEMPERATURE = 0.2;

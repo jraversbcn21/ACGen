@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
+import { HistoryModal } from './HistoryModal';
 import { generateCriteria } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useHistory } from '../hooks/useHistory';
 import type { GenerationStatus } from '../types';
 
 interface AcceptanceCriteriaToolProps {
@@ -20,8 +22,10 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
   const [reasoning, setReasoning] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const [jiraToken, setJiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
   const [jiraBaseUrl, setJiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
+  const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
@@ -49,6 +53,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
       const result = await generateCriteria(apiKey, model, inputText, HARDCODED_PROMPT);
       setCriteria(result.content);
       setReasoning(result.reasoning);
+      addEntry(requirements, result.content);
       setStatus('success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
@@ -57,7 +62,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
     } finally {
       setLoadingStatus('');
     }
-  }, [apiKey, model, requirements, canGenerate, jiraToken, jiraBaseUrl]);
+  }, [apiKey, model, requirements, canGenerate, jiraToken, jiraBaseUrl, addEntry]);
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
@@ -173,6 +178,13 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
         <button
           type="button"
           className="btn-ghost"
+          onClick={() => setShowHistory(true)}
+        >
+          Historial {history.length > 0 && <span className="history-count">{history.length}</span>}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!requirements && !criteria}
         >
@@ -180,6 +192,14 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
         </button>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      {showHistory && (
+        <HistoryModal
+          entries={history}
+          onLoad={(output) => setCriteria(output)}
+          onClearAll={clearHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }

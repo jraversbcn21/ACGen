@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
+import { HistoryModal } from './HistoryModal';
 import { generateBugReport } from '../services/apiService';
 import { BERSHKA_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useHistory } from '../hooks/useHistory';
 import type { BugReportFormData, PlatformId } from '../types';
 
 interface BugReportToolProps {
@@ -40,9 +42,11 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   const [loadingStatus, setLoadingStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [jiraToken, setJiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
   const [jiraBaseUrl, setJiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
   const [jiraConfigExpanded, setJiraConfigExpanded] = useState(false);
+  const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
   const isApp = !isWeb;
@@ -89,6 +93,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
       const result = await generateBugReport(apiKey, model, formData, jiraContext);
       setOutput(result.content);
       setReasoning(result.reasoning);
+      addEntry(formData.description, result.content);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       setError(message);
@@ -96,7 +101,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, jiraToken, jiraBaseUrl]);
+  }, [apiKey, model, formData, canGenerate, jiraToken, jiraBaseUrl, addEntry]);
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
@@ -401,6 +406,13 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         <button
           type="button"
           className="btn-ghost"
+          onClick={() => setShowHistory(true)}
+        >
+          Historial {history.length > 0 && <span className="history-count">{history.length}</span>}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost"
           onClick={handleClear}
           disabled={!formData.description && !output}
         >
@@ -409,6 +421,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      {showHistory && (
+        <HistoryModal
+          entries={history}
+          onLoad={(output) => setOutput(output)}
+          onClearAll={clearHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }
