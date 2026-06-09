@@ -3,7 +3,7 @@ import cors from 'cors';
 import { jiraRoutes } from './jiraRoutes.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = 3002;
 
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());

@@ -1,5 +1,5 @@
 export const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-export const PROXY_URL = 'http://localhost:3001/api';
+export const PROXY_URL = 'http://localhost:3002/api';
 
 export const HARDCODED_PROMPT = `Based on all the information provided, read it, analyze it, and generate one or more acceptance criteria as you consider necessary. Do not be overly detailed; generate only the most important and general criteria. The criteria can be one or several depending on the scope of the information provided. The criteria must be written from the perspective of an end user going through the process, not from a technical point of view. Describe the steps and conditions as if a regular person were navigating or interacting with the system, using natural and everyday language, avoiding technical or implementation-specific terms.
 

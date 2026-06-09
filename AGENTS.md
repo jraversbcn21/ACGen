@@ -5,7 +5,7 @@
 | Command | Action |
 |---|---|
 | `npm run dev` | Start Vite dev server (port 5173) |
-| `npm run server` | Start Express proxy (port 3001) |
+| `npm run server` | Start Express proxy (port 3002) |
 | `npm run dev:all` | Start both Vite + proxy concurrently |
 | `npm run build` | Type-check (`tsc -b`) + Vite build |
 | `npm run lint` | ESLint |
@@ -82,7 +82,7 @@ Test case and test data output **never** includes reasoning regardless of model.
 
 ### Proxy Server
 
-- **`server/index.js`** — Express app on port 3001, CORS origin `http://localhost:5173`, JSON middleware, mounts Jira routes at `/api/jira`.
+- **`server/index.js`** — Express app on port 3002, CORS origin `http://localhost:5173`, JSON middleware, mounts Jira routes at `/api/jira`.
 - **`server/jiraRoutes.js`** — `GET /api/jira/issue/:issueKey`. Reads `X-Jira-Token` and `X-Jira-Base-Url` from request headers, proxies to `{baseUrl}/rest/api/2/issue/{issueKey}`. Returns cleaned `JiraTicketData` (key, summary, description, issueType, priority, status, labels, components, acceptanceCriteria from `customfield_10401`). Handles 401 (invalid token), 404 (not found), and generic errors with Spanish messages.
 - Run with `npm run server` or `npm run dev:all`. Not required for the non-Jira flow.
 
