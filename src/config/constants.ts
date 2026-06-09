@@ -56,7 +56,7 @@ Genera tantos casos de prueba como el usuario solicite. Si no se especifica, gen
 
 Todo el contenido generado (summary, preconditions, testSteps, expectedResult) DEBE estar en español.`;
 
-export const AVALIABLE_MODELS = [
+export const AVAILABLE_MODELS = [
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",

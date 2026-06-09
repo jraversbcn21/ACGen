@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AVALIABLE_MODELS, DEFAULT_MODEL } from '../config/constants';
+import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../config/constants';
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -7,7 +7,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
       const item = localStorage.getItem(key);
       if (item) {
         const parsed = JSON.parse(item) as T;
-        if (key === 'acgen_model' && typeof parsed === 'string' && !AVALIABLE_MODELS.includes(parsed)) {
+        if (key === 'acgen_model' && typeof parsed === 'string' && !AVAILABLE_MODELS.includes(parsed)) {
           localStorage.removeItem(key);
           return DEFAULT_MODEL as T;
         }

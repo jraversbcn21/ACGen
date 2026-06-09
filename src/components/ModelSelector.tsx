@@ -1,4 +1,4 @@
-import { AVALIABLE_MODELS } from '../config/constants';
+import { AVAILABLE_MODELS } from '../config/constants';
 
 interface ModelSelectorProps {
   model: string;
@@ -18,7 +18,7 @@ export function ModelSelector({ model, onChange }: ModelSelectorProps) {
           onChange={(e) => onChange(e.target.value)}
           className="field-select"
         >
-          {AVALIABLE_MODELS.map((m) => (
+          {AVAILABLE_MODELS.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>

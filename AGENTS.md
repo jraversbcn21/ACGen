@@ -17,7 +17,7 @@ No tests configured.
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata'`) in `App.tsx` — no router library.
-- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme` (via `STORAGE_KEYS.THEME`). Model validated against `AVALIABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme` (via `STORAGE_KEYS.THEME`). Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
 - **Shared config**: all four tools receive API key and model as props from `App.tsx`. Response parsing and validation are centralized in the **service layer** — components only render.
 - **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
@@ -166,7 +166,7 @@ App shell uses `<div className="page">` > `<header className="topbar">` + `<main
 Current active list in `src/config/constants.ts`:
 
 ```
-AVALIABLE_MODELS = [
+AVAILABLE_MODELS = [
   "openai/gpt-oss-120b",        ← DEFAULT_MODEL
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",
@@ -183,7 +183,7 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 |---|---|
 | `server/index.js` | Express proxy entry: CORS (`http://localhost:5173`), JSON middleware, mounts Jira routes at `/api/jira` |
 | `server/jiraRoutes.js` | `GET /api/jira/issue/:issueKey` — proxies to Jira REST API, returns cleaned `JiraTicketData` |
-| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVALIABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL, THEME), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
+| `src/config/constants.ts` | `API_URL`, `PROXY_URL`, `HARDCODED_PROMPT`, `REQUIRED_MARKERS`, `TESTCASE_PROMPT`, `BUG_REPORT_PROMPT`, `TEST_DATA_PROMPT`, `AVAILABLE_MODELS`, `DEFAULT_MODEL`, `TEMPERATURE`, `STORAGE_KEYS` (API_KEY, MODEL, JIRA_TOKEN, JIRA_BASE_URL, THEME), `ViewType`, `JIRA_URL_REGEX`, `BERSHKA_MARKETS` (22 markets), `PLATFORMS`, `IOS_DEVICES` (iPhone XR, iPhone 11), `ANDROID_DEVICES` (Redmi Note 11 Pro, Moto g35 5G), `DATA_TYPES` |
 | `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning extraction + decommissioned-model + 401/429 error handling), `getReasoningParams()` (model-aware), `generateCriteria()`, `generateTestCases()` (`extractJsonArray` + `validateTestCases`, returns `TestCaseResponse`), `generateBugReport()` (date injection, returns `GroqResponse`), `generateTestData()` (`extractJsonArray`, returns `{ data, model }`) |
 | `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()` |
 | `src/App.tsx` | View state routing; renders LandingScreen / AcceptanceCriteriaTool / TestCaseTool / BugReportTool / TestDataTool. Theme state via `useLocalStorage` + `useEffect` for `data-theme` attribute. Shell: `.page` > `<main className="container">`. ApiKeyConfig and ModelSelector rendered inside LandingScreen only, not above tools. |
@@ -198,12 +198,12 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 | `src/components/ErrorBanner.tsx` | Dismissible error alert with SVG dismiss icon, uses `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn` |
 | `src/components/ApiKeyConfig.tsx` | API key input with show/hide toggle using `Icon.eye`/`Icon.eyeOff` SVGs; uses `.field-input` + `.adorn-btn` |
 | `src/components/ModelSelector.tsx` | Model dropdown using `.field-select` + `.select-chev` with SVG chevron |
-| `src/hooks/useLocalStorage.ts` | Generic localStorage hook; validates `acgen_model` against `AVALIABLE_MODELS` on read, discards stale values to `DEFAULT_MODEL` |
+| `src/hooks/useLocalStorage.ts` | Generic localStorage hook; validates `acgen_model` against `AVAILABLE_MODELS` on read, discards stale values to `DEFAULT_MODEL` |
 | `src/types/index.ts` | `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData` |
 
 ## Changing model
 
-Edit `AVALIABLE_MODELS` array and `DEFAULT_MODEL` in `src/config/constants.ts`. Models are plain strings. `useLocalStorage` automatically discards stale stored values on next load.
+Edit `AVAILABLE_MODELS` array and `DEFAULT_MODEL` in `src/config/constants.ts`. Models are plain strings. `useLocalStorage` automatically discards stale stored values on next load.
 
 ## Changing output format — Acceptance Criteria
 
