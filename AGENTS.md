@@ -23,8 +23,6 @@ Unit tests with Vitest + React Testing Library. Only hooks with non-trivial logi
 
 Run with `npm test` before committing when modifying hooks.
 
-No tests configured.
-
 ## Architecture
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
@@ -217,7 +215,10 @@ Note: models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32
 | `src/components/ModelSelector.tsx` | Model dropdown using `.field-select` + `.select-chev` with SVG chevron |
 | `src/hooks/useLocalStorage.ts` | Generic localStorage hook; validates `acgen_model` against `AVAILABLE_MODELS` on read, discards stale values to `DEFAULT_MODEL` |
 | `src/hooks/useHistory.ts` | History hook — `useHistory(storageKey)` returns `{ history, addEntry, clearHistory }`. Stores up to 10 `HistoryEntry` objects in localStorage. `addEntry(input, output)` creates an entry with `crypto.randomUUID()` id, `Date.now()` timestamp, and 60-char input preview. |
+| `src/hooks/useHistory.test.ts` | Unit tests for `useHistory` hook — 10 tests: initialization, entry shape, inputPreview truncation (60 chars) and trim, newest-first order, 10-entry limit, localStorage persistence, hydration from storage, clearHistory, invalid JSON recovery. |
+| `src/hooks/useLocalStorage.test.ts` | Unit tests for `useLocalStorage` hook — 9 tests: initialValue fallback, stored value retrieval, setValue, functional updater, invalid JSON recovery, stale `acgen_model` discarding, valid model preservation, key-scoped model validation, object values. |
 | `src/types/index.ts` | `GroqResponse` (with `reasoning?`), `TestCaseResponse`, `GroqApiError`, `GenerationStatus`, `JiraTicketData`, `TestCaseData`, `PlatformId`, `BugReportFormData`, `DataTypeId`, `TestDataFormData`, `HistoryEntry` (id, timestamp, inputPreview, output) |
+| `tsconfig.test.json` | TypeScript config for Vitest (extends `tsconfig.app.json`, adds `vitest/globals` types, disables `noUnusedLocals`/`noUnusedParameters`). Does NOT affect production build. |
 
 ## Changing model
 
@@ -247,8 +248,21 @@ Edit `TEST_DATA_PROMPT` in `constants.ts`. Keep JSON-only constraint and per-dat
 - `Icons.tsx` exports an `Icon` object with named icon components and a base `Svg` helper.
 - App shell uses `<div className="page">` > `<header className="topbar">` + `<main className="container">`.
 - Theme persisted as `acgen_theme` in localStorage via `STORAGE_KEYS.THEME`.
+- `tsconfig.app.json` has `"exclude": ["src/**/*.test.ts", "src/test"]` to keep test files out of the production build (`tsc -b`). `tsconfig.test.json` extends it with `"types": ["vitest/globals"]`, `"noUnusedLocals": false`, `"noUnusedParameters": false` for test-only TypeScript context. It does NOT affect `npm run build`.
+- Test files are co-located with their source files in `src/hooks/`. Only hooks with non-trivial logic are tested — no component tests.
+- `Icons.tsx` exports an `Icon` object with named icon components and a base `Svg` helper.
+- App shell uses `<div className="page">` > `<header className="topbar">` + `<main className="container">`.
+- Theme persisted as `acgen_theme` in localStorage via `STORAGE_KEYS.THEME`.
 - Remaining per-tool layout classes in `App.css`: `.criteria-grid`, `.criteria-left`, `.criteria-right`, `.criteria-input-ta`, `.criteria-output-ta` (acceptance criteria asymmetric grid), `.br-form-grid`, `.br-form-row`, `.br-form-row-single`, `.br-form-field`, `.br-output-section` (bug report form layout), `.td-form-grid`, `.td-form-row`, `.td-form-row-single`, `.td-form-field`, `.td-output-section`, `.td-actions-bar`, `.td-copy-col`, `.td-copy-row-btn` (test data form/table layout), `.output-section`, `.output-header` (generic output area), `.copy-row` (copy button alignment), `.btn-copied` (copy success state), `.loading-status` (inline loading text), `.steps-list` (ordered step list).
 - Shared primitives in `App.css`: `.field-input`, `.field-select`, `.field-textarea`, `.field-label`, `.input-wrap`, `.select-chev`, `.adorn-btn`, `.btn-primary`, `.btn-ghost`, `.btn-icon-new`, `.btn-loading`, `.spinner-new`, `.data-table-wrap`, `.data-table`, `.badge` + variants, `.panel`, `.panel-header`, `.panel-body`, `.reasoning`, `.jira-indicator`, `.jira-indicator-text`, `.jira-config`, `.jira-config-title`, `.jira-fields`, `.actions-bar`, `.model-badge-new`, `.error-banner`, `.error-icon`, `.error-text`, `.dismiss-btn`.
 - History CSS classes in `App.css`: `.history-overlay` (fixed overlay with backdrop blur), `.history-modal` (600px max-width, 70vh max-height), `.history-modal-header`/`.history-modal-title`/`.history-close-btn`, `.history-modal-body`, `.history-empty`, `.history-entry` (2-column grid: date + preview left, "Cargar" button right), `.history-entry-meta`/`.history-entry-date`/`.history-entry-preview`, `.history-entry-load`, `.history-count` (accent badge on button).
 - CSS custom properties in `App.css`: invariants in `:root`, light theme in `[data-theme="light"]` (also `:root`), dark theme in `[data-theme="dark"]`. All token names use `var(--*)` exclusively — no aliased old names (alias bridge removed in Phase 5).
 - Dependencies: `express` + `cors` + `concurrently` are devDependencies (proxy server); `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
+
+## Potential future tools
+
+Tools identified as useful for the functional QA workflow at Bershka that could be added following the same SPA architecture:
+
+- **Regression checklist** — takes as input the area affected by a change (checkout, PDP, login, cart, search…) and generates a risk-prioritized regression checklist in Jira wiki / Confluence format. Highest priority: covers the gap between development and QA that the current 4 tools do not address.
+- **Test summary / Release notes** — takes the bug reports and test cases from a session and generates an executive summary for the team or PM in Confluence format.
+- **Figma vs implementation comparator** — visual analysis of design vs actual behavior (requires image upload; technically more complex than the current tools).
