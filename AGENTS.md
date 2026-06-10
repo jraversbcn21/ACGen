@@ -10,6 +10,18 @@
 | `npm run build` | Type-check (`tsc -b`) + Vite build |
 | `npm run lint` | ESLint |
 | `npm run preview` | Vite preview |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:ui` | Run tests with Vitest UI |
+
+## Testing
+
+Unit tests with Vitest + React Testing Library. Only hooks with non-trivial logic are tested — no component tests.
+
+- `src/hooks/useHistory.test.ts` — 10 tests covering: initialization, entry shape, inputPreview truncation/trim, newest-first order, 10-entry limit, localStorage persistence, hydration from storage, clearHistory, and invalid JSON recovery.
+- `src/hooks/useLocalStorage.test.ts` — 9 tests covering: initialValue fallback, stored value retrieval, setValue, functional updater, invalid JSON recovery, stale `acgen_model` discarding, valid model preservation, key-scoped model validation, and object values.
+
+Run with `npm test` before committing when modifying hooks.
 
 No tests configured.
 
