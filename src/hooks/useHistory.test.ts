@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useHistory } from '../src/hooks/useHistory';
+import { useHistory } from './useHistory';
 
 const KEY = 'test_history';
 

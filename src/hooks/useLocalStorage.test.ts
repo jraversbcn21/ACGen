@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
-import { useLocalStorage } from '../src/hooks/useLocalStorage';
-import { DEFAULT_MODEL, AVAILABLE_MODELS } from '../src/config/constants';
+import { useLocalStorage } from './useLocalStorage';
+import { DEFAULT_MODEL, AVAILABLE_MODELS } from '../config/constants';
 
 describe('useLocalStorage', () => {
   it('returns initialValue when localStorage is empty', () => {
