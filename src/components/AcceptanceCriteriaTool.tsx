@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
@@ -20,6 +20,9 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
   const [status, setStatus] = useState<GenerationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [reasoning, setReasoning] = useState<string | undefined>();
+  const [ttsLang, setTtsLang] = useState<'es-ES' | 'en-US'>('en-US');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
   const [copied, setCopied] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
   const [showHistory, setShowHistory] = useState(false);
@@ -66,6 +69,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
+    stopSpeech();
     setRequirements('');
     setCriteria('');
     setReasoning(undefined);
@@ -84,6 +88,47 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
       el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
     });
   }, []);
+
+  const startSpeech = (text: string) => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = ttsLang;
+    const voices = window.speechSynthesis.getVoices();
+    const langPrefix = ttsLang.split('-')[0];
+    const match = voices
+      .filter(v => v.lang.startsWith(langPrefix))
+      .sort((a, b) => {
+        const quality = (v: SpeechSynthesisVoice): number => {
+          const n = v.name.toLowerCase();
+          if (n.includes('natural')) return 4;
+          if (n.includes('neural'))  return 3;
+          if (n.includes('online'))  return 2;
+          if (!v.localService)       return 1;
+          return 0;
+        };
+        return quality(b) - quality(a);
+      })[0];
+    if (match) utter.voice = match;
+    utter.onstart = () => setIsSpeaking(true);
+    utter.onend = () => setIsSpeaking(false);
+    utter.onerror = () => setIsSpeaking(false);
+    synthRef.current = window.speechSynthesis;
+    window.speechSynthesis.speak(utter);
+  };
+
+  const stopSpeech = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
+
+  useEffect(() => {
+    return () => { window.speechSynthesis.cancel(); };
+  }, []);
+
+  useEffect(() => {
+    if (isSpeaking) stopSpeech();
+  }, [reasoning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = useCallback(async () => {
     try {
@@ -163,7 +208,47 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
         <div className="criteria-right">
           {reasoning && (
             <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
-              <summary>Razonamiento del modelo</summary>
+              <summary>
+                <span className="reasoning-label">Razonamiento del modelo</span>
+                <span className="reasoning-tts" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className={`tts-lang-btn ${ttsLang === 'es-ES' ? 'active' : ''}`}
+                    onClick={() => { stopSpeech(); setTtsLang('es-ES'); }}
+                    title="Leer en español"
+                  >ES</button>
+                  <button
+                    type="button"
+                    className={`tts-lang-btn ${ttsLang === 'en-US' ? 'active' : ''}`}
+                    onClick={() => { stopSpeech(); setTtsLang('en-US'); }}
+                    title="Read in English"
+                  >EN</button>
+                  {!isSpeaking ? (
+                    <button
+                      type="button"
+                      className="tts-play-btn"
+                      onClick={() => startSpeech(reasoning ?? '')}
+                      title="Leer en voz alta"
+                      disabled={!reasoning}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <polygon points="5,3 19,12 5,21" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="tts-stop-btn"
+                      onClick={stopSpeech}
+                      title="Detener lectura"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                      </svg>
+                    </button>
+                  )}
+                </span>
+              </summary>
               <div className="reasoning-body">{reasoning}</div>
             </details>
           )}
