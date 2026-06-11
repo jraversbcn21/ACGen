@@ -400,6 +400,51 @@ body {
   border-top: 1px solid var(--border); max-height: 500px; overflow-y: auto;
 }
 
+/* === TTS CONTROLS === */
+.reasoning summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reasoning-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.reasoning-tts {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.tts-lang-btn {
+  height: 24px; padding: 0 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text-3);
+  cursor: pointer; font-family: var(--font-mono);
+  transition: all .15s var(--ease);
+}
+.tts-lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tts-lang-btn.active { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+
+.tts-play-btn,
+.tts-stop-btn {
+  display: grid; place-items: center;
+  width: 28px; height: 28px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text-2);
+  cursor: pointer;
+  transition: all .15s var(--ease);
+}
+.tts-play-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); }
+.tts-play-btn:disabled { opacity: .35; cursor: not-allowed; }
+.tts-stop-btn { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+.tts-stop-btn:hover { opacity: .8; }
+
 /* === HISTORY MODAL === */
 .history-overlay {
   position: fixed; inset: 0; z-index: 100;
@@ -603,6 +648,9 @@ body {
 }
 .criteria-output-ta {
   min-height: 400px;
+}
+.br-output-ta {
+  min-height: 520px;
 }
 
 /* Test Data Tool */
