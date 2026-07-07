@@ -592,6 +592,17 @@ body {
   margin-top: 8px;
 }
 
+.btn-copy {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btn-copy:hover {
+  background: var(--success);
+  color: #fff;
+}
+
 .btn-copied {
   background: var(--success-bg);
   border-color: var(--success);

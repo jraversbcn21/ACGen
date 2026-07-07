@@ -197,10 +197,10 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
             <div className="copy-row">
               <button
                 type="button"
-                className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
+                className="btn-ghost btn-copy"
                 onClick={handleCopy}
               >
-                {copied ? '¡Copiado!' : 'Copiar al portapapeles'}
+                {copied ? '¡Copiado!' : 'Copiar Criterio'}
               </button>
             </div>
           )}

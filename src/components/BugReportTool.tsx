@@ -420,10 +420,10 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
           <div className="copy-row">
             <button
               type="button"
-              className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
+              className="btn-ghost btn-copy"
               onClick={handleCopy}
             >
-              {copied ? '¡Copiado!' : 'Copiar al portapapeles'}
+              {copied ? '¡Copiado!' : 'Copiar bug report'}
             </button>
           </div>
         )}
