@@ -28,7 +28,7 @@ const EMPTY_JQL: SprintJql = {
   highPriority: '',
 };
 
-function createEmptyGrid(rows: number = 20, cols: number = 10): string[][] {
+function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
 }
 

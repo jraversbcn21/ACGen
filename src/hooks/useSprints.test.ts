@@ -26,7 +26,7 @@ describe('useSprints', () => {
     expect(sprints[0].id).toBeTruthy();
     expect(sprints[0].jql.resolved).toBe('');
     expect(sprints[0].tabGrid.resolved).toHaveLength(20);
-    expect(sprints[0].tabGrid.resolved[0]).toHaveLength(10);
+    expect(sprints[0].tabGrid.resolved[0]).toHaveLength(6);
     expect(sprints[0].tabGrid.resolved[0][0]).toBe('');
   });
 
@@ -166,6 +166,6 @@ describe('useSprints', () => {
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toHaveLength(1);
     expect(result.current.sprints[0].tabGrid.resolved).toHaveLength(20);
-    expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(10);
+    expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(6);
   });
 });

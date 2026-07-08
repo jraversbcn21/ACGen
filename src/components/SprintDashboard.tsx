@@ -57,7 +57,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
       const data = await jiraSearch(jql, jiraToken, jiraBaseUrl);
       const existingGrid = sprint.tabGrid[tab] || [];
       const maxRows = Math.max(existingGrid.length, data.issues.length, 20);
-      const maxCols = existingGrid[0]?.length || 10;
+      const maxCols = existingGrid[0]?.length || 6;
       const newGrid: string[][] = Array.from({ length: maxRows }, (_, ri) => {
         const existing = existingGrid[ri] || [];
         const ticket = data.issues[ri];
@@ -122,7 +122,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority'];
   const grid = sprint.tabGrid[activeTab] || [];
   const rowCount = grid.length || 20;
-  const colCount = grid[0]?.length || 10;
+  const colCount = grid[0]?.length || 6;
 
   const getColWidth = (col: number) => colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
 
