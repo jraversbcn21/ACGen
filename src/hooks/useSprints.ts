@@ -18,8 +18,7 @@ export interface Sprint {
   endDate: string | null;
   archived: boolean;
   jql: SprintJql;
-  tabColumns: Record<TabId, string[]>;
-  tabCells: Record<TabId, Record<string, Record<string, string>>>;
+  tabGrid: Record<TabId, string[][]>;
 }
 
 const EMPTY_JQL: SprintJql = {
@@ -29,12 +28,18 @@ const EMPTY_JQL: SprintJql = {
   highPriority: '',
 };
 
-const DEFAULT_COLUMNS: Record<TabId, string[]> = {
-  resolved: ['Prioridad', 'Autor'],
-  created: ['Prioridad', 'Autor'],
-  reopened: ['Motivo', 'Squad'],
-  highPriority: ['Motivo', 'Squad'],
-};
+function createEmptyGrid(rows: number = 20, cols: number = 10): string[][] {
+  return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
+}
+
+function emptyTabGrid(): Record<TabId, string[][]> {
+  return {
+    resolved: createEmptyGrid(),
+    created: createEmptyGrid(),
+    reopened: createEmptyGrid(),
+    highPriority: createEmptyGrid(),
+  };
+}
 
 export function useSprints() {
   const [sprints, setSprints] = useState<Sprint[]>(() => {
@@ -44,8 +49,7 @@ export function useSprints() {
       const parsed = JSON.parse(raw);
       return parsed.map((s: Sprint) => ({
         ...s,
-        tabColumns: s.tabColumns || { ...DEFAULT_COLUMNS },
-        tabCells: s.tabCells || { resolved: {}, created: {}, reopened: {}, highPriority: {} },
+        tabGrid: s.tabGrid || emptyTabGrid(),
       }));
     } catch {
       return [];
@@ -60,8 +64,7 @@ export function useSprints() {
       endDate: null,
       archived: false,
       jql: { ...EMPTY_JQL },
-      tabColumns: { ...DEFAULT_COLUMNS },
-      tabCells: { resolved: {}, created: {}, reopened: {}, highPriority: {} },
+      tabGrid: emptyTabGrid(),
     };
     setSprints((prev) => {
       const updated = [sprint, ...prev];
@@ -94,33 +97,30 @@ export function useSprints() {
     });
   }, []);
 
-  const updateCell = useCallback((id: string, tabId: TabId, ticketKey: string, column: string, value: string) => {
+  const updateGridCell = useCallback((id: string, tabId: TabId, row: number, col: number, value: string) => {
     setSprints((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== id) return s;
-        const tabData = s.tabCells[tabId] || {};
-        const ticketData = tabData[ticketKey] || {};
-        return {
-          ...s,
-          tabCells: {
-            ...s.tabCells,
-            [tabId]: { ...tabData, [ticketKey]: { ...ticketData, [column]: value } },
-          },
-        };
+        const grid = s.tabGrid[tabId] || [];
+        const newGrid = grid.map((r, ri) => {
+          if (ri !== row) return r;
+          const newRow = [...r];
+          while (newRow.length <= col) newRow.push('');
+          newRow[col] = value;
+          return newRow;
+        });
+        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, []);
 
-  const updateTabColumns = useCallback((id: string, tabId: TabId, columns: string[]) => {
+  const setTabGrid = useCallback((id: string, tabId: TabId, grid: string[][]) => {
     setSprints((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== id) return s;
-        return {
-          ...s,
-          tabColumns: { ...s.tabColumns, [tabId]: columns },
-        };
+        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: grid } };
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
@@ -135,5 +135,5 @@ export function useSprints() {
     });
   }, []);
 
-  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateCell, updateTabColumns, deleteSprint };
+  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint };
 }

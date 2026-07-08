@@ -25,11 +25,9 @@ describe('useSprints', () => {
     expect(sprints[0].archived).toBe(false);
     expect(sprints[0].id).toBeTruthy();
     expect(sprints[0].jql.resolved).toBe('');
-    expect(sprints[0].tabColumns.resolved).toEqual(['Prioridad', 'Autor']);
-    expect(sprints[0].tabColumns.created).toEqual(['Prioridad', 'Autor']);
-    expect(sprints[0].tabColumns.reopened).toEqual(['Motivo', 'Squad']);
-    expect(sprints[0].tabColumns.highPriority).toEqual(['Motivo', 'Squad']);
-    expect(sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
+    expect(sprints[0].tabGrid.resolved).toHaveLength(20);
+    expect(sprints[0].tabGrid.resolved[0]).toHaveLength(10);
+    expect(sprints[0].tabGrid.resolved[0][0]).toBe('');
   });
 
   it('archiveSprint sets archived true and endDate to today', () => {
@@ -41,9 +39,8 @@ describe('useSprints', () => {
     act(() => {
       result.current.archiveSprint(id);
     });
-    const archived = result.current.sprints[0];
-    expect(archived.archived).toBe(true);
-    expect(archived.endDate).not.toBeNull();
+    expect(result.current.sprints[0].archived).toBe(true);
+    expect(result.current.sprints[0].endDate).not.toBeNull();
   });
 
   it('updateSprint modifies sprint fields', () => {
@@ -70,28 +67,41 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].jql.resolved).toBe('project = BERSHKA AND status = Done');
   });
 
-  it('updateCell sets a value for a ticket column', () => {
+  it('updateGridCell sets a value at row,col', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
       result.current.addSprint('Sprint 24', '2026-07-08');
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateCell(id, 'resolved', 'BERSHKA-123', 'Squad', 'Payment');
+      result.current.updateGridCell(id, 'resolved', 0, 0, 'BERSHKA-123');
     });
-    expect(result.current.sprints[0].tabCells.resolved['BERSHKA-123']['Squad']).toBe('Payment');
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('BERSHKA-123');
   });
 
-  it('updateTabColumns replaces columns for a tab', () => {
+  it('updateGridCell expands grid if col is out of bounds', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
       result.current.addSprint('Sprint 24', '2026-07-08');
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateTabColumns(id, 'resolved', ['Squad', 'Notas']);
+      result.current.updateGridCell(id, 'resolved', 0, 15, 'test');
     });
-    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Squad', 'Notas']);
+    expect(result.current.sprints[0].tabGrid.resolved[0][15]).toBe('test');
+  });
+
+  it('setTabGrid replaces the entire grid for a tab', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+    const newGrid = [['BERSHKA-1', '2026-07-08'], ['BERSHKA-2', '2026-07-09']];
+    act(() => {
+      result.current.setTabGrid(id, 'resolved', newGrid);
+    });
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual(newGrid);
   });
 
   it('deleteSprint removes a sprint', () => {
@@ -125,14 +135,14 @@ describe('useSprints', () => {
         endDate: '2026-07-07',
         archived: true,
         jql: { resolved: 'jql1', created: '', reopened: '', highPriority: '' },
-        tabColumns: { resolved: ['Squad'], created: ['Tipo'], reopened: ['Motivo'], highPriority: [] },
-        tabCells: { resolved: {}, created: {}, reopened: {}, highPriority: {} },
+        tabGrid: { resolved: [['BERSHKA-1', '2026-07-08']], created: [], reopened: [], highPriority: [] },
       },
     ];
     localStorage.setItem('acgen_sprints', JSON.stringify(existing));
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toHaveLength(1);
     expect(result.current.sprints[0].name).toBe('Sprint 23');
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('BERSHKA-1');
   });
 
   it('recovers from invalid JSON in localStorage', () => {
@@ -141,7 +151,7 @@ describe('useSprints', () => {
     expect(result.current.sprints).toEqual([]);
   });
 
-  it('migrates old sprints without tabColumns/tabCells', () => {
+  it('migrates old sprints without tabGrid', () => {
     const oldSprint = [
       {
         id: 'old-1',
@@ -150,13 +160,12 @@ describe('useSprints', () => {
         endDate: null,
         archived: false,
         jql: { resolved: '', created: '', reopened: '', highPriority: '' },
-        notes: {},
       },
     ];
     localStorage.setItem('acgen_sprints', JSON.stringify(oldSprint));
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toHaveLength(1);
-    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Prioridad', 'Autor']);
-    expect(result.current.sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
+    expect(result.current.sprints[0].tabGrid.resolved).toHaveLength(20);
+    expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(10);
   });
 });

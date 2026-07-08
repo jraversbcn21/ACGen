@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { jiraSearch } from '../services/jiraService';
-import type { JiraSearchResult } from '../types';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
 const TAB_LABELS: Record<TabId, string> = {
@@ -10,77 +9,91 @@ const TAB_LABELS: Record<TabId, string> = {
   highPriority: 'Prioridad Alta',
 };
 
+const TICKET_KEY_PATTERN = /^[A-Z]+-\d+$/;
+
+function colToLetter(col: number): string {
+  let letter = '';
+  let n = col;
+  while (n >= 0) {
+    letter = String.fromCharCode(65 + (n % 26)) + letter;
+    n = Math.floor(n / 26) - 1;
+  }
+  return letter;
+}
+
 interface SprintDashboardProps {
   sprint: Sprint;
   jiraToken: string;
   jiraBaseUrl: string;
   onUpdateTabJql: (tabId: TabId, jql: string) => void;
-  onUpdateCell: (tabId: TabId, ticketKey: string, column: string, value: string) => void;
-  onUpdateTabColumns: (tabId: TabId, columns: string[]) => void;
+  onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
+  onSetTabGrid: (tabId: TabId, grid: string[][]) => void;
   onArchive: () => void;
 }
 
-export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql, onUpdateCell, onUpdateTabColumns, onArchive }: SprintDashboardProps) {
+export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql, onUpdateGridCell, onSetTabGrid, onArchive }: SprintDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
-  const [results, setResults] = useState<Record<TabId, JiraSearchResult[]>>({
-    resolved: [],
-    created: [],
-    reopened: [],
-    highPriority: [],
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newColName, setNewColName] = useState('');
 
   const fetchTab = useCallback(async (tab: TabId) => {
     const jql = sprint.jql[tab];
-    if (!jql.trim()) {
-      setResults((prev) => ({ ...prev, [tab]: [] }));
-      return;
-    }
+    if (!jql.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const data = await jiraSearch(jql, jiraToken, jiraBaseUrl);
-      setResults((prev) => ({ ...prev, [tab]: data.issues }));
+      const existingGrid = sprint.tabGrid[tab] || [];
+      const maxRows = Math.max(existingGrid.length, data.issues.length, 20);
+      const maxCols = existingGrid[0]?.length || 10;
+      const newGrid: string[][] = Array.from({ length: maxRows }, (_, ri) => {
+        const existing = existingGrid[ri] || [];
+        const ticket = data.issues[ri];
+        const row: string[] = Array.from({ length: maxCols }, (_, ci) => {
+          if (ticket && ci === 0) return ticket.key;
+          if (ticket && ci === 1) {
+            const d = new Date(tab === 'created' ? ticket.created : ticket.updated);
+            return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          }
+          return existing[ci] || '';
+        });
+        return row;
+      });
+      onSetTabGrid(tab, newGrid);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al consultar Jira');
     } finally {
       setLoading(false);
     }
-  }, [sprint.jql, jiraToken, jiraBaseUrl]);
+  }, [sprint.jql, sprint.tabGrid, jiraToken, jiraBaseUrl, onSetTabGrid]);
 
   useEffect(() => {
-    fetchTab(activeTab);
+    const jql = sprint.jql[activeTab];
+    if (jql.trim()) {
+      fetchTab(activeTab);
+    }
   }, [activeTab, fetchTab]);
 
   const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority'];
+  const grid = sprint.tabGrid[activeTab] || [];
+  const rowCount = grid.length || 20;
+  const colCount = grid[0]?.length || 10;
 
-  const formatDate = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const handleAddRow = () => {
+    const newGrid = [...grid, Array.from({ length: colCount }, () => '')];
+    onSetTabGrid(activeTab, newGrid);
   };
 
-  const userColumns = sprint.tabColumns[activeTab] || [];
-
-  const handleAddColumn = () => {
-    const name = newColName.trim();
-    if (!name) return;
-    if (userColumns.includes(name)) return;
-    onUpdateTabColumns(activeTab, [...userColumns, name]);
-    setNewColName('');
+  const handleAddCol = () => {
+    const newGrid = grid.map((row) => [...row, '']);
+    onSetTabGrid(activeTab, newGrid);
   };
 
-  const handleRemoveColumn = (col: string) => {
-    onUpdateTabColumns(activeTab, userColumns.filter((c) => c !== col));
+  const getCellValue = (row: number, col: number) => {
+    return grid[row]?.[col] || '';
   };
 
-  const getCellValue = (ticketKey: string, col: string) => {
-    const tabData = sprint.tabCells[activeTab] || {};
-    const ticketData = tabData[ticketKey] || {};
-    return ticketData[col] || '';
-  };
+  const baseUrl = jiraBaseUrl.replace(/\/+$/, '');
 
   return (
     <div className="sprint-dashboard">
@@ -93,9 +106,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
             onClick={() => setActiveTab(tab)}
           >
             {TAB_LABELS[tab]}
-            {results[tab].length > 0 && (
-              <span className="history-count">{results[tab].length}</span>
-            )}
           </button>
         ))}
         <button
@@ -109,7 +119,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <label className="field-label">JQL para {TAB_LABELS[activeTab]}</label>
+        <label className="field-label">JQL</label>
         <textarea
           value={sprint.jql[activeTab]}
           onChange={(e) => onUpdateTabJql(activeTab, e.target.value)}
@@ -117,33 +127,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
           className="field-textarea"
           style={{ minHeight: 48 }}
         />
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 8 }}>
-        <input
-          type="text"
-          className="field-input"
-          value={newColName}
-          onChange={(e) => setNewColName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleAddColumn(); }}
-          placeholder="Nombre de columna..."
-          style={{ height: 34, fontSize: 13, maxWidth: 220 }}
-        />
-        <button type="button" className="btn-ghost" onClick={handleAddColumn} style={{ padding: '6px 14px', fontSize: 13 }}>
-          + Columna
-        </button>
-        {userColumns.map((col) => (
-          <span key={col} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
-            {col}
-            <button
-              type="button"
-              onClick={() => handleRemoveColumn(col)}
-              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0 }}
-            >
-              ×
-            </button>
-          </span>
-        ))}
       </div>
 
       {error && (
@@ -156,60 +139,79 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
         <span className="loading-status" style={{ display: 'block', marginTop: 12 }}>Consultando Jira...</span>
       )}
 
-      {!loading && results[activeTab].length === 0 && sprint.jql[activeTab].trim() && (
-        <p style={{ marginTop: 16, color: 'var(--text-3)', fontSize: 14 }}>Sin tickets en esta categoría</p>
-      )}
-
-      {!loading && !sprint.jql[activeTab].trim() && (
-        <p style={{ marginTop: 16, color: 'var(--text-3)', fontSize: 14 }}>Configura la JQL para ver los tickets</p>
-      )}
-
-      {!loading && results[activeTab].length > 0 && (
-        <div className="data-table-wrap" style={{ marginTop: 16 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ticket</th>
-                <th>Fecha</th>
-                {userColumns.map((col) => (
-                  <th key={col}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {results[activeTab].map((ticket) => (
-                <tr key={ticket.key}>
-                  <td>
-                    <a
-                      href={`${jiraBaseUrl.replace(/\/+$/, '')}/browse/${ticket.key}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
-                    >
-                      {ticket.key}
-                    </a>
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {formatDate(activeTab === 'created' ? ticket.created : ticket.updated)}
-                  </td>
-                  {userColumns.map((col) => (
-                    <td key={col}>
+      <div className="sprint-spreadsheet-wrap" style={{ marginTop: 12, overflow: 'auto', maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+        <table className="sprint-spreadsheet" style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+          <thead>
+            <tr>
+              <th style={{
+                position: 'sticky', top: 0, left: 0, zIndex: 2,
+                width: 36, minWidth: 36, height: 28, background: 'var(--surface-2)',
+                border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
+              }}></th>
+              {Array.from({ length: colCount }, (_, ci) => (
+                <th key={ci} style={{
+                  position: 'sticky', top: 0, zIndex: 1,
+                  minWidth: 120, height: 28, background: 'var(--surface-2)',
+                  border: '1px solid var(--border)', fontSize: 11, fontWeight: 700,
+                  color: 'var(--text-3)', textAlign: 'center',
+                }}>{colToLetter(ci)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: rowCount }, (_, ri) => (
+              <tr key={ri}>
+                <td style={{
+                  position: 'sticky', left: 0, zIndex: 1,
+                  width: 36, minWidth: 36, height: 28, background: 'var(--surface-2)',
+                  border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
+                  textAlign: 'center', fontWeight: 700,
+                }}>{ri + 1}</td>
+                {Array.from({ length: colCount }, (_, ci) => {
+                  const value = getCellValue(ri, ci);
+                  const isTicketKey = ci === 0 && TICKET_KEY_PATTERN.test(value);
+                  return (
+                    <td key={ci} style={{ border: '1px solid var(--border)', padding: 0, position: 'relative' }}>
                       <input
                         type="text"
-                        className="field-input"
-                        value={getCellValue(ticket.key, col)}
-                        onChange={(e) => onUpdateCell(activeTab, ticket.key, col, e.target.value)}
-                        placeholder={col}
-                        style={{ height: 32, fontSize: 12, minWidth: 120 }}
+                        value={value}
+                        onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
+                        style={{
+                          width: '100%', height: 28, border: 'none', outline: 'none',
+                          padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
+                          background: 'transparent', color: isTicketKey ? 'var(--accent)' : 'var(--text)',
+                          fontWeight: isTicketKey ? 600 : 400,
+                        }}
                       />
+                      {isTicketKey && (
+                        <a
+                          href={`${baseUrl}/browse/${value}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)',
+                            fontSize: 10, color: 'var(--accent)', textDecoration: 'none',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >↗</a>
+                      )}
                     </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
+          + Fila
+        </button>
+        <button type="button" className="btn-ghost" onClick={handleAddCol} style={{ padding: '6px 14px', fontSize: 13 }}>
+          + Columna
+        </button>
+      </div>
 
       {!sprint.archived && (
         <div className="actions-bar">

@@ -10,7 +10,7 @@ interface SprintTrackerProps {
 }
 
 export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
-  const { sprints, addSprint, archiveSprint, updateTabJql, updateCell, updateTabColumns, deleteSprint } = useSprints();
+  const { sprints, addSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
 
@@ -34,15 +34,15 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     updateTabJql(selectedSprint.id, tabId, jql);
   }, [selectedSprint, updateTabJql]);
 
-  const handleUpdateCell = useCallback((tabId: TabId, ticketKey: string, column: string, value: string) => {
+  const handleUpdateGridCell = useCallback((tabId: TabId, row: number, col: number, value: string) => {
     if (!selectedSprint) return;
-    updateCell(selectedSprint.id, tabId, ticketKey, column, value);
-  }, [selectedSprint, updateCell]);
+    updateGridCell(selectedSprint.id, tabId, row, col, value);
+  }, [selectedSprint, updateGridCell]);
 
-  const handleUpdateTabColumns = useCallback((tabId: TabId, columns: string[]) => {
+  const handleSetTabGrid = useCallback((tabId: TabId, grid: string[][]) => {
     if (!selectedSprint) return;
-    updateTabColumns(selectedSprint.id, tabId, columns);
-  }, [selectedSprint, updateTabColumns]);
+    setTabGrid(selectedSprint.id, tabId, grid);
+  }, [selectedSprint, setTabGrid]);
 
   const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
 
@@ -81,8 +81,8 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
           jiraToken={jiraToken.trim()}
           jiraBaseUrl={jiraBaseUrl.trim()}
           onUpdateTabJql={handleUpdateTabJql}
-          onUpdateCell={handleUpdateCell}
-          onUpdateTabColumns={handleUpdateTabColumns}
+          onUpdateGridCell={handleUpdateGridCell}
+          onSetTabGrid={handleSetTabGrid}
           onArchive={handleArchive}
         />
       </div>
