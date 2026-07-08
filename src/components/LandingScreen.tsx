@@ -3,7 +3,7 @@ import { ModelSelector } from './ModelSelector';
 import { Icon } from './Icons';
 
 interface LandingScreenProps {
-  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata') => void;
+  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker') => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   model: string;
@@ -39,6 +39,13 @@ const tools = [
     desc: 'Genera datos de prueba realistas por mercado',
     tag: 'Datos',
   },
+  {
+    id: 'sprinttracker' as const,
+    icon: Icon.sprint,
+    title: 'Sprint Tracker',
+    desc: 'Dashboard de tracking de tickets Jira por sprint',
+    tag: 'Tracking',
+  },
 ];
 
 export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModelChange }: LandingScreenProps) {
@@ -59,7 +66,7 @@ export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModel
 
       <div className="sec-head">
         <h2 className="sec-title">Generadores</h2>
-        <span className="sec-count">04</span>
+        <span className="sec-count">05</span>
       </div>
 
       <div className="tool-list">

@@ -77,4 +77,15 @@ export const Icon = {
     </Svg>
   ),
   back: (p: SvgProps) => (<Svg sw={1.7} {...p}><path d="M19 12H6M12 18l-6-6 6-6" /></Svg>),
+  sprint: (p: SvgProps) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="7" height="7" rx="1.2" />
+      <rect x="14" y="3" width="7" height="7" rx="1.2" />
+      <rect x="3" y="14" width="7" height="7" rx="1.2" />
+      <rect x="14" y="14" width="7" height="7" rx="1.2" />
+      <path d="M7 17v3M17 17v3M7 7v-3M17 7v-3" />
+      <circle cx="7" cy="20" r="1.2" />
+      <circle cx="17" cy="20" r="1.2" />
+    </Svg>
+  ),
 };

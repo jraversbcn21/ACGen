@@ -729,3 +729,29 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* === SPRINT TRACKER === */
+.sprint-dashboard {
+  animation: fadeIn 0.3s ease;
+}
+
+.sprint-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.sprint-tab-active {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background: var(--accent-weak) !important;
+}
+
+.sprint-card {
+  transition: box-shadow 0.18s var(--ease), background 0.15s var(--ease);
+}
+.sprint-card:hover {
+  box-shadow: var(--shadow-sm);
+}

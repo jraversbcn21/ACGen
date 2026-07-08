@@ -6,6 +6,7 @@ import { AcceptanceCriteriaTool } from './components/AcceptanceCriteriaTool';
 import { TestCaseTool } from './components/TestCaseTool';
 import { BugReportTool } from './components/BugReportTool';
 import { TestDataTool } from './components/TestDataTool';
+import { SprintTracker } from './components/SprintTracker';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import type { ViewType } from './config/constants';
@@ -15,11 +16,14 @@ const toolNames: Record<string, string> = {
   testcase: 'Test Case Generator',
   bugreport: 'Bug Report',
   testdata: 'Datos de Prueba',
+  sprinttracker: 'Sprint Tracker',
 };
 
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
+  const [jiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
+  const [jiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
   const [view, setView] = useState<ViewType>('landing');
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
 
@@ -61,6 +65,10 @@ export default function App() {
 
         {view === 'testdata' && (
           <TestDataTool apiKey={apiKey} model={model} />
+        )}
+
+        {view === 'sprinttracker' && (
+          <SprintTracker jiraToken={jiraToken} jiraBaseUrl={jiraBaseUrl} />
         )}
       </main>
     </div>
