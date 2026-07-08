@@ -12,15 +12,16 @@ interface SprintTrackerProps {
 
 export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
   const { sprints, addSprint, updateSprint, archiveSprint, updateNotes, deleteSprint } = useSprints();
-  const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
+  const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
   const [showJqlConfig, setShowJqlConfig] = useState(false);
 
   const handleSelectSprint = useCallback((sprint: Sprint) => {
-    setSelectedSprint(sprint);
+    setSelectedSprintId(sprint.id);
   }, []);
 
   const handleBack = useCallback(() => {
-    setSelectedSprint(null);
+    setSelectedSprintId(null);
     setShowJqlConfig(false);
   }, []);
 
@@ -28,7 +29,7 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     if (!selectedSprint) return;
     if (!confirm('¿Archivar este sprint? El sprint archivado se moverá al historial.')) return;
     archiveSprint(selectedSprint.id);
-    setSelectedSprint(null);
+    setSelectedSprintId(null);
   }, [selectedSprint, archiveSprint]);
 
   const handleUpdateNotes = useCallback((ticketKey: string, note: string) => {
