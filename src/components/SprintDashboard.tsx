@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { jiraSearch } from '../services/jiraService';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
@@ -10,6 +10,8 @@ const TAB_LABELS: Record<TabId, string> = {
 };
 
 const TICKET_KEY_PATTERN = /^[A-Z]+-\d+$/;
+const DEFAULT_COL_WIDTH = 120;
+const MIN_COL_WIDTH = 50;
 
 function colToLetter(col: number): string {
   let letter = '';
@@ -35,6 +37,9 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+
+  const resizeRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
 
   const fetchTab = useCallback(async (tab: TabId) => {
     const jql = sprint.jql[tab];
@@ -74,10 +79,44 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
     }
   }, [activeTab, fetchTab]);
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { col, startX, startWidth } = resizeRef.current;
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(MIN_COL_WIDTH, startWidth + diff);
+      setColWidths((prev) => ({ ...prev, [`${activeTab}-${col}`]: newWidth }));
+    };
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    if (resizeRef.current) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [activeTab]);
+
+  const startResize = (e: React.MouseEvent, col: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentWidth = colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
+    resizeRef.current = { col, startX: e.clientX, startWidth: currentWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority'];
   const grid = sprint.tabGrid[activeTab] || [];
   const rowCount = grid.length || 20;
   const colCount = grid[0]?.length || 10;
+
+  const getColWidth = (col: number) => colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
 
   const handleAddRow = () => {
     const newGrid = [...grid, Array.from({ length: colCount }, () => '')];
@@ -139,8 +178,14 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
         <span className="loading-status" style={{ display: 'block', marginTop: 12 }}>Consultando Jira...</span>
       )}
 
-      <div className="sprint-spreadsheet-wrap" style={{ marginTop: 12, overflow: 'auto', maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-        <table className="sprint-spreadsheet" style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+      <div style={{ marginTop: 12, overflow: 'auto', maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 36 }} />
+            {Array.from({ length: colCount }, (_, ci) => (
+              <col key={ci} style={{ width: getColWidth(ci) }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               <th style={{
@@ -151,10 +196,20 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
               {Array.from({ length: colCount }, (_, ci) => (
                 <th key={ci} style={{
                   position: 'sticky', top: 0, zIndex: 1,
-                  minWidth: 120, height: 28, background: 'var(--surface-2)',
+                  height: 28, background: 'var(--surface-2)',
                   border: '1px solid var(--border)', fontSize: 11, fontWeight: 700,
                   color: 'var(--text-3)', textAlign: 'center',
-                }}>{colToLetter(ci)}</th>
+                  position: 'relative',
+                }}>
+                  {colToLetter(ci)}
+                  <div
+                    onMouseDown={(e) => startResize(e, ci)}
+                    style={{
+                      position: 'absolute', right: -1, top: 0, width: 5, height: '100%',
+                      cursor: 'col-resize', zIndex: 10,
+                    }}
+                  />
+                </th>
               ))}
             </tr>
           </thead>
@@ -171,7 +226,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                   const value = getCellValue(ri, ci);
                   const isTicketKey = ci === 0 && TICKET_KEY_PATTERN.test(value);
                   return (
-                    <td key={ci} style={{ border: '1px solid var(--border)', padding: 0, position: 'relative' }}>
+                    <td key={ci} style={{ border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden' }}>
                       <input
                         type="text"
                         value={value}
