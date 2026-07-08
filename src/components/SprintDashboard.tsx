@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { jiraSearch } from '../services/jiraService';
+import { useState, useEffect, useRef } from 'react';
 import type { Sprint, TabId } from '../hooks/useSprints';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
@@ -33,61 +32,19 @@ function colToLetter(col: number): string {
 
 interface SprintDashboardProps {
   sprint: Sprint;
-  jiraToken: string;
   jiraBaseUrl: string;
-  onUpdateTabJql: (tabId: TabId, jql: string) => void;
   onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
   onSetTabGrid: (tabId: TabId, grid: string[][]) => void;
   onArchive: () => void;
 }
 
-export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql, onUpdateGridCell, onSetTabGrid, onArchive }: SprintDashboardProps) {
+export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTabGrid, onArchive }: SprintDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`, {});
   const [isResizing, setIsResizing] = useState(false);
   const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
   const resizeRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
-
-  const fetchTab = useCallback(async (tab: TabId) => {
-    const jql = sprint.jql[tab];
-    if (!jql.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await jiraSearch(jql, jiraToken, jiraBaseUrl);
-      const existingGrid = sprint.tabGrid[tab] || [];
-      const maxRows = Math.max(existingGrid.length, data.issues.length, 20);
-      const maxCols = existingGrid[0]?.length || 6;
-      const newGrid: string[][] = Array.from({ length: maxRows }, (_, ri) => {
-        const existing = existingGrid[ri] || [];
-        const ticket = data.issues[ri];
-        const row: string[] = Array.from({ length: maxCols }, (_, ci) => {
-          if (ticket && ci === 0) return ticket.key;
-          if (ticket && ci === 1) {
-            const d = new Date(tab === 'created' ? ticket.created : ticket.updated);
-            return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          }
-          return existing[ci] || '';
-        });
-        return row;
-      });
-      onSetTabGrid(tab, newGrid);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al consultar Jira');
-    } finally {
-      setLoading(false);
-    }
-  }, [sprint.jql, sprint.tabGrid, jiraToken, jiraBaseUrl, onSetTabGrid]);
-
-  useEffect(() => {
-    const jql = sprint.jql[activeTab];
-    if (jql.trim()) {
-      fetchTab(activeTab);
-    }
-  }, [activeTab, fetchTab]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -132,11 +89,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
     onSetTabGrid(activeTab, newGrid);
   };
 
-  const handleAddCol = () => {
-    const newGrid = grid.map((row) => [...row, '']);
-    onSetTabGrid(activeTab, newGrid);
-  };
-
   const getCellValue = (row: number, col: number) => {
     return grid[row]?.[col] || '';
   };
@@ -156,36 +108,17 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
             {TAB_LABELS[tab]}
           </button>
         ))}
-        <button
-          type="button"
+        <a
+          href="https://chromewebstore.google.com/detail/SnapLink/nooilpnmljdmpdknbkckjiieafoaikfc?utm_source=ext_app_menu"
+          target="_blank"
+          rel="noopener noreferrer"
           className="btn-ghost"
-          onClick={() => fetchTab(activeTab)}
-          style={{ marginLeft: 'auto' }}
+          style={{ marginLeft: 'auto', padding: '6px 14px', fontSize: 12, textDecoration: 'none' }}
+          title="Descargar extensión SnapLink para Chrome"
         >
-          Refrescar
-        </button>
+          + SnapLink
+        </a>
       </div>
-
-      <div style={{ marginTop: 12 }}>
-        <label className="field-label">JQL</label>
-        <textarea
-          value={sprint.jql[activeTab]}
-          onChange={(e) => onUpdateTabJql(activeTab, e.target.value)}
-          placeholder={`project = BERSHKA AND sprint = "${sprint.name}"...`}
-          className="field-textarea"
-          style={{ minHeight: 48 }}
-        />
-      </div>
-
-      {error && (
-        <div className="error-banner" style={{ marginTop: 12 }}>
-          <span className="error-text">{error}</span>
-        </div>
-      )}
-
-      {loading && (
-        <span className="loading-status" style={{ display: 'block', marginTop: 12 }}>Consultando Jira...</span>
-      )}
 
       <div style={{ marginTop: 12, overflowX: 'auto', width: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed', width: '100%' }}>
@@ -334,9 +267,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
           + Fila
-        </button>
-        <button type="button" className="btn-ghost" onClick={handleAddCol} style={{ padding: '6px 14px', fontSize: 13 }}>
-          + Columna
         </button>
       </div>
 

@@ -28,7 +28,7 @@ Run `npm test` before committing when modifying hooks.
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library.
-- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
 - **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
 - **Theme**: light/dark via `[data-theme]` attribute on `<html>`. Toggle button in Header topbar. State managed in `App.tsx` via `useLocalStorage<'light'|'dark'>(STORAGE_KEYS.THEME, 'light')` + `useEffect` that syncs attribute. Initialized from stored value, falls back to `prefers-color-scheme`.
@@ -67,13 +67,15 @@ Run `npm test` before committing when modifying hooks.
 
 ### Sprint Tracker
 
-- **New 5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`.
-- No Groq dependency — only queries Jira via the proxy.
-- **Data model**: sprints stored in localStorage (`acgen_sprints`). Each sprint has JQL per tab (`jql`), a spreadsheet grid (`tabGrid: Record<TabId, string[][]>`), and metadata (name, dates, archived flag).
-- **4 tabs** per sprint: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has inline JQL textarea and a spreadsheet grid.
-- **Grid**: editable 2D array (20 rows × 6 columns default). Column headers show letter (A-F) and category-specific name. Columns resizable via drag handle. "Ticket" column values matching `^[A-Z]+-\d+$` render as clickable Jira links. "+ Fila" / "+ Columna" buttons to expand. All cells editable.
-- **JQL refresh**: clicks "Refrescar" → `jiraSearch()` hits `GET /api/jira/search?jql=...` on proxy → populates column A with ticket key and column B with date.
-- **Archiving**: "Archivar Sprint" sets `archived: true` + `endDate`. Archived sprints can still be viewed (data refreshes from Jira).
+- **5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`.
+- Fully offline spreadsheet — no Groq or Jira API dependency.
+- **Data model**: sprints stored in localStorage (`acgen_sprints`). Each sprint has a spreadsheet grid (`tabGrid: Record<TabId, string[][]>`), JQL strings per tab (`jql`, not exposed in UI), and metadata (name, dates, archived flag). Column widths persisted separately per sprint in `acgen_sprint_col_widths_{sprintId}`.
+- **4 tabs** per sprint: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has its own spreadsheet grid.
+- **Grid**: editable 2D array (20 rows × 6 columns fixed). Column headers show letter (A-F) and category-specific name. Columns resizable via drag handle, widths persist in localStorage. Only "+ Fila" button to expand rows. All cells editable.
+- **Ticket column (A)**: values starting with a ticket key (`^([A-Z]+-\d+)\b`) display as clickable hyperlinks — clicking anywhere on the cell opens the Jira ticket in a new tab. SnapLink integration: pasting via `Ctrl+V` automatically parses `Title - URL` format and stores `KEY Title` as display text.
+- **SnapLink button**: link to Chrome Web Store extension in the tab bar for easy setup.
+- **Keyboard navigation**: arrow keys move focus between cells. Ticket cells show a subtle accent highlight when focused via keyboard. `Tab`/`Shift+Tab` navigate in DOM order.
+- **Archiving**: "Archivar Sprint" sets `archived: true` + `endDate`. Archived sprints remain viewable.
 - **Migration**: old sprints without `tabGrid` get initialized with empty grid on load.
 
 ### Model-aware reasoning params
@@ -139,9 +141,9 @@ Structured form (dataType/market/quantity). Output: HTML table with row copy + T
 
 - **SprintList**: active sprint card (accent border) + archived list. "Nuevo Sprint" form (name + start date). Delete with confirm.
 - **SprintDashboard**: tabbed interface (4 category tabs). Each tab has:
-  - **JQL textarea** — type or paste JQL query for that category
-  - **Spreadsheet grid** (`.sprint-spreadsheet-wrap`) — columns A-F with letter headers + category-specific names (Ticket, Fecha, Prioridad, Autor / Motivo, Squad). Resizable columns via drag handle on header border. Editable cells. Column A values matching `^[A-Z]+-\d+$` get Jira link ↗. "+ Fila" and "+ Columna" expand the grid
-  - **"Refrescar" button** — fetches from Jira via JQL, fills column A + B
+  - **Spreadsheet grid** (overflow-x scroll, 100% width) — columns A-F with letter headers + category-specific names (Ticket, Fecha, Prioridad, Autor / Motivo, Squad). Columns A-F fill the container evenly via `tableLayout: fixed`. Resizable columns via drag handle on header border; widths persist in localStorage per sprint. Editable cells. Ticket column values starting with `^[A-Z]+-\d+` display as full-cell clickable hyperlinks (accent color, bold, pointer cursor, `window.open` on click). SnapLink paste via `Ctrl+V` extracts key + title. "+ Fila" button to expand.
+  - **"+ SnapLink" button** — links to Chrome Web Store extension for easy ticket URL copying.
+  - **Keyboard navigation** — arrow keys move focus between cells. Focused ticket cells get accent background + border highlight. Tab/Shift+Tab for sequential navigation.
   - **"Archivar Sprint" button** — sends sprint to history
 
 ## Models
@@ -173,7 +175,7 @@ Models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32b` wer
 | `src/components/SearchableSelect.tsx` | Reusable searchable dropdown (used in BugReport/TestData market selects) |
 | `src/components/SprintTracker.tsx` | Sprint Tracker router: list → detail navigation |
 | `src/components/SprintList.tsx` | Sprint cards (active + archived), new sprint form, delete |
-| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet grid with inline JQL, resizable columns, Jira fetch |
+| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet grid: SnapLink paste, clickable ticket cells, keyboard nav, resizable persisted columns |
 | `src/hooks/useSprints.ts` | Sprint CRUD hook with localStorage persistence (exports Sprint, TabId, SprintJql types) |
 | `src/hooks/useSprints.test.ts` | 13 unit tests for useSprints |
 
@@ -199,6 +201,6 @@ Edit `TEST_DATA_PROMPT` in `constants.ts`. Add entries to `DATA_TYPES` and `LABE
 - `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
 - `express` + `cors` + `concurrently` are devDependencies (proxy server).
 - ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
-- Sprint Tracker does NOT use Groq API — only Jira proxy.
+- Sprint Tracker operates fully offline — no Groq or Jira API calls. JQL fields are stored in the data model but not exposed in the UI.
 - Test files co-located with source in `src/hooks/`.
 - Design tokens in `:root` + `[data-theme="light"]` / `[data-theme="dark"]`.

@@ -10,7 +10,7 @@ interface SprintTrackerProps {
 }
 
 export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
-  const { sprints, addSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint } = useSprints();
+  const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
 
@@ -28,11 +28,6 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     archiveSprint(selectedSprint.id);
     setSelectedSprintId(null);
   }, [selectedSprint, archiveSprint]);
-
-  const handleUpdateTabJql = useCallback((tabId: TabId, jql: string) => {
-    if (!selectedSprint) return;
-    updateTabJql(selectedSprint.id, tabId, jql);
-  }, [selectedSprint, updateTabJql]);
 
   const handleUpdateGridCell = useCallback((tabId: TabId, row: number, col: number, value: string) => {
     if (!selectedSprint) return;
@@ -78,9 +73,7 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
 
         <SprintDashboard
           sprint={selectedSprint}
-          jiraToken={jiraToken.trim()}
           jiraBaseUrl={jiraBaseUrl.trim()}
-          onUpdateTabJql={handleUpdateTabJql}
           onUpdateGridCell={handleUpdateGridCell}
           onSetTabGrid={handleSetTabGrid}
           onArchive={handleArchive}
