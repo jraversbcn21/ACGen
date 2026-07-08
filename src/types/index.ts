@@ -68,3 +68,11 @@ export interface HistoryEntry {
   inputPreview: string;
   output: string;
 }
+
+export interface JiraSearchResult {
+  key: string;
+  summary: string;
+  status: string;
+  created: string;
+  updated: string;
+}

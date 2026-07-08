@@ -1,5 +1,5 @@
 import { JIRA_URL_REGEX, PROXY_URL } from '../config/constants';
-import type { JiraTicketData } from '../types';
+import type { JiraSearchResult, JiraTicketData } from '../types';
 
 export function extractIssueKey(input: string): string | null {
   const match = input.match(JIRA_URL_REGEX);
@@ -42,4 +42,27 @@ export function formatTicketAsText(ticket: JiraTicketData): string {
     `Descripción:\n${description}\n` +
     `Criterios de aceptación existentes:\n${acceptanceCriteria}`
   );
+}
+
+export async function jiraSearch(
+  jql: string,
+  token: string,
+  baseUrl: string,
+): Promise<{ issues: JiraSearchResult[] }> {
+  const response = await fetch(
+    `${PROXY_URL}/jira/search?jql=${encodeURIComponent(jql)}`,
+    {
+      headers: {
+        'X-Jira-Token': token,
+        'X-Jira-Base-Url': baseUrl,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error || `Error HTTP ${response.status}`);
+  }
+
+  return response.json();
 }
