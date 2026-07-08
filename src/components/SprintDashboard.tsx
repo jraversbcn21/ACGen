@@ -38,7 +38,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
-
+  const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
 
   const fetchTab = useCallback(async (tab: TabId) => {
@@ -80,6 +80,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   }, [activeTab, fetchTab]);
 
   useEffect(() => {
+    if (!isResizing) return;
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizeRef.current) return;
       const { col, startX, startWidth } = resizeRef.current;
@@ -89,24 +90,24 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
     };
     const handleMouseUp = () => {
       resizeRef.current = null;
+      setIsResizing(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-    if (resizeRef.current) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [activeTab]);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, activeTab]);
 
   const startResize = (e: React.MouseEvent, col: number) => {
     e.preventDefault();
     e.stopPropagation();
     const currentWidth = colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
     resizeRef.current = { col, startX: e.clientX, startWidth: currentWidth };
+    setIsResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   };
