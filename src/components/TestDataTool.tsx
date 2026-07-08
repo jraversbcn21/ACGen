@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
+import { SearchableSelect } from './SearchableSelect';
 import { generateTestData } from '../services/apiService';
 import { BERSHKA_MARKETS, DATA_TYPES, STORAGE_KEYS } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
@@ -99,6 +100,11 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
   const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
+
+  const marketOptions = useMemo(
+    () => BERSHKA_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
+    [],
+  );
 
   const updateForm = useCallback(<K extends keyof TestDataFormData>(key: K, value: TestDataFormData[K]) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -271,19 +277,12 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
           </div>
           <div className="td-form-field">
             <label htmlFor="td-market" className="field-label">Mercado</label>
-            <div className="input-wrap">
-              <select
-                id="td-market"
-                value={formData.market}
-                onChange={(e) => updateForm('market', e.target.value)}
-                className="field-select"
-              >
-                {BERSHKA_MARKETS.map(m => (
-                  <option key={m.code} value={m.code}>{m.label} ({m.code})</option>
-                ))}
-              </select>
-              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
-            </div>
+            <SearchableSelect
+              options={marketOptions}
+              value={formData.market}
+              onChange={(v) => updateForm('market', v)}
+              placeholder="Buscar mercado..."
+            />
           </div>
           <div className="td-form-field">
             <label htmlFor="td-quantity" className="field-label">Cantidad</label>

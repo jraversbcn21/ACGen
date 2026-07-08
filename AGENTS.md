@@ -1,139 +1,204 @@
-﻿# ACGen — Agent guide
+# ACGen — Agent guide
 
-## Commands (run from cgen/)
+## Commands (run from `acgen/`)
 
 | Command | Action |
 |---|---|
-| 
-pm run dev | Start Vite dev server (port 5173) |
-| 
-pm run server | Start Express proxy (port 3002) |
-| 
-pm run dev:all | Start both Vite + proxy concurrently |
-| 
-pm run build | Type-check (	sc -b) + Vite build |
-| 
-pm run lint | ESLint |
-| 
-pm run preview | Vite preview |
-| 
-pm test | Run unit tests (Vitest) |
-| 
-pm run test:watch | Run tests in watch mode |
-| 
-pm run test:ui | Run tests with Vitest UI |
+| `npm run dev` | Start Vite dev server (port 5173) |
+| `npm run server` | Start Express proxy (port 3002) |
+| `npm run dev:all` | Start both Vite + proxy concurrently |
+| `npm run build` | Type-check (`tsc -b`) + Vite build |
+| `npm run lint` | ESLint |
+| `npm run preview` | Vite preview |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:ui` | Run tests with Vitest UI |
 
 ## Testing
 
-Unit tests with Vitest + React Testing Library. Only hooks with non-trivial logic are tested.
+Unit tests with Vitest + React Testing Library. Only hooks with non-trivial logic are tested — no component tests.
 
-- src/hooks/useHistory.test.ts — 10 tests
-- src/hooks/useLocalStorage.test.ts — 9 tests
-- src/hooks/useSprints.test.ts — 13 tests (init, add, archive, update, grid cells, persistence, hydration, migration, invalid JSON)
+- `src/hooks/useHistory.test.ts` — 10 tests
+- `src/hooks/useLocalStorage.test.ts` — 9 tests
+- `src/hooks/useSprints.test.ts` — 13 tests covering: init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, persistence, hydration, invalid JSON recovery, old-sprint migration
 
-Run 
-pm test before committing when modifying hooks.
+Run `npm test` before committing when modifying hooks.
 
 ## Architecture
 
-- **React 18 SPA**, Vite 5, TypeScript. Express proxy (server/) for Jira API calls (CORS bypass).
-- **State-based view routing** ('landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker').
-- **Settings persistence**: API key / model / Jira token+URL / theme / history per tool / sprints — all in localStorage.
-- **GROQ API** via etch. Temperature 0.2.
-- **Theme**: light/dark via [data-theme] on <html>. Persisted as cgen_theme.
-- **SVG Icons**: Icon object in Icons.tsx (12 named components). 24×24, stroke-based, currentColor.
-- **Shared CSS primitives** in App.css: form fields, buttons, tables, badges, reasoning + TTS, Jira config, action bar, model badge, searchable select, sprint spreadsheet.
+- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
+- **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library.
+- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
+- **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
+- **Theme**: light/dark via `[data-theme]` attribute on `<html>`. Toggle button in Header topbar. State managed in `App.tsx` via `useLocalStorage<'light'|'dark'>(STORAGE_KEYS.THEME, 'light')` + `useEffect` that syncs attribute. Initialized from stored value, falls back to `prefers-color-scheme`.
+- **SVG Icons**: `src/components/Icons.tsx` exports an `Icon` object with named components (criterios, testcase, bug, datos, sprint, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All 24×24, stroke-based, `currentColor`, `strokeWidth` 1.6. No emojis used as icons.
+- **Shared CSS primitives** in `App.css`: form fields, buttons, tables, badges, reasoning + TTS sections, Jira config, action bar, model badge, searchable select, sprint spreadsheet.
 
 ### Acceptance Criteria
 
-- System prompt HARDCODED_PROMPT in constants.ts. Markers {panel}, {quote}, *Dado*, *Cuando*, *Entonces*.
-- generateCriteria() → generateWithGroq() with REQUIRED_MARKERS. Returns GroqResponse. History: cgen_criteria_history.
+- System prompt (`HARDCODED_PROMPT` in `constants.ts`) — instructions + Confluence wiki format template with `{panel}`, `{quote}`, `*Dado*`, `*Cuando*`, `*Entonces*` markers.
+- `generateCriteria()` calls `generateWithGroq()` with `REQUIRED_MARKERS`. Missing markers → error with list of missing elements.
+- Returns `GroqResponse` (`{ content, model, reasoning? }`). Reasoning captured from API and passed to component.
+- **History**: saves last 10 successful generations to localStorage (`acgen_criteria_history`) via `useHistory()` hook.
 
 ### Test Cases
 
-- TESTCASE_PROMPT — JSON array: key, summary, priority, type, preconditions, testSteps, expectedResult.
-- generateTestCases() → extractJsonArray() + alidateTestCases(). Returns TestCaseResponse.
-- Table with priority/type badges, Jira copy, PDF download.
+- System prompt (`TESTCASE_PROMPT` in `constants.ts`) — JSON array (`key`, `summary`, `priority`, `type`, `preconditions`, `testSteps`, `expectedResult`).
+- `generateTestCases()` calls `generateWithGroq()` (empty markers), then `extractJsonArray()` + `validateTestCases()`.
+- Returns `TestCaseResponse` (`{ testCases: TestCaseData[], model }`).
+- Rendered as HTML table with priority badges (`.badge-high/medium/low`) and type badges (`.badge-positive/negative`), numbered step lists.
+- Actions: "Copiar como tabla Jira" (Confluence wiki table) and "Descargar PDF" (jsPDF + jspdf-autotable).
 
 ### Bug Report Generator
 
-- BUG_REPORT_PROMPT — 6 {panel} blocks in Jira wiki format.
-- generateBugReport() injects date (DD-MM-YYYY). Platform-aware language (tap/click). History: cgen_bug_history.
+- System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — generates Jira wiki formatted bug reports with 6 `{panel}` blocks.
+- `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData`, injects current date in `DD-MM-YYYY` format, calls `generateWithGroq()` with empty markers and `tool='criteria'`.
+- Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Dynamic form fields per platform.
+- Optional Jira context via ticket URL.
+- Output: Jira wiki format bug report, copyable to clipboard. Reasoning captured and displayed when available.
+- **History**: saves last 10 successful bug reports to localStorage (`acgen_bug_history`) via `useHistory()`.
 
 ### Test Data Generator
 
-- TEST_DATA_PROMPT — 5 data types (shipping, billing, registration, cards, promo codes).
-- generateTestData() → extractJsonArray(). Table with row copy, TSV copy, CSV download.
+- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for Bershka ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
+- `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`.
+- Output rendered as HTML table with Spanish column headers. Row copy, TSV copy, CSV download (with BOM for Excel).
 
 ### Sprint Tracker
 
-- 5th tool, no Groq dependency. Queries Jira via proxy only.
-- Sprints stored in localStorage (cgen_sprints). Each sprint: name, dates, archived, JQL per tab, spreadsheet grid.
-- **4 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta. Inline JQL textarea per tab.
-- **Spreadsheet grid** (20×6 default): column letters A-F, category-specific headers, resizable via drag, editable cells. Column A values matching ^[A-Z]+-\d+$ render as Jira links.
-- **"Refrescar"** → jiraSearch() populates column A (ticket key) and B (date).
-- "Archivar Sprint" sets archived flag. Archived sprints remain viewable (data refreshes from Jira).
+- **New 5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`.
+- No Groq dependency — only queries Jira via the proxy.
+- **Data model**: sprints stored in localStorage (`acgen_sprints`). Each sprint has JQL per tab (`jql`), a spreadsheet grid (`tabGrid: Record<TabId, string[][]>`), and metadata (name, dates, archived flag).
+- **4 tabs** per sprint: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has inline JQL textarea and a spreadsheet grid.
+- **Grid**: editable 2D array (20 rows × 6 columns default). Column headers show letter (A-F) and category-specific name. Columns resizable via drag handle. "Ticket" column values matching `^[A-Z]+-\d+$` render as clickable Jira links. "+ Fila" / "+ Columna" buttons to expand. All cells editable.
+- **JQL refresh**: clicks "Refrescar" → `jiraSearch()` hits `GET /api/jira/search?jql=...` on proxy → populates column A with ticket key and column B with date.
+- **Archiving**: "Archivar Sprint" sets `archived: true` + `endDate`. Archived sprints can still be viewed (data refreshes from Jira).
+- **Migration**: old sprints without `tabGrid` get initialized with empty grid on load.
 
 ### Model-aware reasoning params
 
-| Model | 	ool='testcase' | 	ool='criteria' |
+In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body params per model:
+
+| Model | `tool='testcase'` | `tool='criteria'` |
 |---|---|---|
-| qwen/qwen3-32b | easoning_format: "hidden" | easoning_format: "parsed" |
-| openai/gpt-oss-* | none | none |
-| llama-* | none | none |
+| `qwen/qwen3-32b` | `reasoning_format: "hidden"` | `reasoning_format: "parsed"` |
+| `openai/gpt-oss-*` | none | none |
+| `llama-*` | none | none |
 
 ### Decommissioned-model error handling
 
-Detects model_decommissioned / model_not_found etc. in HTTP 400 body. Also 401 (invalid key) and 429 (rate limit) — Spanish messages.
+`generateWithGroq()` detects HTTP 400 with `model_decommissioned` / `model_not_found` / `invalid model` / `model not found` and surfaces: *"El modelo seleccionado ya no está disponible. Por favor selecciona otro modelo."* Also handles HTTP 401 (invalid API key) and HTTP 429 (rate limit) with specific Spanish messages.
 
 ### Proxy Server
 
-- server/index.js: Express on port 3002, CORS http://localhost:5173.
-- server/jiraRoutes.js:
-  - GET /api/jira/issue/:issueKey — single ticket.
-  - GET /api/jira/search?jql= — search with maxResults=100. Returns { issues }.
-- Headers: X-Jira-Token, X-Jira-Base-Url. Errors in Spanish.
+- **`server/index.js`** — Express app on port 3002, CORS origin `http://localhost:5173`, JSON middleware, mounts Jira routes at `/api/jira`.
+- **`server/jiraRoutes.js`** routes:
+  - `GET /api/jira/issue/:issueKey` — proxies to `{baseUrl}/rest/api/2/issue/{issueKey}`. Returns cleaned `JiraTicketData`.
+  - `GET /api/jira/search?jql=` — proxies to `{baseUrl}/rest/api/2/search?jql={jql}&fields=key,summary,status,created,updated&maxResults=100`. Returns `{ issues: Array<{ key, summary, status, created, updated }> }`.
+- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish.
 
-### Jira integration
+### Jira ticket integration
 
-jiraService.ts exports: extractIssueKey(), etchJiraTicket(), ormatTicketAsText(), jiraSearch().
-Config shared via useLocalStorage(STORAGE_KEYS.JIRA_TOKEN) / JIRA_BASE_URL.
+Tools that use Jira: AcceptanceCriteria, BugReport, TestData, SprintTracker.
+- `jiraService.ts` exports: `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()`.
+- Config persisted via `useLocalStorage(STORAGE_KEYS.JIRA_TOKEN)` and `useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL)`.
 
 ## Layout
 
-- **App shell**: .page > .topbar + .container (max-width 1260px).
-- **Landing**: hero, config strip, 5-tool list, count badge **05**.
-- **Sprint Tracker**: SprintList (active + archived cards, new sprint form) → SprintDashboard (tabs + inline JQL + spreadsheet grid + resizable columns).
+### App shell
+
+`<div className="page">` > `<header className="topbar">` + `<main className="container">`. `.page` is full viewport with `--bg-grad`. `.container` has `max-width: 1260px` with responsive padding.
+
+### Landing screen
+
+- Hero section with eyebrow "Sesión de QA · Jorgito" and mixed-weight title.
+- Config strip: ApiKeyConfig and ModelSelector in 1.5fr 1fr grid.
+- Section header "Generadores" with count badge **"05"**.
+- 5 tools: Criterios de aceptación, Test Case Generator, Bug Report Generator, Datos de Prueba, Sprint Tracker.
+- Tool list: grid rows with italic number, SVG icon, title/description, tag pill, hover arrow.
+- Extensibility slot: "+ Más generadores próximamente".
+
+### Acceptance Criteria Tool
+
+Asymmetric two-column grid (`.criteria-grid`, 3fr 2fr). Left: input + editable output + copy button. Right: reasoning collapsible with TTS controls. Actions: GenerateButton, Historial, Limpiar.
+
+### Test Case Generator
+
+Single-column: input → generate/clear → HTML table with priority badges + Jira copy + PDF download.
+
+### Bug Report Tool
+
+Structured form (`.br-form-grid`) with dynamic web/app fields. Output: read-only textarea + copy + reasoning with TTS. History modal. Jira config indicator.
+
+### Test Data Tool
+
+Structured form (dataType/market/quantity). Output: HTML table with row copy + TSV copy + CSV download.
+
+### Sprint Tracker
+
+- **SprintList**: active sprint card (accent border) + archived list. "Nuevo Sprint" form (name + start date). Delete with confirm.
+- **SprintDashboard**: tabbed interface (4 category tabs). Each tab has:
+  - **JQL textarea** — type or paste JQL query for that category
+  - **Spreadsheet grid** (`.sprint-spreadsheet-wrap`) — columns A-F with letter headers + category-specific names (Ticket, Fecha, Prioridad, Autor / Motivo, Squad). Resizable columns via drag handle on header border. Editable cells. Column A values matching `^[A-Z]+-\d+$` get Jira link ↗. "+ Fila" and "+ Columna" expand the grid
+  - **"Refrescar" button** — fetches from Jira via JQL, fills column A + B
+  - **"Archivar Sprint" button** — sends sprint to history
 
 ## Models
 
-AVAILABLE_MODELS: openai/gpt-oss-120b, openai/gpt-oss-20b, llama-3.3-70b-versatile, llama-3.1-8b-instant, qwen/qwen3-32b. DEFAULT_MODEL: openai/gpt-oss-120b.
+```
+AVAILABLE_MODELS = [
+  "openai/gpt-oss-120b",        ← DEFAULT_MODEL
+  "openai/gpt-oss-20b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+  "qwen/qwen3-32b",
+]
+```
+
+Models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32b` were removed.
 
 ## Key files
 
 | File | Purpose |
 |---|---|
-| server/jiraRoutes.js | GET /issue/:issueKey and GET /search?jql= |
-| src/services/apiService.ts | Groq API calls (all 4 tool generations) |
-| src/services/jiraService.ts | Jira proxy client (issue + search) |
-| src/App.tsx | View routing, theme, Jira token/URL state |
-| src/components/SprintTracker.tsx | Sprint Tracker router (list→detail) |
-| src/components/SprintList.tsx | Sprint cards, new sprint form |
-| src/components/SprintDashboard.tsx | Tabbed spreadsheet with inline JQL, resizable columns |
-| src/components/SearchableSelect.tsx | Reusable searchable dropdown for market selects |
-| src/hooks/useSprints.ts | Sprint CRUD with localStorage (exports Sprint, TabId, SprintJql) |
-| src/hooks/useSprints.test.ts | 13 unit tests |
+| `server/index.js` | Express proxy entry: CORS, JSON middleware, mounts Jira routes |
+| `server/jiraRoutes.js` | `GET /issue/:issueKey` and `GET /search?jql=` — proxies to Jira REST API |
+| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, BERSHKA_MARKETS, PLATFORMS, DATA_TYPES |
+| `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning + error handling), `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()` |
+| `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()` |
+| `src/App.tsx` | View state routing (5 tools + landing). Theme state. Jira token/URL state. |
+| `src/components/Icons.tsx` | SVG icons — `Icon` object with 12 named components |
+| `src/components/LandingScreen.tsx` | Editorial landing with hero, config strip, 5-tool list |
+| `src/components/SearchableSelect.tsx` | Reusable searchable dropdown (used in BugReport/TestData market selects) |
+| `src/components/SprintTracker.tsx` | Sprint Tracker router: list → detail navigation |
+| `src/components/SprintList.tsx` | Sprint cards (active + archived), new sprint form, delete |
+| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet grid with inline JQL, resizable columns, Jira fetch |
+| `src/hooks/useSprints.ts` | Sprint CRUD hook with localStorage persistence (exports Sprint, TabId, SprintJql types) |
+| `src/hooks/useSprints.test.ts` | 13 unit tests for useSprints |
 
-## Changing output format
+## Changing output format — Acceptance Criteria
 
-- **Acceptance Criteria**: edit HARDCODED_PROMPT + REQUIRED_MARKERS
-- **Test Cases**: edit TESTCASE_PROMPT, update extractJsonArray/alidateTestCases, update rendering
-- **Bug Report**: edit BUG_REPORT_PROMPT, date format in generateBugReport()
-- **Test Data**: edit TEST_DATA_PROMPT, add DATA_TYPES + LABEL_MAP
+Edit `HARDCODED_PROMPT` in `constants.ts`. Update `REQUIRED_MARKERS` if markers change.
+
+## Changing output format — Test Cases
+
+Edit `TESTCASE_PROMPT` in `constants.ts`. Update `extractJsonArray` / `validateTestCases` in `apiService.ts` if schema changes. Update rendering in `TestCaseTool.tsx`.
+
+## Changing output format — Bug Report
+
+Edit `BUG_REPORT_PROMPT` in `constants.ts`. Date format injected in `generateBugReport()` via `padStart`.
+
+## Changing output format — Test Data
+
+Edit `TEST_DATA_PROMPT` in `constants.ts`. Add entries to `DATA_TYPES` and `LABEL_MAP` for new data types.
 
 ## Notable
 
-- Entrypoint: src/main.tsx → App.tsx.
-- jspdf + jspdf-autotable are production deps; express + cors + concurrently are devDeps.
-- Sprint Tracker does NOT use Groq — only Jira proxy.
-- Test files co-located in src/hooks/.
+- Entrypoint: `src/main.tsx` → `App.tsx`.
+- `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
+- `express` + `cors` + `concurrently` are devDependencies (proxy server).
+- ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
+- Sprint Tracker does NOT use Groq API — only Jira proxy.
+- Test files co-located with source in `src/hooks/`.
+- Design tokens in `:root` + `[data-theme="light"]` / `[data-theme="dark"]`.
