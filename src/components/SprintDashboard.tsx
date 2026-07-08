@@ -9,6 +9,13 @@ const TAB_LABELS: Record<TabId, string> = {
   highPriority: 'Prioridad Alta',
 };
 
+const TAB_HEADERS: Record<TabId, string[]> = {
+  resolved: ['Ticket', 'Fecha', 'Prioridad', 'Autor'],
+  created: ['Ticket', 'Fecha', 'Prioridad', 'Autor'],
+  reopened: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
+  highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
+};
+
 const TICKET_KEY_PATTERN = /^[A-Z]+-\d+$/;
 const DEFAULT_COL_WIDTH = 120;
 const MIN_COL_WIDTH = 50;
@@ -213,6 +220,22 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                 </th>
               ))}
             </tr>
+            <tr>
+              <th style={{
+                position: 'sticky', top: 28, left: 0, zIndex: 2,
+                width: 36, minWidth: 36, height: 26, background: 'var(--surface-2)',
+                border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
+              }}></th>
+              {Array.from({ length: colCount }, (_, ci) => (
+                <th key={ci} style={{
+                  position: 'sticky', top: 28, zIndex: 1,
+                  height: 26, background: 'var(--surface-2)',
+                  border: '1px solid var(--border)', fontSize: 11, fontWeight: 700,
+                  color: 'var(--text-2)', textAlign: 'left',
+                  padding: '0 6px',
+                }}>{TAB_HEADERS[activeTab][ci] || ''}</th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {Array.from({ length: rowCount }, (_, ri) => (
@@ -222,8 +245,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                   width: 36, minWidth: 36, height: 28, background: 'var(--surface-2)',
                   border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
                   textAlign: 'center', fontWeight: 700,
-                }}>{ri + 1}</td>
-                {Array.from({ length: colCount }, (_, ci) => {
+                }}>{ri + 1}</td>                {Array.from({ length: colCount }, (_, ci) => {
                   const value = getCellValue(ri, ci);
                   const isTicketKey = ci === 0 && TICKET_KEY_PATTERN.test(value);
                   return (
