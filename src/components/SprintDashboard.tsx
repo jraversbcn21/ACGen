@@ -98,7 +98,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateNotes,
       )}
 
       {!loading && results[activeTab].length === 0 && sprint.jql[activeTab].trim() && (
-        <p style={{ marginTop: 16, color: 'var(--text-3)', fontSize: 14 }}>Sin tickets en esta categoria</p>
+        <p style={{ marginTop: 16, color: 'var(--text-3)', fontSize: 14 }}>Sin tickets en esta categoría</p>
       )}
 
       {!loading && !sprint.jql[activeTab].trim() && (
@@ -122,7 +122,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateNotes,
                 <tr key={ticket.key}>
                   <td>
                     <a
-                      href={`${jiraBaseUrl}/browse/${ticket.key}`}
+                      href={`${jiraBaseUrl.replace(/\/+$/, '')}/browse/${ticket.key}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
