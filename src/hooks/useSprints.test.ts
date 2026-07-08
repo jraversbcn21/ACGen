@@ -25,10 +25,11 @@ describe('useSprints', () => {
     expect(sprints[0].archived).toBe(false);
     expect(sprints[0].id).toBeTruthy();
     expect(sprints[0].jql.resolved).toBe('');
-    expect(sprints[0].jql.created).toBe('');
-    expect(sprints[0].jql.reopened).toBe('');
-    expect(sprints[0].jql.highPriority).toBe('');
-    expect(sprints[0].notes).toEqual({});
+    expect(sprints[0].tabColumns.resolved).toEqual(['Squad']);
+    expect(sprints[0].tabColumns.created).toEqual(['Tipo', 'Autor']);
+    expect(sprints[0].tabColumns.reopened).toEqual(['Motivo del reopen']);
+    expect(sprints[0].tabColumns.highPriority).toEqual(['Motivo prioritario']);
+    expect(sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
   });
 
   it('archiveSprint sets archived true and endDate to today', () => {
@@ -52,25 +53,45 @@ describe('useSprints', () => {
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateSprint(id, {
-        name: 'Sprint 25',
-        jql: { ...result.current.sprints[0].jql, resolved: 'project = BERSHKA AND status = Done' },
-      });
+      result.current.updateSprint(id, { name: 'Sprint 25' });
     });
     expect(result.current.sprints[0].name).toBe('Sprint 25');
-    expect(result.current.sprints[0].jql.resolved).toBe('project = BERSHKA AND status = Done');
   });
 
-  it('updateNotes sets a note for a ticket key', () => {
+  it('updateTabJql sets JQL for a tab', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
       result.current.addSprint('Sprint 24', '2026-07-08');
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateNotes(id, 'BERSHKA-123', 'Reabierto por fallo en checkout');
+      result.current.updateTabJql(id, 'resolved', 'project = BERSHKA AND status = Done');
     });
-    expect(result.current.sprints[0].notes['BERSHKA-123']).toBe('Reabierto por fallo en checkout');
+    expect(result.current.sprints[0].jql.resolved).toBe('project = BERSHKA AND status = Done');
+  });
+
+  it('updateCell sets a value for a ticket column', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+    act(() => {
+      result.current.updateCell(id, 'resolved', 'BERSHKA-123', 'Squad', 'Payment');
+    });
+    expect(result.current.sprints[0].tabCells.resolved['BERSHKA-123']['Squad']).toBe('Payment');
+  });
+
+  it('updateTabColumns replaces columns for a tab', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+    act(() => {
+      result.current.updateTabColumns(id, 'resolved', ['Squad', 'Notas']);
+    });
+    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Squad', 'Notas']);
   });
 
   it('deleteSprint removes a sprint', () => {
@@ -104,7 +125,8 @@ describe('useSprints', () => {
         endDate: '2026-07-07',
         archived: true,
         jql: { resolved: 'jql1', created: '', reopened: '', highPriority: '' },
-        notes: {},
+        tabColumns: { resolved: ['Squad'], created: ['Tipo'], reopened: ['Motivo'], highPriority: [] },
+        tabCells: { resolved: {}, created: {}, reopened: {}, highPriority: {} },
       },
     ];
     localStorage.setItem('acgen_sprints', JSON.stringify(existing));
@@ -117,5 +139,24 @@ describe('useSprints', () => {
     localStorage.setItem('acgen_sprints', 'not-valid-json');
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toEqual([]);
+  });
+
+  it('migrates old sprints without tabColumns/tabCells', () => {
+    const oldSprint = [
+      {
+        id: 'old-1',
+        name: 'Sprint 20',
+        startDate: '2026-06-01',
+        endDate: null,
+        archived: false,
+        jql: { resolved: '', created: '', reopened: '', highPriority: '' },
+        notes: {},
+      },
+    ];
+    localStorage.setItem('acgen_sprints', JSON.stringify(oldSprint));
+    const { result } = renderHook(() => useSprints());
+    expect(result.current.sprints).toHaveLength(1);
+    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Squad']);
+    expect(result.current.sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
   });
 });

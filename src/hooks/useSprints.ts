@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'acgen_sprints';
 
+export type TabId = 'resolved' | 'created' | 'reopened' | 'highPriority';
+
 export interface SprintJql {
   resolved: string;
   created: string;
@@ -16,7 +18,8 @@ export interface Sprint {
   endDate: string | null;
   archived: boolean;
   jql: SprintJql;
-  notes: Record<string, string>;
+  tabColumns: Record<TabId, string[]>;
+  tabCells: Record<TabId, Record<string, Record<string, string>>>;
 }
 
 const EMPTY_JQL: SprintJql = {
@@ -26,11 +29,24 @@ const EMPTY_JQL: SprintJql = {
   highPriority: '',
 };
 
+const DEFAULT_COLUMNS: Record<TabId, string[]> = {
+  resolved: ['Squad'],
+  created: ['Tipo', 'Autor'],
+  reopened: ['Motivo del reopen'],
+  highPriority: ['Motivo prioritario'],
+};
+
 export function useSprints() {
   const [sprints, setSprints] = useState<Sprint[]>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return parsed.map((s: Sprint) => ({
+        ...s,
+        tabColumns: s.tabColumns || { ...DEFAULT_COLUMNS },
+        tabCells: s.tabCells || { resolved: {}, created: {}, reopened: {}, highPriority: {} },
+      }));
     } catch {
       return [];
     }
@@ -44,7 +60,8 @@ export function useSprints() {
       endDate: null,
       archived: false,
       jql: { ...EMPTY_JQL },
-      notes: {},
+      tabColumns: { ...DEFAULT_COLUMNS },
+      tabCells: { resolved: {}, created: {}, reopened: {}, highPriority: {} },
     };
     setSprints((prev) => {
       const updated = [sprint, ...prev];
@@ -66,11 +83,44 @@ export function useSprints() {
     updateSprint(id, { archived: true, endDate: today });
   }, [updateSprint]);
 
-  const updateNotes = useCallback((id: string, ticketKey: string, note: string) => {
+  const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
     setSprints((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== id) return s;
-        return { ...s, notes: { ...s.notes, [ticketKey]: note } };
+        return { ...s, jql: { ...s.jql, [tabId]: jql } };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const updateCell = useCallback((id: string, tabId: TabId, ticketKey: string, column: string, value: string) => {
+    setSprints((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== id) return s;
+        const tabData = s.tabCells[tabId] || {};
+        const ticketData = tabData[ticketKey] || {};
+        return {
+          ...s,
+          tabCells: {
+            ...s.tabCells,
+            [tabId]: { ...tabData, [ticketKey]: { ...ticketData, [column]: value } },
+          },
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const updateTabColumns = useCallback((id: string, tabId: TabId, columns: string[]) => {
+    setSprints((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== id) return s;
+        return {
+          ...s,
+          tabColumns: { ...s.tabColumns, [tabId]: columns },
+        };
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
@@ -85,5 +135,5 @@ export function useSprints() {
     });
   }, []);
 
-  return { sprints, addSprint, updateSprint, archiveSprint, updateNotes, deleteSprint };
+  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateCell, updateTabColumns, deleteSprint };
 }

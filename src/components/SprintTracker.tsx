@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
 import { SprintList } from './SprintList';
 import { SprintDashboard } from './SprintDashboard';
-import { SprintJqlConfig } from './SprintJqlConfig';
 import { useSprints } from '../hooks/useSprints';
-import type { Sprint } from '../hooks/useSprints';
+import type { Sprint, TabId } from '../hooks/useSprints';
 
 interface SprintTrackerProps {
   jiraToken: string;
@@ -11,10 +10,9 @@ interface SprintTrackerProps {
 }
 
 export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
-  const { sprints, addSprint, updateSprint, archiveSprint, updateNotes, deleteSprint } = useSprints();
+  const { sprints, addSprint, archiveSprint, updateTabJql, updateCell, updateTabColumns, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
-  const [showJqlConfig, setShowJqlConfig] = useState(false);
 
   const handleSelectSprint = useCallback((sprint: Sprint) => {
     setSelectedSprintId(sprint.id);
@@ -22,7 +20,6 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
 
   const handleBack = useCallback(() => {
     setSelectedSprintId(null);
-    setShowJqlConfig(false);
   }, []);
 
   const handleArchive = useCallback(() => {
@@ -32,10 +29,20 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     setSelectedSprintId(null);
   }, [selectedSprint, archiveSprint]);
 
-  const handleUpdateNotes = useCallback((ticketKey: string, note: string) => {
+  const handleUpdateTabJql = useCallback((tabId: TabId, jql: string) => {
     if (!selectedSprint) return;
-    updateNotes(selectedSprint.id, ticketKey, note);
-  }, [selectedSprint, updateNotes]);
+    updateTabJql(selectedSprint.id, tabId, jql);
+  }, [selectedSprint, updateTabJql]);
+
+  const handleUpdateCell = useCallback((tabId: TabId, ticketKey: string, column: string, value: string) => {
+    if (!selectedSprint) return;
+    updateCell(selectedSprint.id, tabId, ticketKey, column, value);
+  }, [selectedSprint, updateCell]);
+
+  const handleUpdateTabColumns = useCallback((tabId: TabId, columns: string[]) => {
+    if (!selectedSprint) return;
+    updateTabColumns(selectedSprint.id, tabId, columns);
+  }, [selectedSprint, updateTabColumns]);
 
   const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
 
@@ -67,28 +74,15 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
           {selectedSprint.archived && (
             <span className="badge badge-info" style={{ fontSize: 11 }}>Archivado</span>
           )}
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => setShowJqlConfig((p) => !p)}
-            style={{ marginLeft: 'auto' }}
-          >
-            {showJqlConfig ? 'Ocultar JQLs' : 'Configurar JQLs'}
-          </button>
         </div>
-
-        {showJqlConfig && (
-          <SprintJqlConfig
-            jql={selectedSprint.jql}
-            onChange={(jql) => updateSprint(selectedSprint.id, { jql })}
-          />
-        )}
 
         <SprintDashboard
           sprint={selectedSprint}
           jiraToken={jiraToken.trim()}
           jiraBaseUrl={jiraBaseUrl.trim()}
-          onUpdateNotes={handleUpdateNotes}
+          onUpdateTabJql={handleUpdateTabJql}
+          onUpdateCell={handleUpdateCell}
+          onUpdateTabColumns={handleUpdateTabColumns}
           onArchive={handleArchive}
         />
       </div>
