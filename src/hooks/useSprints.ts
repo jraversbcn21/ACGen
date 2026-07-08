@@ -30,10 +30,10 @@ const EMPTY_JQL: SprintJql = {
 };
 
 const DEFAULT_COLUMNS: Record<TabId, string[]> = {
-  resolved: ['Squad'],
-  created: ['Tipo', 'Autor'],
-  reopened: ['Motivo del reopen'],
-  highPriority: ['Motivo prioritario'],
+  resolved: ['Prioridad', 'Autor'],
+  created: ['Prioridad', 'Autor'],
+  reopened: ['Motivo', 'Squad'],
+  highPriority: ['Motivo', 'Squad'],
 };
 
 export function useSprints() {

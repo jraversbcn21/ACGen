@@ -170,8 +170,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
             <thead>
               <tr>
                 <th>Ticket</th>
-                <th>Resumen</th>
-                <th>Estado</th>
                 <th>Fecha</th>
                 {userColumns.map((col) => (
                   <th key={col}>{col}</th>
@@ -190,10 +188,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                     >
                       {ticket.key}
                     </a>
-                  </td>
-                  <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{ticket.summary}</td>
-                  <td>
-                    <span className="badge badge-info">{ticket.status}</span>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {formatDate(activeTab === 'created' ? ticket.created : ticket.updated)}

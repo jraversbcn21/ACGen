@@ -25,10 +25,10 @@ describe('useSprints', () => {
     expect(sprints[0].archived).toBe(false);
     expect(sprints[0].id).toBeTruthy();
     expect(sprints[0].jql.resolved).toBe('');
-    expect(sprints[0].tabColumns.resolved).toEqual(['Squad']);
-    expect(sprints[0].tabColumns.created).toEqual(['Tipo', 'Autor']);
-    expect(sprints[0].tabColumns.reopened).toEqual(['Motivo del reopen']);
-    expect(sprints[0].tabColumns.highPriority).toEqual(['Motivo prioritario']);
+    expect(sprints[0].tabColumns.resolved).toEqual(['Prioridad', 'Autor']);
+    expect(sprints[0].tabColumns.created).toEqual(['Prioridad', 'Autor']);
+    expect(sprints[0].tabColumns.reopened).toEqual(['Motivo', 'Squad']);
+    expect(sprints[0].tabColumns.highPriority).toEqual(['Motivo', 'Squad']);
     expect(sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
   });
 
@@ -156,7 +156,7 @@ describe('useSprints', () => {
     localStorage.setItem('acgen_sprints', JSON.stringify(oldSprint));
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toHaveLength(1);
-    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Squad']);
+    expect(result.current.sprints[0].tabColumns.resolved).toEqual(['Prioridad', 'Autor']);
     expect(result.current.sprints[0].tabCells).toEqual({ resolved: {}, created: {}, reopened: {}, highPriority: {} });
   });
 });
