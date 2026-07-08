@@ -74,6 +74,7 @@ export const STORAGE_KEYS = {
   THEME: 'acgen_theme',
   CRITERIA_HISTORY: 'acgen_criteria_history',
   BUG_HISTORY: 'acgen_bug_history',
+  SPRINT_COL_WIDTHS: 'acgen_sprint_col_widths',
 } as const;
 
 export const TEMPERATURE = 0.2;

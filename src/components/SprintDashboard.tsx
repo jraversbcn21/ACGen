@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { jiraSearch } from '../services/jiraService';
 import type { Sprint, TabId } from '../hooks/useSprints';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { STORAGE_KEYS } from '../config/constants';
 
 const TAB_LABELS: Record<TabId, string> = {
   resolved: 'Resueltos',
@@ -16,8 +18,7 @@ const TAB_HEADERS: Record<TabId, string[]> = {
   highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
 };
 
-const TICKET_KEY_PATTERN = /^[A-Z]+-\d+$/;
-const DEFAULT_COL_WIDTH = 120;
+const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
 const MIN_COL_WIDTH = 50;
 
 function colToLetter(col: number): string {
@@ -44,9 +45,11 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`, {});
   const [isResizing, setIsResizing] = useState(false);
+  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
   const resizeRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
+  const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const fetchTab = useCallback(async (tab: TabId) => {
     const jql = sprint.jql[tab];
@@ -112,7 +115,7 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const startResize = (e: React.MouseEvent, col: number) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentWidth = colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
+    const currentWidth = colWidths[`${activeTab}-${col}`] || 120;
     resizeRef.current = { col, startX: e.clientX, startWidth: currentWidth };
     setIsResizing(true);
     document.body.style.cursor = 'col-resize';
@@ -123,8 +126,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
   const grid = sprint.tabGrid[activeTab] || [];
   const rowCount = grid.length || 20;
   const colCount = grid[0]?.length || 6;
-
-  const getColWidth = (col: number) => colWidths[`${activeTab}-${col}`] || DEFAULT_COL_WIDTH;
 
   const handleAddRow = () => {
     const newGrid = [...grid, Array.from({ length: colCount }, () => '')];
@@ -186,13 +187,14 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
         <span className="loading-status" style={{ display: 'block', marginTop: 12 }}>Consultando Jira...</span>
       )}
 
-      <div style={{ marginTop: 12, overflow: 'auto', maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed' }}>
+      <div style={{ marginTop: 12, overflowX: 'auto', width: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 36 }} />
-            {Array.from({ length: colCount }, (_, ci) => (
-              <col key={ci} style={{ width: getColWidth(ci) }} />
-            ))}
+            {Array.from({ length: colCount }, (_, ci) => {
+              const w = colWidths[`${activeTab}-${ci}`];
+              return <col key={ci} style={w ? { width: w } : undefined} />;
+            })}
           </colgroup>
           <thead>
             <tr>
@@ -207,7 +209,6 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                   height: 28, background: 'var(--surface-2)',
                   border: '1px solid var(--border)', fontSize: 11, fontWeight: 700,
                   color: 'var(--text-3)', textAlign: 'center',
-                  position: 'relative',
                 }}>
                   {colToLetter(ci)}
                   <div
@@ -247,32 +248,80 @@ export function SprintDashboard({ sprint, jiraToken, jiraBaseUrl, onUpdateTabJql
                   textAlign: 'center', fontWeight: 700,
                 }}>{ri + 1}</td>                {Array.from({ length: colCount }, (_, ci) => {
                   const value = getCellValue(ri, ci);
-                  const isTicketKey = ci === 0 && TICKET_KEY_PATTERN.test(value);
+                  const ticketMatch = ci === 0 ? value.match(TICKET_KEY_PATTERN) : null;
+                  const ticketKey = ticketMatch ? ticketMatch[1] : null;
+                  const isFocused = focusedCell?.row === ri && focusedCell?.col === ci;
+                  const showFocus = ticketKey && isFocused;
                   return (
-                    <td key={ci} style={{ border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden' }}>
+                    <td
+                      key={ci}
+                      onClick={() => {
+                        if (ticketKey) window.open(`${baseUrl}/browse/${ticketKey}`, '_blank');
+                      }}
+                      title={ticketKey ? `Abrir ${ticketKey} en Jira` : undefined}
+                      style={{
+                        border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
+                        cursor: ticketKey ? 'pointer' : undefined,
+                        background: showFocus ? 'var(--accent-weak)' : undefined,
+                        outline: showFocus ? '1px solid var(--accent)' : undefined,
+                        outlineOffset: -1,
+                      }}
+                    >
                       <input
                         type="text"
+                        data-row={ri}
+                        data-col={ci}
+                        ref={(el) => {
+                          const key = `${ri}-${ci}`;
+                          if (el) cellRefs.current.set(key, el);
+                          else cellRefs.current.delete(key);
+                        }}
                         value={value}
                         onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
+                        onKeyDown={(e) => {
+                          const key = e.key;
+                          let tr = ri;
+                          let tc = ci;
+                          if (key === 'ArrowUp') tr--;
+                          else if (key === 'ArrowDown') tr++;
+                          else if (key === 'ArrowLeft') tc--;
+                          else if (key === 'ArrowRight') tc++;
+                          else return;
+                          if (tr < 0 || tr >= rowCount || tc < 0 || tc >= colCount) return;
+                          e.preventDefault();
+                          cellRefs.current.get(`${tr}-${tc}`)?.focus();
+                        }}
+                        onMouseDown={(e) => {
+                          if (ticketKey) e.preventDefault();
+                        }}
+                        onFocus={() => setFocusedCell({ row: ri, col: ci })}
+                        onBlur={() => setFocusedCell((prev) => {
+                          if (prev?.row === ri && prev?.col === ci) return null;
+                          return prev;
+                        })}
+                        onPaste={(e) => {
+                          const text = e.clipboardData.getData('text/plain');
+                          const snapLinkMatch = text.match(/^(.+?)\s*-\s*(https?:\/\/[^\s]+\/browse\/([A-Z]+-\d+))/i);
+                          if (snapLinkMatch) {
+                            e.preventDefault();
+                            onUpdateGridCell(activeTab, ri, ci, `${snapLinkMatch[3]} ${snapLinkMatch[1].trim()}`);
+                            return;
+                          }
+                          const urlMatch = text.match(/\/browse\/([A-Z]+-\d+)/i);
+                          if (urlMatch) {
+                            e.preventDefault();
+                            onUpdateGridCell(activeTab, ri, ci, urlMatch[1]);
+                          }
+                        }}
                         style={{
                           width: '100%', height: 28, border: 'none', outline: 'none',
                           padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
-                          background: 'transparent', color: isTicketKey ? 'var(--accent)' : 'var(--text)',
-                          fontWeight: isTicketKey ? 600 : 400,
+                          background: 'transparent', color: ticketKey ? 'var(--accent)' : 'var(--text)',
+                          fontWeight: ticketKey ? 600 : 400,
+                          caretColor: ticketKey ? 'transparent' : undefined,
+                          cursor: ticketKey ? 'pointer' : undefined,
                         }}
                       />
-                      {isTicketKey && (
-                        <a
-                          href={`${baseUrl}/browse/${value}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)',
-                            fontSize: 10, color: 'var(--accent)', textDecoration: 'none',
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >↗</a>
-                      )}
                     </td>
                   );
                 })}
