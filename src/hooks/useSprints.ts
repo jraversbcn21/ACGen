@@ -127,6 +127,23 @@ export function useSprints() {
     });
   }, []);
 
+  const moveRow = useCallback((id: string, tabId: TabId, fromRow: number, toRow: number) => {
+    setSprints((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== id) return s;
+        const grid = s.tabGrid[tabId] || [];
+        if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return s;
+        if (fromRow === toRow) return s;
+        const newGrid = [...grid];
+        const [movedRow] = newGrid.splice(fromRow, 1);
+        newGrid.splice(toRow, 0, movedRow);
+        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const deleteSprint = useCallback((id: string) => {
     setSprints((prev) => {
       const updated = prev.filter((s) => s.id !== id);
@@ -135,5 +152,5 @@ export function useSprints() {
     });
   }, []);
 
-  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint };
+  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
 }

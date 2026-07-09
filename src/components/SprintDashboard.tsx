@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { Sprint, TabId } from '../hooks/useSprints';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
@@ -11,8 +11,8 @@ const TAB_LABELS: Record<TabId, string> = {
 };
 
 const TAB_HEADERS: Record<TabId, string[]> = {
-  resolved: ['Ticket', 'Fecha', 'Prioridad', 'Autor'],
-  created: ['Ticket', 'Fecha', 'Prioridad', 'Autor'],
+  resolved: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
+  created: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
   reopened: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
   highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
 };
@@ -35,14 +35,18 @@ interface SprintDashboardProps {
   jiraBaseUrl: string;
   onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
   onSetTabGrid: (tabId: TabId, grid: string[][]) => void;
+  onMoveRow: (tabId: TabId, fromRow: number, toRow: number) => void;
   onArchive: () => void;
 }
 
-export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTabGrid, onArchive }: SprintDashboardProps) {
+export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
   const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`, {});
   const [isResizing, setIsResizing] = useState(false);
   const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
+  const [dragSourceRow, setDragSourceRow] = useState<number | null>(null);
+  const [dragTargetRow, setDragTargetRow] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const resizeRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
@@ -81,8 +85,23 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
 
   const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority'];
   const grid = sprint.tabGrid[activeTab] || [];
-  const rowCount = grid.length || 20;
   const colCount = grid[0]?.length || 6;
+
+  const filteredRowIndices = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.toLowerCase();
+    const indices: number[] = [];
+    for (let ri = 0; ri < grid.length; ri++) {
+      const row = grid[ri];
+      if (!row) continue;
+      const matches = row.some((cell) => (cell || '').toLowerCase().includes(q));
+      if (matches) indices.push(ri);
+    }
+    return indices;
+  }, [grid, searchQuery]);
+
+  const displayRowIndices = filteredRowIndices ?? Array.from({ length: grid.length }, (_, i) => i);
+  const displayRowCount = displayRowIndices.length;
 
   const handleAddRow = () => {
     const newGrid = [...grid, Array.from({ length: colCount }, () => '')];
@@ -95,6 +114,33 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
 
   const baseUrl = jiraBaseUrl.replace(/\/+$/, '');
 
+  const handleDragStart = (e: React.DragEvent, ri: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(ri));
+    setDragSourceRow(ri);
+    setDragTargetRow(ri);
+  };
+
+  const handleDragOver = (e: React.DragEvent, ri: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragTargetRow(ri);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragSourceRow !== null && dragTargetRow !== null && dragSourceRow !== dragTargetRow) {
+      onMoveRow(activeTab, dragSourceRow, dragTargetRow);
+    }
+    setDragSourceRow(null);
+    setDragTargetRow(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragSourceRow(null);
+    setDragTargetRow(null);
+  };
+
   return (
     <div className="sprint-dashboard">
       <div className="sprint-tabs">
@@ -103,7 +149,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
             key={tab}
             type="button"
             className={`btn-ghost ${activeTab === tab ? 'sprint-tab-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => { setActiveTab(tab); setSearchQuery(''); }}
           >
             {TAB_LABELS[tab]}
           </button>
@@ -120,10 +166,31 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
         </a>
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
+        {searchQuery.trim() && (
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+            {displayRowCount} de {grid.length} filas
+          </span>
+        )}
+        <input
+          type="text"
+          placeholder="Buscar por ticket, fecha, squad..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
+          style={{
+            width: 240, height: 30, padding: '0 10px', fontSize: 12,
+            fontFamily: 'var(--font-ui)', background: 'var(--surface-2)',
+            color: 'var(--text)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)', outline: 'none',
+          }}
+        />
+      </div>
+
       <div style={{ marginTop: 12, overflowX: 'auto', width: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
-            <col style={{ width: 36 }} />
+            <col style={{ width: 44 }} />
             {Array.from({ length: colCount }, (_, ci) => {
               const w = colWidths[`${activeTab}-${ci}`];
               return <col key={ci} style={w ? { width: w } : undefined} />;
@@ -133,7 +200,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
             <tr>
               <th style={{
                 position: 'sticky', top: 0, left: 0, zIndex: 2,
-                width: 36, minWidth: 36, height: 28, background: 'var(--surface-2)',
+                width: 44, minWidth: 44, height: 28, background: 'var(--surface-2)',
                 border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
               }}></th>
               {Array.from({ length: colCount }, (_, ci) => (
@@ -157,7 +224,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
             <tr>
               <th style={{
                 position: 'sticky', top: 28, left: 0, zIndex: 2,
-                width: 36, minWidth: 36, height: 26, background: 'var(--surface-2)',
+                width: 44, minWidth: 44, height: 26, background: 'var(--surface-2)',
                 border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
               }}></th>
               {Array.from({ length: colCount }, (_, ci) => (
@@ -172,14 +239,36 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: rowCount }, (_, ri) => (
-              <tr key={ri}>
-                <td style={{
-                  position: 'sticky', left: 0, zIndex: 1,
-                  width: 36, minWidth: 36, height: 28, background: 'var(--surface-2)',
-                  border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
-                  textAlign: 'center', fontWeight: 700,
-                }}>{ri + 1}</td>                {Array.from({ length: colCount }, (_, ci) => {
+            {displayRowIndices.map((ri, pos) => {
+              const isDragging = dragSourceRow === ri;
+              const isDropTarget = dragTargetRow === ri && dragSourceRow !== ri;
+              return (
+              <tr
+                key={ri}
+                onDragOver={(e) => handleDragOver(e, ri)}
+                onDrop={handleDrop}
+                style={{
+                  opacity: isDragging ? 0.4 : undefined,
+                  borderTop: isDropTarget ? '2px solid var(--accent)' : undefined,
+                }}
+              >
+                <td
+                  draggable={!sprint.archived}
+                  onDragStart={(e) => !sprint.archived ? handleDragStart(e, ri) : e.preventDefault()}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    position: 'sticky', left: 0, zIndex: 1,
+                    width: 44, minWidth: 44, height: 28, background: 'var(--surface-2)',
+                    border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
+                    textAlign: 'center', fontWeight: 700,
+                    cursor: sprint.archived ? undefined : 'grab',
+                  }}
+                >
+                  {!sprint.archived && (
+                    <span style={{ marginRight: 2, fontSize: 12, lineHeight: 1, verticalAlign: 'middle', opacity: 0.5 }}>&#x22EE;&#x22EE;</span>
+                  )}
+                  {ri + 1}
+                </td>                {Array.from({ length: colCount }, (_, ci) => {
                   const value = getCellValue(ri, ci);
                   const ticketMatch = ci === 0 ? value.match(TICKET_KEY_PATTERN) : null;
                   const ticketKey = ticketMatch ? ticketMatch[1] : null;
@@ -213,15 +302,16 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
                         onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
                         onKeyDown={(e) => {
                           const key = e.key;
-                          let tr = ri;
+                          let nextPos = pos;
                           let tc = ci;
-                          if (key === 'ArrowUp') tr--;
-                          else if (key === 'ArrowDown') tr++;
+                          if (key === 'ArrowUp') nextPos--;
+                          else if (key === 'ArrowDown') nextPos++;
                           else if (key === 'ArrowLeft') tc--;
                           else if (key === 'ArrowRight') tc++;
                           else return;
-                          if (tr < 0 || tr >= rowCount || tc < 0 || tc >= colCount) return;
+                          if (nextPos < 0 || nextPos >= displayRowIndices.length || tc < 0 || tc >= colCount) return;
                           e.preventDefault();
+                          const tr = key === 'ArrowUp' || key === 'ArrowDown' ? displayRowIndices[nextPos] : ri;
                           cellRefs.current.get(`${tr}-${tc}`)?.focus();
                         }}
                         onMouseDown={(e) => {
@@ -259,16 +349,19 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
-          + Fila
-        </button>
-      </div>
+      {!searchQuery.trim() && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
+            + Fila
+          </button>
+        </div>
+      )}
 
       {!sprint.archived && (
         <div className="actions-bar">

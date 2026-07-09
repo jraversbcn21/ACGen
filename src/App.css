@@ -660,6 +660,33 @@ body {
 .criteria-output-ta {
   min-height: 400px;
 }
+/* Bug Report compact row */
+.br-compact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.br-compact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+  max-width: 170px;
+  flex: 0 0 auto;
+}
+
+.br-compact-field-wide {
+  flex: 0 0 230px;
+  max-width: 230px;
+}
+
+.br-compact-field-jira {
+  flex: 0 0 500px;
+  max-width: 500px;
+}
+
 .br-output-ta {
   min-height: 470px;
 }
@@ -797,6 +824,12 @@ body {
   }
   .br-form-row {
     grid-template-columns: 1fr;
+  }
+  .br-compact-field,
+  .br-compact-field-wide,
+  .br-compact-field-jira {
+    min-width: 100%;
+    max-width: 100%;
   }
   .td-form-row {
     grid-template-columns: 1fr;

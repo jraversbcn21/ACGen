@@ -55,6 +55,7 @@ Run `npm test` before committing when modifying hooks.
 - System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — generates Jira wiki formatted bug reports with 6 `{panel}` blocks.
 - `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData`, injects current date in `DD-MM-YYYY` format, calls `generateWithGroq()` with empty markers and `tool='criteria'`.
 - Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Dynamic form fields per platform.
+- **Form layout**: compact flex row (`.br-compact-row`) with all fields in a single horizontal strip. Selects/inputs at 130-170px (`.br-compact-field`), URL at 230px (`.br-compact-field-wide`), Jira ticket at 500px (`.br-compact-field-jira`). Description and output textareas remain full-width.
 - Optional Jira context via ticket URL.
 - Output: Jira wiki format bug report, copyable to clipboard. Reasoning captured and displayed when available.
 - **History**: saves last 10 successful bug reports to localStorage (`acgen_bug_history`) via `useHistory()`.
@@ -71,10 +72,13 @@ Run `npm test` before committing when modifying hooks.
 - Fully offline spreadsheet — no Groq or Jira API dependency.
 - **Data model**: sprints stored in localStorage (`acgen_sprints`). Each sprint has a spreadsheet grid (`tabGrid: Record<TabId, string[][]>`), JQL strings per tab (`jql`, not exposed in UI), and metadata (name, dates, archived flag). Column widths persisted separately per sprint in `acgen_sprint_col_widths_{sprintId}`.
 - **4 tabs** per sprint: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has its own spreadsheet grid.
+- **Column headers**: Resueltos/Creados → Ticket, Fecha, Prioridad, Autor, Squad. ReOpen/Prioridad Alta → Ticket, Fecha, Motivo, Squad.
 - **Grid**: editable 2D array (20 rows × 6 columns fixed). Column headers show letter (A-F) and category-specific name. Columns resizable via drag handle, widths persist in localStorage. Only "+ Fila" button to expand rows. All cells editable.
+- **Row drag-and-drop**: rows reorderable via drag handle (⋮⋮) on row number cells. Uses `moveRow()` in `useSprints.ts` — persists reordered grid to localStorage. Disabled on archived sprints.
+- **Search bar**: top-right input (`Buscar por ticket, fecha, squad...`) filters rows in-place by matching any cell content. Shows "N de M filas" counter. Escape clears. Hidden when tab changes. "+ Fila" hidden during search.
 - **Ticket column (A)**: values starting with a ticket key (`^([A-Z]+-\d+)\b`) display as clickable hyperlinks — clicking anywhere on the cell opens the Jira ticket in a new tab. SnapLink integration: pasting via `Ctrl+V` automatically parses `Title - URL` format and stores `KEY Title` as display text.
 - **SnapLink button**: link to Chrome Web Store extension in the tab bar for easy setup.
-- **Keyboard navigation**: arrow keys move focus between cells. Ticket cells show a subtle accent highlight when focused via keyboard. `Tab`/`Shift+Tab` navigate in DOM order.
+- **Keyboard navigation**: arrow keys move focus between cells (respects filtered rows during search). Ticket cells show a subtle accent highlight when focused via keyboard. `Tab`/`Shift+Tab` navigate in DOM order.
 - **Archiving**: "Archivar Sprint" sets `archived: true` + `endDate`. Archived sprints remain viewable.
 - **Migration**: old sprints without `tabGrid` get initialized with empty grid on load.
 
@@ -131,7 +135,7 @@ Single-column: input → generate/clear → HTML table with priority badges + Ji
 
 ### Bug Report Tool
 
-Structured form (`.br-form-grid`) with dynamic web/app fields. Output: read-only textarea + copy + reasoning with TTS. History modal. Jira config indicator.
+Compact flex row (`.br-compact-row`) with all fields side by side: Platform, Market, Browser, URL/Version, Device, OS, Jira ticket. Selects/inputs sized via `.br-compact-field` (130-170px), `.br-compact-field-wide` (230px for URL), `.br-compact-field-jira` (500px for Jira ticket). Description and output textareas full-width. Same styling, just horizontally compacted to save vertical space. Actions: GenerateButton, Historial, Limpiar. Copy + reasoning with TTS. History modal. Jira config collapsible.
 
 ### Test Data Tool
 
@@ -141,9 +145,11 @@ Structured form (dataType/market/quantity). Output: HTML table with row copy + T
 
 - **SprintList**: active sprint card (accent border) + archived list. "Nuevo Sprint" form (name + start date). Delete with confirm.
 - **SprintDashboard**: tabbed interface (4 category tabs). Each tab has:
-  - **Spreadsheet grid** (overflow-x scroll, 100% width) — columns A-F with letter headers + category-specific names (Ticket, Fecha, Prioridad, Autor / Motivo, Squad). Columns A-F fill the container evenly via `tableLayout: fixed`. Resizable columns via drag handle on header border; widths persist in localStorage per sprint. Editable cells. Ticket column values starting with `^[A-Z]+-\d+` display as full-cell clickable hyperlinks (accent color, bold, pointer cursor, `window.open` on click). SnapLink paste via `Ctrl+V` extracts key + title. "+ Fila" button to expand.
-  - **"+ SnapLink" button** — links to Chrome Web Store extension for easy ticket URL copying.
-  - **Keyboard navigation** — arrow keys move focus between cells. Focused ticket cells get accent background + border highlight. Tab/Shift+Tab for sequential navigation.
+  - **Search bar** — top-right input that filters rows in-place by any cell content. Counter shows "N de M filas". Tab switch clears filter. "+ Fila" hidden during search.
+  - **Spreadsheet grid** — columns A-F with letter headers + category-specific names: Resueltos/Creados (Ticket, Fecha, Prioridad, Autor, Squad), ReOpen/Prioridad Alta (Ticket, Fecha, Motivo, Squad). `tableLayout: fixed`. Resizable columns via drag handle; widths persist per sprint. Editable cells. Ticket column hyperlinks. SnapLink paste. "+ Fila" button.
+  - **Row drag-and-drop** — drag handle (⋮⋮) on row number cells. Reorders grid rows via `moveRow()`. Disabled on archived sprints.
+  - **"+ SnapLink" button** — links to Chrome Web Store extension.
+  - **Keyboard navigation** — arrow keys move between cells (respects filtered rows). Focused ticket cells get accent highlight.
   - **"Archivar Sprint" button** — sends sprint to history
 
 ## Models
@@ -175,8 +181,8 @@ Models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32b` wer
 | `src/components/SearchableSelect.tsx` | Reusable searchable dropdown (used in BugReport/TestData market selects) |
 | `src/components/SprintTracker.tsx` | Sprint Tracker router: list → detail navigation |
 | `src/components/SprintList.tsx` | Sprint cards (active + archived), new sprint form, delete |
-| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet grid: SnapLink paste, clickable ticket cells, keyboard nav, resizable persisted columns |
-| `src/hooks/useSprints.ts` | Sprint CRUD hook with localStorage persistence (exports Sprint, TabId, SprintJql types) |
+| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet grid: drag-and-drop row reordering, search bar, SnapLink paste, clickable ticket cells, keyboard nav, resizable persisted columns |
+| `src/hooks/useSprints.ts` | Sprint CRUD hook with localStorage persistence: `moveRow()` for drag-and-drop reorder, `updateGridCell()`, `setTabGrid()`, `addSprint()`, `archiveSprint()`, `deleteSprint()` |
 | `src/hooks/useSprints.test.ts` | 13 unit tests for useSprints |
 
 ## Changing output format — Acceptance Criteria

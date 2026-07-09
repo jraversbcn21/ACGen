@@ -10,7 +10,7 @@ interface SprintTrackerProps {
 }
 
 export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
-  const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, deleteSprint } = useSprints();
+  const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
 
@@ -38,6 +38,11 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     if (!selectedSprint) return;
     setTabGrid(selectedSprint.id, tabId, grid);
   }, [selectedSprint, setTabGrid]);
+
+  const handleMoveRow = useCallback((tabId: TabId, fromRow: number, toRow: number) => {
+    if (!selectedSprint) return;
+    moveRow(selectedSprint.id, tabId, fromRow, toRow);
+  }, [selectedSprint, moveRow]);
 
   const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
 
@@ -76,6 +81,7 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
           jiraBaseUrl={jiraBaseUrl.trim()}
           onUpdateGridCell={handleUpdateGridCell}
           onSetTabGrid={handleSetTabGrid}
+          onMoveRow={handleMoveRow}
           onArchive={handleArchive}
         />
       </div>

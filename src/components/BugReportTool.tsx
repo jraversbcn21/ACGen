@@ -53,7 +53,6 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
-  const isApp = !isWeb;
   const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
 
@@ -253,113 +252,100 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         </div>
       )}
 
-      {/* Form grid */}
-      <div className="br-form-grid">
-        {/* Row 1: Platform + Market */}
-        <div className="br-form-row">
-          <div className="br-form-field">
-            <label htmlFor="br-platform" className="field-label">Plataforma</label>
-            <div className="input-wrap">
-              <select
-                id="br-platform"
-                value={formData.platform}
-                onChange={(e) => handlePlatformChange(e.target.value)}
-                className="field-select"
-              >
-                {PLATFORMS.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-              </select>
-              <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+      {/* Compact fields row */}
+      <div className="br-compact-row">
+        <div className="br-compact-field">
+          <label htmlFor="br-platform" className="field-label">Plataforma</label>
+          <div className="input-wrap">
+            <select
+              id="br-platform"
+              value={formData.platform}
+              onChange={(e) => handlePlatformChange(e.target.value)}
+              className="field-select"
+            >
+              {PLATFORMS.map(p => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+            <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </div>
+        </div>
+        <div className="br-compact-field">
+          <label htmlFor="br-market" className="field-label">Mercado</label>
+          <SearchableSelect
+            options={marketOptions}
+            value={formData.market}
+            onChange={(v) => updateForm('market', v)}
+            placeholder="Buscar..."
+          />
+        </div>
+        {isWeb ? (
+          <>
+            <div className="br-compact-field">
+              <label htmlFor="br-browser" className="field-label">Navegador</label>
+              <div className="input-wrap">
+                <select
+                  id="br-browser"
+                  value={formData.browser}
+                  onChange={(e) => updateForm('browser', e.target.value)}
+                  className="field-select"
+                >
+                  {browserOptions.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+              </div>
             </div>
-          </div>
-          <div className="br-form-field">
-            <label htmlFor="br-market" className="field-label">Mercado</label>
-            <SearchableSelect
-              options={marketOptions}
-              value={formData.market}
-              onChange={(v) => updateForm('market', v)}
-              placeholder="Buscar mercado..."
-            />
-          </div>
-        </div>
-
-        {/* Row 2: Dynamic fields */}
-        <div className="br-form-row">
-          {isWeb ? (
-            <>
-              <div className="br-form-field">
-                <label htmlFor="br-browser" className="field-label">Navegador</label>
-                <div className="input-wrap">
-                  <select
-                    id="br-browser"
-                    value={formData.browser}
-                    onChange={(e) => updateForm('browser', e.target.value)}
-                    className="field-select"
-                  >
-                    {browserOptions.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                  <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
-                </div>
+            <div className="br-compact-field br-compact-field-wide">
+              <label htmlFor="br-url" className="field-label">URL</label>
+              <input
+                id="br-url"
+                type="text"
+                value={formData.url || ''}
+                onChange={(e) => updateForm('url', e.target.value)}
+                placeholder="https://localhost:3443/"
+                className="field-input"
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="br-compact-field">
+              <label htmlFor="br-app-version" className="field-label">
+                {formData.platform === 'app-android' ? 'Versión APK' : 'Versión Build'}
+              </label>
+              <input
+                id="br-app-version"
+                type="text"
+                value={formData.appVersion || ''}
+                onChange={(e) => updateForm('appVersion', e.target.value)}
+                placeholder={formData.platform === 'app-android' ? 'ej: v2024.12.1' : 'ej: v2024.12.1'}
+                className="field-input"
+              />
+            </div>
+            <div className="br-compact-field">
+              <label htmlFor="br-device" className="field-label">Dispositivo</label>
+              <div className="input-wrap">
+                <select
+                  id="br-device"
+                  value={formData.device || ''}
+                  onChange={(e) => updateForm('device', e.target.value)}
+                  className="field-select"
+                >
+                  {formData.platform === 'app-ios'
+                    ? IOS_DEVICES.map(d => (
+                        <option key={d.id} value={d.label}>{d.label}</option>
+                      ))
+                    : ANDROID_DEVICES.map(d => (
+                        <option key={d.id} value={d.label}>{d.label}</option>
+                      ))
+                  }
+                </select>
+                <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
               </div>
-              <div className="br-form-field">
-                <label htmlFor="br-url" className="field-label">URL</label>
-                <input
-                  id="br-url"
-                  type="text"
-                  value={formData.url || ''}
-                  onChange={(e) => updateForm('url', e.target.value)}
-                  placeholder="https://localhost:3443/"
-                  className="field-input"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="br-form-field">
-                <label htmlFor="br-app-version" className="field-label">
-                  {formData.platform === 'app-android' ? 'Versión APK' : 'Versión Build'}
-                </label>
-                <input
-                  id="br-app-version"
-                  type="text"
-                  value={formData.appVersion || ''}
-                  onChange={(e) => updateForm('appVersion', e.target.value)}
-                  placeholder={formData.platform === 'app-android' ? 'ej: v2024.12.1' : 'ej: v2024.12.1'}
-                  className="field-input"
-                />
-              </div>
-              <div className="br-form-field">
-                <label htmlFor="br-device" className="field-label">Dispositivo</label>
-                <div className="input-wrap">
-                  <select
-                    id="br-device"
-                    value={formData.device || ''}
-                    onChange={(e) => updateForm('device', e.target.value)}
-                    className="field-select"
-                  >
-                    {formData.platform === 'app-ios'
-                      ? IOS_DEVICES.map(d => (
-                          <option key={d.id} value={d.label}>{d.label}</option>
-                        ))
-                      : ANDROID_DEVICES.map(d => (
-                          <option key={d.id} value={d.label}>{d.label}</option>
-                        ))
-                    }
-                  </select>
-                  <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Row 3: OS version (app only) */}
-        {isApp && (
-          <div className="br-form-row-single">
-            <div className="br-form-field">
+            </div>
+            <div className="br-compact-field">
               <label htmlFor="br-os-version" className="field-label">
                 {formData.platform === 'app-android' ? 'Versión Android' : 'Versión iOS'}
               </label>
@@ -372,38 +358,32 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
                 className="field-input"
               />
             </div>
-          </div>
+          </>
         )}
-
-        {/* Row 4: Related Jira ticket */}
-        <div className="br-form-row-single">
-          <div className="br-form-field">
-            <label htmlFor="br-jira-ticket" className="field-label">Ticket relacionado (opcional)</label>
-            <input
-              id="br-jira-ticket"
-              type="text"
-              value={formData.jiraTicketUrl || ''}
-              onChange={(e) => updateForm('jiraTicketUrl', e.target.value)}
-              placeholder="URL del ticket de Jira relacionado (opcional)"
-              className="field-input"
-            />
-          </div>
+        <div className="br-compact-field br-compact-field-jira">
+          <label htmlFor="br-jira-ticket" className="field-label">Ticket Jira</label>
+          <input
+            id="br-jira-ticket"
+            type="text"
+            value={formData.jiraTicketUrl || ''}
+            onChange={(e) => updateForm('jiraTicketUrl', e.target.value)}
+            placeholder="URL opcional"
+            className="field-input"
+          />
         </div>
+      </div>
 
-        {/* Row 5: Bug description */}
-        <div className="br-form-row-single">
-          <div className="br-form-field">
-            <label htmlFor="br-description" className="field-label">Descripción del bug</label>
-            <textarea
-              id="br-description"
-              value={formData.description}
-              onChange={(e) => updateForm('description', e.target.value)}
-              placeholder='Describe el bug de forma informal, ej: "Al añadir talla M al carrito desde mobile, el precio se muestra como 0€ en la minicesta"'
-              className="field-textarea"
-              style={{ minHeight: 120 }}
-            />
-          </div>
-        </div>
+      {/* Bug description */}
+      <div style={{ marginTop: 16 }}>
+        <label htmlFor="br-description" className="field-label">Descripcion del bug</label>
+        <textarea
+          id="br-description"
+          value={formData.description}
+          onChange={(e) => updateForm('description', e.target.value)}
+          placeholder='Describe el bug de forma informal, ej: "Al anadir talla M al carrito desde mobile, el precio se muestra como 0C en la minicesta"'
+          className="field-textarea"
+          style={{ minHeight: 120 }}
+        />
       </div>
 
       {/* Output area */}
