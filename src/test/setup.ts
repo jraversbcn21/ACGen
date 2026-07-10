@@ -9,5 +9,5 @@ Object.defineProperty(globalThis, 'crypto', {
 
 beforeEach(() => {
   uuidCounter = 0;
-  localStorage.clear();
+  try { localStorage.clear(); } catch { /* node env lacks localStorage */ }
 });

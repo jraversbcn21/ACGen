@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import { validateAndEncodeIssueKey, validateBaseUrl } from './jiraUtils.js';
 
 export const jiraRoutes = Router();
+
+const FETCH_TIMEOUT_MS = 30_000;
 
 jiraRoutes.get('/issue/:issueKey', async (req, res) => {
   const { issueKey } = req.params;
@@ -11,13 +14,31 @@ jiraRoutes.get('/issue/:issueKey', async (req, res) => {
     return res.status(400).json({ error: 'Faltan credenciales de Jira (token o URL base).' });
   }
 
+  let validatedBaseUrl;
   try {
-    const response = await fetch(`${baseUrl}/rest/api/2/issue/${issueKey}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
+    validatedBaseUrl = validateBaseUrl(baseUrl);
+  } catch {
+    return res.status(400).json({ error: 'URL base de Jira inválida.' });
+  }
+
+  let encodedIssueKey;
+  try {
+    encodedIssueKey = validateAndEncodeIssueKey(issueKey);
+  } catch {
+    return res.status(400).json({ error: 'Clave de ticket inválida.' });
+  }
+
+  try {
+    const response = await fetch(
+      `${validatedBaseUrl}/rest/api/2/issue/${encodedIssueKey}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       },
-    });
+    );
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -46,6 +67,9 @@ jiraRoutes.get('/issue/:issueKey', async (req, res) => {
 
     return res.json(result);
   } catch (err) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      return res.status(504).json({ error: 'Timeout al consultar Jira. El servidor no responde.' });
+    }
     console.error('Jira proxy error:', err);
     return res.status(500).json({ error: 'Error de conexión con el servidor proxy.' });
   }
@@ -64,14 +88,22 @@ jiraRoutes.get('/search', async (req, res) => {
     return res.status(400).json({ error: 'Falta el parámetro JQL.' });
   }
 
+  let validatedBaseUrl;
+  try {
+    validatedBaseUrl = validateBaseUrl(baseUrl);
+  } catch {
+    return res.status(400).json({ error: 'URL base de Jira inválida.' });
+  }
+
   try {
     const response = await fetch(
-      `${baseUrl}/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=key,summary,status,created,updated&maxResults=100`,
+      `${validatedBaseUrl}/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=key,summary,status,created,updated&maxResults=100`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       },
     );
 
@@ -96,6 +128,9 @@ jiraRoutes.get('/search', async (req, res) => {
 
     return res.json({ issues });
   } catch (err) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      return res.status(504).json({ error: 'Timeout al consultar Jira. El servidor no responde.' });
+    }
     console.error('Jira proxy error:', err);
     return res.status(500).json({ error: 'Error de conexión con el servidor proxy.' });
   }
