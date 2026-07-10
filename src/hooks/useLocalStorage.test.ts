@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useLocalStorage } from './useLocalStorage';
 import { DEFAULT_MODEL, AVAILABLE_MODELS } from '../config/constants';
 
@@ -65,5 +66,74 @@ describe('useLocalStorage', () => {
 
     expect(result.current[0]).toEqual({ count: 42 });
     expect(JSON.parse(localStorage.getItem('test_obj') || '{}')).toEqual({ count: 42 });
+  });
+
+  it('syncs two instances with the same key in the same tab', () => {
+    const { result } = renderHook(() => ({
+      a: useLocalStorage('shared_key', 'default'),
+      b: useLocalStorage('shared_key', 'default'),
+    }));
+
+    act(() => { result.current.a[1]('updated by a'); });
+
+    expect(result.current.a[0]).toBe('updated by a');
+    expect(result.current.b[0]).toBe('updated by a');
+  });
+
+  it('updates when a native storage event fires for its key (cross-tab sync)', () => {
+    const { result } = renderHook(() => useLocalStorage('cross_tab_key', 'default'));
+
+    act(() => {
+      localStorage.setItem('cross_tab_key', JSON.stringify('from another tab'));
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'cross_tab_key',
+        newValue: JSON.stringify('from another tab'),
+      }));
+    });
+
+    expect(result.current[0]).toBe('from another tab');
+  });
+
+  it('ignores storage events for other keys', () => {
+    const { result } = renderHook(() => useLocalStorage('my_key', 'default'));
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'other_key',
+        newValue: JSON.stringify('should not apply'),
+      }));
+    });
+
+    expect(result.current[0]).toBe('default');
+  });
+
+  it('resets to initialValue when a storage event clears its key', () => {
+    localStorage.setItem('clearable_key', JSON.stringify('initial from storage'));
+    const { result } = renderHook(() => useLocalStorage('clearable_key', 'fallback'));
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'clearable_key',
+        newValue: null,
+      }));
+    });
+
+    expect(result.current[0]).toBe('fallback');
+  });
+
+  it('keeps the in-memory value updated even when localStorage.setItem throws (quota exceeded)', () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+
+    const { result } = renderHook(() => useLocalStorage('quota_key', 'default'));
+
+    expect(() => {
+      act(() => { result.current[1]('new value'); });
+    }).not.toThrow();
+
+    expect(result.current[0]).toBe('new value');
+
+    setItemSpy.mockRestore();
   });
 });

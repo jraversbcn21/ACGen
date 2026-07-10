@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useHistory } from './useHistory';
 
 const KEY = 'test_history';
@@ -94,5 +95,19 @@ describe('useHistory', () => {
     localStorage.setItem(KEY, 'not-valid-json{{');
     const { result } = renderHook(() => useHistory(KEY));
     expect(result.current.history).toEqual([]);
+  });
+
+  it('keeps the new entry in memory even when localStorage.setItem throws (quota exceeded)', () => {
+    const { result } = renderHook(() => useHistory(KEY));
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+
+    expect(() => {
+      act(() => { result.current.addEntry('input', 'output'); });
+    }).not.toThrow();
+
+    expect(result.current.history).toHaveLength(1);
+    setItemSpy.mockRestore();
   });
 });

@@ -258,6 +258,30 @@ body {
 }
 .adorn-btn:hover { color: var(--text); background: var(--surface-2); }
 
+/* Error boundary fallback */
+.error-boundary-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px;
+  background: var(--danger-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  margin: 24px 0;
+}
+.error-boundary-fallback h2 {
+  margin: 0;
+  color: var(--danger);
+  font-size: 1.1rem;
+}
+.error-boundary-fallback p {
+  margin: 0;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
 /* Error banner */
 .error-banner {
   display: flex;

@@ -67,11 +67,17 @@ function extractJsonArray(text: string): unknown[] {
   return items;
 }
 
-function validateTestCases(items: unknown[]): TestCaseData[] {
+const STRING_FIELDS = ['key', 'summary', 'priority', 'type', 'preconditions', 'expectedResult'] as const;
+
+export function validateTestCases(items: unknown[]): TestCaseData[] {
   const requiredFields = ['key', 'summary', 'priority', 'type', 'preconditions', 'testSteps', 'expectedResult'];
   const validated: TestCaseData[] = [];
   for (let i = 0; i < items.length; i++) {
-    const tc = items[i] as Record<string, unknown>;
+    const raw = items[i];
+    if (!raw || typeof raw !== 'object') {
+      throw new Error(`El caso de prueba ${i + 1} no es un objeto válido.`);
+    }
+    const tc = raw as Record<string, unknown>;
     const missing = requiredFields.filter(f => {
       const v = tc[f];
       return v === undefined || v === null || (Array.isArray(v) && v.length === 0) || (typeof v === 'string' && v.trim() === '');
@@ -79,6 +85,15 @@ function validateTestCases(items: unknown[]): TestCaseData[] {
     if (missing.length > 0) {
       throw new Error(`El caso de prueba ${i + 1} (${tc.key || `#${i + 1}`}) no tiene los campos requeridos: ${missing.join(', ')}`);
     }
+
+    const wrongType: string[] = STRING_FIELDS.filter(f => typeof tc[f] !== 'string');
+    if (!Array.isArray(tc.testSteps) || tc.testSteps.some(s => typeof s !== 'string')) {
+      wrongType.push('testSteps');
+    }
+    if (wrongType.length > 0) {
+      throw new Error(`El caso de prueba ${i + 1} (${tc.key || `#${i + 1}`}) tiene campos con tipo incorrecto: ${wrongType.join(', ')}`);
+    }
+
     validated.push(tc as unknown as TestCaseData);
   }
   return validated;
@@ -224,6 +239,21 @@ export async function generateBugReport(
   return generateWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, [], undefined, reasoningParams);
 }
 
+export function validateTestDataRows(items: unknown[]): Record<string, string>[] {
+  return items.map((row, i) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      throw new Error(`El registro ${i + 1} no es un objeto válido.`);
+    }
+    const entries = Object.entries(row as Record<string, unknown>).map(([field, value]) => {
+      if (value !== null && typeof value === 'object') {
+        throw new Error(`El registro ${i + 1} tiene un valor anidado no soportado en el campo "${field}".`);
+      }
+      return [field, value === null || value === undefined ? '' : String(value)] as const;
+    });
+    return Object.fromEntries(entries);
+  });
+}
+
 export async function generateTestData(
   apiKey: string,
   model: string,
@@ -254,5 +284,5 @@ export async function generateTestData(
     throw new Error('No se pudieron generar los datos de prueba. Intenta de nuevo.');
   }
 
-  return { data: jsonArray as Record<string, string>[], model: response.model };
+  return { data: validateTestDataRows(jsonArray), model: response.model };
 }

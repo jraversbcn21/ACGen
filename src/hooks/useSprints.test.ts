@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSprints } from './useSprints';
 
 beforeEach(() => {
@@ -167,5 +167,26 @@ describe('useSprints', () => {
     expect(result.current.sprints).toHaveLength(1);
     expect(result.current.sprints[0].tabGrid.resolved).toHaveLength(20);
     expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(6);
+  });
+
+  it('keeps sprint changes in memory even when localStorage.setItem throws (quota exceeded)', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+
+    expect(() => {
+      act(() => {
+        result.current.updateGridCell(id, 'resolved', 0, 0, 'PROJ-1');
+      });
+    }).not.toThrow();
+
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('PROJ-1');
+    setItemSpy.mockRestore();
   });
 });

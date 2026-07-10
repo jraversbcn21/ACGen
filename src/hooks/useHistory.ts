@@ -22,7 +22,11 @@ export function useHistory(storageKey: string) {
     };
     setHistory(prev => {
       const updated = [entry, ...prev].slice(0, MAX_ENTRIES);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+      } catch (err) {
+        console.error(`No se pudo guardar el historial "${storageKey}" en localStorage:`, err);
+      }
       return updated;
     });
   }, [storageKey]);

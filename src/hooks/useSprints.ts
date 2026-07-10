@@ -41,6 +41,14 @@ function emptyTabGrid(): Record<TabId, string[][]> {
   };
 }
 
+function persistSprints(sprints: Sprint[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sprints));
+  } catch (err) {
+    console.error('No se pudieron guardar los sprints en localStorage:', err);
+  }
+}
+
 export function useSprints() {
   const [sprints, setSprints] = useState<Sprint[]>(() => {
     try {
@@ -68,7 +76,7 @@ export function useSprints() {
     };
     setSprints((prev) => {
       const updated = [sprint, ...prev];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -76,7 +84,7 @@ export function useSprints() {
   const updateSprint = useCallback((id: string, partial: Partial<Omit<Sprint, 'id'>>) => {
     setSprints((prev) => {
       const updated = prev.map((s) => (s.id === id ? { ...s, ...partial } : s));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -92,7 +100,7 @@ export function useSprints() {
         if (s.id !== id) return s;
         return { ...s, jql: { ...s.jql, [tabId]: jql } };
       });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -111,7 +119,7 @@ export function useSprints() {
         });
         return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
       });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -122,7 +130,7 @@ export function useSprints() {
         if (s.id !== id) return s;
         return { ...s, tabGrid: { ...s.tabGrid, [tabId]: grid } };
       });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -139,7 +147,7 @@ export function useSprints() {
         newGrid.splice(toRow, 0, movedRow);
         return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
       });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);
@@ -147,7 +155,7 @@ export function useSprints() {
   const deleteSprint = useCallback((id: string) => {
     setSprints((prev) => {
       const updated = prev.filter((s) => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      persistSprints(updated);
       return updated;
     });
   }, []);

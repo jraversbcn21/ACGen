@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { Header } from './components/Header';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LandingScreen } from './components/LandingScreen';
 import { AcceptanceCriteriaTool } from './components/AcceptanceCriteriaTool';
 import { TestCaseTool } from './components/TestCaseTool';
@@ -41,35 +42,37 @@ export default function App() {
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
       <main className="container">
-        {view === 'landing' && (
-          <LandingScreen
-            onSelect={setView}
-            apiKey={apiKey}
-            onApiKeyChange={setApiKey}
-            model={model}
-            onModelChange={setModel}
-          />
-        )}
+        <ErrorBoundary key={view}>
+          {view === 'landing' && (
+            <LandingScreen
+              onSelect={setView}
+              apiKey={apiKey}
+              onApiKeyChange={setApiKey}
+              model={model}
+              onModelChange={setModel}
+            />
+          )}
 
-        {view === 'acceptance' && (
-          <AcceptanceCriteriaTool apiKey={apiKey} model={model} />
-        )}
+          {view === 'acceptance' && (
+            <AcceptanceCriteriaTool apiKey={apiKey} model={model} />
+          )}
 
-        {view === 'testcase' && (
-          <TestCaseTool apiKey={apiKey} model={model} />
-        )}
+          {view === 'testcase' && (
+            <TestCaseTool apiKey={apiKey} model={model} />
+          )}
 
-        {view === 'bugreport' && (
-          <BugReportTool apiKey={apiKey} model={model} />
-        )}
+          {view === 'bugreport' && (
+            <BugReportTool apiKey={apiKey} model={model} />
+          )}
 
-        {view === 'testdata' && (
-          <TestDataTool apiKey={apiKey} model={model} />
-        )}
+          {view === 'testdata' && (
+            <TestDataTool apiKey={apiKey} model={model} />
+          )}
 
-        {view === 'sprinttracker' && (
-          <SprintTracker jiraToken={jiraToken} jiraBaseUrl={jiraBaseUrl} />
-        )}
+          {view === 'sprinttracker' && (
+            <SprintTracker jiraToken={jiraToken} jiraBaseUrl={jiraBaseUrl} />
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

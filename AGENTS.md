@@ -16,24 +16,27 @@
 
 ## Testing
 
-Unit tests with Vitest + React Testing Library. Only hooks with non-trivial logic are tested — no component tests.
+Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are tested, plus service-layer validation and the global `ErrorBoundary` (the only component test, justified by its class-lifecycle logic).
 
-- `src/hooks/useHistory.test.ts` — 10 tests
-- `src/hooks/useLocalStorage.test.ts` — 9 tests
-- `src/hooks/useSprints.test.ts` — 13 tests covering: init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, persistence, hydration, invalid JSON recovery, old-sprint migration
+- `src/hooks/useHistory.test.ts` — 11 tests (adds: quota-exceeded resilience)
+- `src/hooks/useLocalStorage.test.ts` — 14 tests (adds: same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience)
+- `src/hooks/useSprints.test.ts` — 14 tests covering: init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience
+- `src/services/apiService.test.ts` — 10 tests covering `validateTestCases` (type checks, not just presence) and `validateTestDataRows` (rejects nested objects/arrays from the LLM)
+- `src/components/ErrorBoundary.test.tsx` — 3 tests (renders children, catches render crash, recovers on reset)
 
-Run `npm test` before committing when modifying hooks.
+Run `npm test` before committing when modifying hooks or services.
 
 ## Architecture
 
 - **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
-- **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library.
+- **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library. The view router is wrapped in `<ErrorBoundary key={view}>` (`src/components/ErrorBoundary.tsx`): a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recoverable fallback (message + "Reintentar" button) instead of a blank screen when a tool crashes. Keyed by `view` so switching tools remounts it and clears any stuck error state.
 - **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
+- **`useLocalStorage` cross-instance/cross-tab sync**: on write, dispatches a custom `acgen-local-storage` window event (same-tab instances sharing a key stay in sync — e.g. Jira credentials configured in one tool are immediately visible in another without reloading) and listens for the native `storage` event (cross-tab sync; a `newValue: null` resets to `initialValue`). All `localStorage.setItem` calls across `useLocalStorage`, `useHistory`, and `useSprints` (via its `persistSprints` helper) are wrapped in try/catch so a `QuotaExceededError` degrades to a console error instead of crashing the render.
 - **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
 - **Design tokens** live in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
 - **Theme**: light/dark via `[data-theme]` attribute on `<html>`. Toggle button in Header topbar. State managed in `App.tsx` via `useLocalStorage<'light'|'dark'>(STORAGE_KEYS.THEME, 'light')` + `useEffect` that syncs attribute. Initialized from stored value, falls back to `prefers-color-scheme`.
 - **SVG Icons**: `src/components/Icons.tsx` exports an `Icon` object with named components (criterios, testcase, bug, datos, sprint, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All 24×24, stroke-based, `currentColor`, `strokeWidth` 1.6. No emojis used as icons.
-- **Shared CSS primitives** in `App.css`: form fields, buttons, tables, badges, reasoning + TTS sections, Jira config, action bar, model badge, searchable select, sprint spreadsheet.
+- **Shared CSS primitives** in `App.css`: form fields, buttons, tables, badges, reasoning + TTS sections, Jira config, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback.
 
 ### Acceptance Criteria
 
@@ -45,7 +48,7 @@ Run `npm test` before committing when modifying hooks.
 ### Test Cases
 
 - System prompt (`TESTCASE_PROMPT` in `constants.ts`) — JSON array (`key`, `summary`, `priority`, `type`, `preconditions`, `testSteps`, `expectedResult`).
-- `generateTestCases()` calls `generateWithGroq()` (empty markers), then `extractJsonArray()` + `validateTestCases()`.
+- `generateTestCases()` calls `generateWithGroq()` (empty markers), then `extractJsonArray()` + `validateTestCases()`. `validateTestCases()` checks both presence **and type** of every field (`testSteps` must be a string array; the rest must be strings) — rejects malformed LLM output (e.g. `testSteps` returned as a single string) with a clear Spanish error instead of letting it crash the table render.
 - Returns `TestCaseResponse` (`{ testCases: TestCaseData[], model }`).
 - Rendered as HTML table with priority badges (`.badge-high/medium/low`) and type badges (`.badge-positive/negative`), numbered step lists.
 - Actions: "Copiar como tabla Jira" (Confluence wiki table) and "Descargar PDF" (jsPDF + jspdf-autotable).
@@ -63,7 +66,7 @@ Run `npm test` before committing when modifying hooks.
 ### Test Data Generator
 
 - System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for Bershka ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
-- `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`.
+- `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`, then validates row shape via `validateTestDataRows()` — rejects/coerces nested objects or arrays from the LLM (they would otherwise crash React's render with "Objects are not valid as a React child").
 - Output rendered as HTML table with Spanish column headers. Row copy, TSV copy, CSV download (with BOM for Excel).
 
 ### Sprint Tracker
@@ -173,9 +176,11 @@ Models are plain strings. `deepseek-r1-distill-llama-70b` and `qwen-qwq-32b` wer
 | `server/index.js` | Express proxy entry: CORS, JSON middleware, mounts Jira routes |
 | `server/jiraRoutes.js` | `GET /issue/:issueKey` and `GET /search?jql=` — proxies to Jira REST API |
 | `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, BERSHKA_MARKETS, PLATFORMS, DATA_TYPES |
-| `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning + error handling), `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()` |
+| `src/services/apiService.ts` | `generateWithGroq()` (POST + marker validation + reasoning + error handling), `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `validateTestCases()`, `validateTestDataRows()` |
+| `src/services/apiService.test.ts` | Unit tests for `validateTestCases()` / `validateTestDataRows()` type/shape checks |
 | `src/services/jiraService.ts` | `extractIssueKey()`, `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()` |
-| `src/App.tsx` | View state routing (5 tools + landing). Theme state. Jira token/URL state. |
+| `src/App.tsx` | View state routing (5 tools + landing) wrapped in `ErrorBoundary`. Theme state. Jira token/URL state. |
+| `src/components/ErrorBoundary.tsx` | Class component error boundary around the view router; recoverable fallback UI with a reset button |
 | `src/components/Icons.tsx` | SVG icons — `Icon` object with 12 named components |
 | `src/components/LandingScreen.tsx` | Editorial landing with hero, config strip, 5-tool list |
 | `src/components/SearchableSelect.tsx` | Reusable searchable dropdown (used in BugReport/TestData market selects) |
@@ -208,5 +213,15 @@ Edit `TEST_DATA_PROMPT` in `constants.ts`. Add entries to `DATA_TYPES` and `LABE
 - `express` + `cors` + `concurrently` are devDependencies (proxy server).
 - ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
 - Sprint Tracker operates fully offline — no Groq or Jira API calls. JQL fields are stored in the data model but not exposed in the UI.
-- Test files co-located with source in `src/hooks/`.
+- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/ErrorBoundary.test.tsx`).
 - Design tokens in `:root` + `[data-theme="light"]` / `[data-theme="dark"]`.
+- `tsconfig.app.json` excludes both `*.test.ts` and `*.test.tsx` from the production typecheck/build (the `.tsx` exclusion was missing until the first component test was added — `npm run build` would otherwise fail on jest-dom matcher types).
+
+## Known issues (bug hunt 2026-07-10)
+
+A parallel multi-agent review found ~40 real bugs across services, hooks, components, and the proxy server. **Phase 1 (crashes + data loss) is fixed** — see the Testing/Architecture notes above. Still open:
+
+- **Phase 2 — proxy security**: `issueKey` not `encodeURIComponent`-encoded in `server/jiraRoutes.js` (PAT can be redirected to arbitrary Jira endpoints); `X-Jira-Base-Url` accepted from the client with no validation (SSRF/token-exfiltration risk); no fetch timeouts (a dead Jira host hangs the UI forever).
+- **Phase 3 — Sprint Tracker UX**: `moveRow()` off-by-one when dragging a row downward (lands one row past the drop indicator); drag state (`dragTargetRow`) not cleared on non-row drags; `ArrowLeft`/`ArrowRight` always jump cells instead of moving the caret; ticket cells can't be edited with the mouse (`onClick` always opens Jira); search filter re-evaluates on every keystroke and can unmount the row being edited.
+- **Phase 4 — generation & exports**: decommissioned-model detection in `generateWithGroq()` never actually matches Groq's real error shape/status; Jira wiki table export doesn't escape `|` or newlines; CSV export doesn't neutralize leading `=+-@` (formula injection risk in Excel); TSV export doesn't escape newlines; Acceptance Criteria replaces the user's typed requirements entirely if a Jira URL appears anywhere in the text; Bug Report resets the URL field when switching between web platforms.
+- **Phase 5 — polish**: ~15 low-severity items (`extractIssueKey` rejects `http://` silently, orphaned `acgen_sprint_col_widths_*` keys on sprint delete, `endDate`/sprint dates computed in UTC causing off-by-one days, dark-theme flash on reload, `SearchableSelect` filter requiring 3+ chars vs 2-char market codes, etc.).
