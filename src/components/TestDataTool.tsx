@@ -337,7 +337,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
           type="button"
           className="btn-ghost"
           onClick={handleClear}
-          disabled={!formData.dataType && !hasOutput}
+          disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput && !jiraTicketUrl}
         >
           Limpiar
         </button>

@@ -22,7 +22,7 @@ export function SearchableSelect({ options, value, onChange, placeholder }: Sear
 
   const selectedOption = options.find(o => o.value === value);
 
-  const filtered = search.length >= 3
+  const filtered = search.length >= 1
     ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
     : options;
 

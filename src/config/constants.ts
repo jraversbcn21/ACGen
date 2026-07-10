@@ -81,7 +81,7 @@ export const TEMPERATURE = 0.2;
 
 export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker';
 
-export const JIRA_URL_REGEX = /https:\/\/(?:[^/]+\/)?(?:jira\/)?browse\/([A-Z]+-\d+)/i;
+export const JIRA_URL_REGEX = /https?:\/\/(?:[^/]+\/)?(?:jira\/)?browse\/([A-Z]+-\d+)/i;
 
 export const BERSHKA_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },

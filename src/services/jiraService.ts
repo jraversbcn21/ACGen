@@ -3,7 +3,10 @@ import type { JiraSearchResult, JiraTicketData } from '../types';
 
 export function extractIssueKey(input: string): string | null {
   const match = input.match(JIRA_URL_REGEX);
-  return match ? match[1] : null;
+  if (match) return match[1].toUpperCase();
+  const bareMatch = input.match(/^([A-Z]+-\d+)$/i);
+  if (bareMatch) return bareMatch[1].toUpperCase();
+  return null;
 }
 
 export async function fetchJiraTicket(

@@ -349,13 +349,13 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
                           const snapLinkMatch = text.match(/^(.+?)\s*-\s*(https?:\/\/[^\s]+\/browse\/([A-Z]+-\d+))/i);
                           if (snapLinkMatch) {
                             e.preventDefault();
-                            onUpdateGridCell(activeTab, ri, ci, `${snapLinkMatch[3]} ${snapLinkMatch[1].trim()}`);
+                            onUpdateGridCell(activeTab, ri, ci, `${snapLinkMatch[3].toUpperCase()} ${snapLinkMatch[1].trim()}`);
                             return;
                           }
                           const urlMatch = text.match(/\/browse\/([A-Z]+-\d+)/i);
                           if (urlMatch) {
                             e.preventDefault();
-                            onUpdateGridCell(activeTab, ri, ci, urlMatch[1]);
+                            onUpdateGridCell(activeTab, ri, ci, urlMatch[1].toUpperCase());
                           }
                         }}
                         style={{

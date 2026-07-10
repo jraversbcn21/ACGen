@@ -32,6 +32,14 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  if (typeof document !== 'undefined') {
+    const stored = localStorage.getItem(STORAGE_KEYS.THEME);
+    const initial = stored ? (JSON.parse(stored) as string) : theme;
+    if (initial === 'dark' || initial === 'light') {
+      document.documentElement.setAttribute('data-theme', initial);
+    }
+  }
+
   return (
     <div className="page">
       <Header

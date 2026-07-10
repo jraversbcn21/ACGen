@@ -90,8 +90,9 @@ export function useSprints() {
   }, []);
 
   const archiveSprint = useCallback((id: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    updateSprint(id, { archived: true, endDate: today });
+    const today = new Date();
+    const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    updateSprint(id, { archived: true, endDate: localDate });
   }, [updateSprint]);
 
   const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
@@ -159,6 +160,11 @@ export function useSprints() {
       persistSprints(updated);
       return updated;
     });
+    try {
+      localStorage.removeItem(`${STORAGE_KEY}_col_widths_${id}`);
+    } catch {
+      // ignore
+    }
   }, []);
 
   return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };

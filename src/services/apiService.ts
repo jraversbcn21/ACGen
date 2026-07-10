@@ -29,7 +29,7 @@ function validateResponseFormat(content: string, requiredMarkers: string[]): str
 
 function extractJsonArray(text: string): unknown[] {
   let cleaned = text.trim();
-  const fenceMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  const fenceMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/i);
   if (fenceMatch) {
     cleaned = fenceMatch[1].trim();
   }
@@ -208,6 +208,9 @@ export async function generateTestCases(
   const reasoningParams = getReasoningParams(model, 'testcase');
   const result = await generateWithGroq(apiKey, model, userInput, systemPrompt, [], signal, reasoningParams);
   const items = extractJsonArray(result.content);
+  if (items.length === 0) {
+    throw new Error('No se generaron casos de prueba. Intenta con una descripción más detallada.');
+  }
   const testCases = validateTestCases(items);
   return { testCases, model: result.model };
 }
