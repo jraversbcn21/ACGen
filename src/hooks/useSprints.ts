@@ -144,7 +144,8 @@ export function useSprints() {
         if (fromRow === toRow) return s;
         const newGrid = [...grid];
         const [movedRow] = newGrid.splice(fromRow, 1);
-        newGrid.splice(toRow, 0, movedRow);
+        const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
+        newGrid.splice(targetIndex, 0, movedRow);
         return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
       });
       persistSprints(updated);

@@ -169,6 +169,112 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(6);
   });
 
+  it('moveRow reorders rows within a tab grid (move down)', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+
+    const grid = [
+      ['BERSHKA-1', 'A'],
+      ['BERSHKA-2', 'B'],
+      ['BERSHKA-3', 'C'],
+      ['BERSHKA-4', 'D'],
+      ['BERSHKA-5', 'E'],
+    ];
+    act(() => {
+      result.current.setTabGrid(id, 'resolved', grid);
+    });
+
+    act(() => {
+      result.current.moveRow(id, 'resolved', 0, 2);
+    });
+
+    const moved = result.current.sprints[0].tabGrid.resolved;
+    expect(moved[0][0]).toBe('BERSHKA-2');
+    expect(moved[1][0]).toBe('BERSHKA-1');
+    expect(moved[2][0]).toBe('BERSHKA-3');
+    expect(moved[3][0]).toBe('BERSHKA-4');
+    expect(moved[4][0]).toBe('BERSHKA-5');
+  });
+
+  it('moveRow reorders rows within a tab grid (move up)', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+
+    const grid = [
+      ['BERSHKA-1', 'A'],
+      ['BERSHKA-2', 'B'],
+      ['BERSHKA-3', 'C'],
+      ['BERSHKA-4', 'D'],
+      ['BERSHKA-5', 'E'],
+    ];
+    act(() => {
+      result.current.setTabGrid(id, 'resolved', grid);
+    });
+
+    act(() => {
+      result.current.moveRow(id, 'resolved', 4, 0);
+    });
+
+    const moved = result.current.sprints[0].tabGrid.resolved;
+    expect(moved[0][0]).toBe('BERSHKA-5');
+    expect(moved[1][0]).toBe('BERSHKA-1');
+    expect(moved[2][0]).toBe('BERSHKA-2');
+    expect(moved[3][0]).toBe('BERSHKA-3');
+    expect(moved[4][0]).toBe('BERSHKA-4');
+  });
+
+  it('moveRow is a no-op when source and target are the same', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+
+    const grid = [
+      ['BERSHKA-1'],
+      ['BERSHKA-2'],
+    ];
+    act(() => {
+      result.current.setTabGrid(id, 'resolved', grid);
+    });
+
+    const before = result.current.sprints[0].tabGrid.resolved;
+    act(() => {
+      result.current.moveRow(id, 'resolved', 0, 0);
+    });
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual(before);
+  });
+
+  it('moveRow is a no-op for out-of-bounds indices', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+
+    const grid = [['BERSHKA-1']];
+    act(() => {
+      result.current.setTabGrid(id, 'resolved', grid);
+    });
+
+    const before = result.current.sprints[0].tabGrid.resolved;
+    act(() => {
+      result.current.moveRow(id, 'resolved', -1, 0);
+    });
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual(before);
+
+    act(() => {
+      result.current.moveRow(id, 'resolved', 0, 99);
+    });
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual(before);
+  });
+
   it('keeps sprint changes in memory even when localStorage.setItem throws (quota exceeded)', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
