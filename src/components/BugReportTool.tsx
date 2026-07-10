@@ -179,11 +179,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
 
   const handlePlatformChange = useCallback((platform: string) => {
     const p = platform as PlatformId;
+    const wasWeb = formData.platform.startsWith('web-');
+    const nowWeb = p.startsWith('web-');
     setFormData(prev => {
       const browsers = getAvailableBrowsers(p);
       let device = '';
       if (p === 'app-ios') device = IOS_DEVICES[0].label;
       else if (p === 'app-android') device = ANDROID_DEVICES[0].label;
+      const keepUrl = (!wasWeb && nowWeb) || prev.url === '' || prev.url === 'https://localhost:3443/';
       return {
         ...prev,
         platform: p,
@@ -191,10 +194,10 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         appVersion: '',
         device,
         osVersion: '',
-        url: p.startsWith('web-') ? 'https://localhost:3443/' : prev.url,
+        url: nowWeb ? (keepUrl ? 'https://localhost:3443/' : prev.url) : prev.url,
       };
     });
-  }, []);
+  }, [formData.platform]);
 
   const browserOptions = getAvailableBrowsers(formData.platform);
 

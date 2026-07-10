@@ -20,10 +20,11 @@ function typeClass(t: string): string {
 }
 
 function generateJiraTable(testCases: TestCaseData[]): string {
+  const escapeCell = (val: string) => val.replace(/\|/g, '&#124;').replace(/\n/g, '\\\\');
   const header = '||Clave||Resumen||Prioridad||Tipo||Precondiciones||Pasos||Resultado Esperado||';
   const rows = testCases.map(tc => {
     const steps = tc.testSteps.join('\\\\');
-    return `|${tc.key}|${tc.summary}|${tc.priority}|${tc.type}|${tc.preconditions}|${steps}|${tc.expectedResult}|`;
+    return `|${escapeCell(tc.key)}|${escapeCell(tc.summary)}|${escapeCell(tc.priority)}|${escapeCell(tc.type)}|${escapeCell(tc.preconditions)}|${steps}|${escapeCell(tc.expectedResult)}|`;
   });
   return [header, ...rows].join('\n');
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateTestCases, validateTestDataRows } from './apiService';
+import { validateTestCases, validateTestDataRows, isModelDecommissioned } from './apiService';
 
 function validCase(overrides: Record<string, unknown> = {}) {
   return {
@@ -44,8 +44,8 @@ describe('validateTestCases', () => {
 
 describe('validateTestDataRows', () => {
   it('accepts rows with only primitive values', () => {
-    const rows = validateTestDataRows([{ nombre: 'María', telefono: '+34612345678' }]);
-    expect(rows).toEqual([{ nombre: 'María', telefono: '+34612345678' }]);
+    const rows = validateTestDataRows([{ nombre: 'Maria', telefono: '+34612345678' }]);
+    expect(rows).toEqual([{ nombre: 'Maria', telefono: '+34612345678' }]);
   });
 
   it('coerces numeric and boolean values to strings', () => {
@@ -54,16 +54,46 @@ describe('validateTestDataRows', () => {
   });
 
   it('throws when a row contains a nested object', () => {
-    const rows = [{ nombre: 'María', direccion: { calle: 'Mayor', numero: 1 } }];
+    const rows = [{ nombre: 'Maria', direccion: { calle: 'Mayor', numero: 1 } }];
     expect(() => validateTestDataRows(rows)).toThrow(/direccion/);
   });
 
   it('throws when a row contains a nested array', () => {
-    const rows = [{ nombre: 'María', tags: ['a', 'b'] }];
+    const rows = [{ nombre: 'Maria', tags: ['a', 'b'] }];
     expect(() => validateTestDataRows(rows)).toThrow(/tags/);
   });
 
   it('throws when a row is not an object', () => {
     expect(() => validateTestDataRows(['not-an-object'])).toThrow(/registro 1/);
+  });
+});
+
+describe('isModelDecommissioned', () => {
+  it('returns true for 404 with model_not_found', () => {
+    expect(isModelDecommissioned('model_not_found in message', 404)).toBe(true);
+  });
+
+  it('returns true for 400 with model_decommissioned', () => {
+    expect(isModelDecommissioned('model_decommissioned: removed', 400)).toBe(true);
+  });
+
+  it('returns true for 400 with "invalid model"', () => {
+    expect(isModelDecommissioned('This is an invalid model', 400)).toBe(true);
+  });
+
+  it('returns true for 400 with "model not found"', () => {
+    expect(isModelDecommissioned('The requested model not found in catalog', 400)).toBe(true);
+  });
+
+  it('returns false for 401 (auth errors are not model errors)', () => {
+    expect(isModelDecommissioned('Invalid API key', 401)).toBe(false);
+  });
+
+  it('returns false for generic 400 errors unrelated to models', () => {
+    expect(isModelDecommissioned('Bad request: invalid parameter', 400)).toBe(false);
+  });
+
+  it('returns false for 404 without model keywords', () => {
+    expect(isModelDecommissioned('Resource not found', 404)).toBe(false);
   });
 });

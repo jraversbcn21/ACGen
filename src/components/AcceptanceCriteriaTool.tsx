@@ -45,11 +45,16 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
 
       if (issueKey) {
         if (!jiraToken.trim() || !jiraBaseUrl.trim()) {
-          throw new Error('Configura la URL base y el token de Jira para poder leer tickets.');
+          setError('Jira no está configurado — generando solo con el texto introducido. Configura Jira para añadir contexto del ticket.');
+        } else {
+          try {
+            setLoadingStatus('Obteniendo datos del ticket...');
+            const ticket = await fetchJiraTicket(issueKey, jiraToken.trim(), jiraBaseUrl.trim());
+            inputText = `${requirements}\n\n--- Contexto del ticket ${issueKey} ---\n${formatTicketAsText(ticket)}`;
+          } catch {
+            setError('No se pudo obtener el ticket de Jira — generando solo con el texto introducido.');
+          }
         }
-        setLoadingStatus('Obteniendo datos del ticket...');
-        const ticket = await fetchJiraTicket(issueKey, jiraToken.trim(), jiraBaseUrl.trim());
-        inputText = formatTicketAsText(ticket);
       }
 
       setLoadingStatus('Generando criterios...');

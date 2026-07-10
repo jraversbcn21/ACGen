@@ -51,7 +51,10 @@ function downloadCSV(data: Record<string, string>[], dataType: string, market: s
   const header = keys.map(k => `"${LABEL_MAP[k] || k}"`).join(',');
   const rows = data.map(row =>
     keys.map(k => {
-      const val = (row[k] || '').replace(/"/g, '""');
+      let val = (row[k] || '').replace(/"/g, '""');
+      if (val && /^[=+\-@]/.test(val)) {
+        val = `'${val}`;
+      }
       return `"${val}"`;
     }).join(',')
   );
@@ -72,7 +75,7 @@ function formatTableAsTSV(data: Record<string, string>[]): string {
   const keys = Object.keys(data[0]);
   const header = keys.map(k => LABEL_MAP[k] || k).join('\t');
   const rows = data.map(row =>
-    keys.map(k => (row[k] || '').replace(/\t/g, ' ')).join('\t')
+    keys.map(k => (row[k] || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t')
   );
   return [header, ...rows].join('\n');
 }

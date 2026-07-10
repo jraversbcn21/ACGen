@@ -99,6 +99,17 @@ export function validateTestCases(items: unknown[]): TestCaseData[] {
   return validated;
 }
 
+export function isModelDecommissioned(errorMessage: string | undefined, status: number): boolean {
+  if (status !== 400 && status !== 404) return false;
+  const msg = (errorMessage ?? '').toLowerCase();
+  return (
+    msg.includes('model_decommissioned') ||
+    msg.includes('model_not_found') ||
+    msg.includes('invalid model') ||
+    msg.includes('model not found')
+  );
+}
+
 export async function generateWithGroq(
   apiKey: string,
   model: string,
@@ -140,20 +151,12 @@ export async function generateWithGroq(
     if (response.status === 429) {
       throw Object.assign(new Error('Límite de peticiones alcanzado. Espera unos segundos y vuelve a intentar.'), apiError);
     }
-    if (response.status === 400) {
-      const msg = (apiError.message ?? '').toLowerCase();
-      const isModelError =
-        msg.includes('model_decommissioned') ||
-        msg.includes('model_not_found') ||
-        msg.includes('invalid model') ||
-        msg.includes('model not found');
-      if (isModelError) {
+    if (isModelDecommissioned(apiError.message, response.status)) {
         throw Object.assign(
           new Error('El modelo seleccionado ya no está disponible. Por favor selecciona otro modelo.'),
           apiError,
         );
       }
-    }
 
     throw Object.assign(new Error(apiError.message), apiError);
   }
