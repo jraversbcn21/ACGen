@@ -19,14 +19,14 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `api/_lib/jiraUtils.test.js` | 16 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema) |
+| `api/_lib/jiraUtils.test.js` | 22 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema, `JIRA_ALLOWED_HOSTS` allowlist: case-insensitivity, quote/whitespace tolerance, fail-closed on unset/empty, no subdomain-suffix bypass) |
 | `src/services/apiService.test.ts` | 17 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection) |
-| `src/hooks/useSprints.test.ts` | 18 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience |
+| `src/hooks/useSprints.test.ts` | 19 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint (removes column-widths key), moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load from history, clear, quota-exceeded resilience |
 | `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches render crash, recovers on reset |
 
-**Total: 79 tests across 6 files.**
+**Total: 86 tests across 6 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
