@@ -33,6 +33,14 @@ export function ApiKeyConfig({ apiKey, onChange }: ApiKeyConfigProps) {
           {showKey ? <Icon.eyeOff size={18} /> : <Icon.eye size={18} />}
         </button>
       </div>
+      <a
+        href="https://console.groq.com/keys"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'inline-block', marginTop: 6, fontSize: 11.5, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}
+      >
+        ¿No tienes una? Consíguela gratis en Groq →
+      </a>
     </div>
   );
 }
