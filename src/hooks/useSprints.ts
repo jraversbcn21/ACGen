@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { STORAGE_KEYS } from '../config/constants';
 
 const STORAGE_KEY = 'acgen_sprints';
 
@@ -161,7 +162,7 @@ export function useSprints() {
       return updated;
     });
     try {
-      localStorage.removeItem(`${STORAGE_KEY}_col_widths_${id}`);
+      localStorage.removeItem(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${id}`);
     } catch {
       // ignore
     }

@@ -33,8 +33,13 @@ export default function App() {
   }, [theme]);
 
   if (typeof document !== 'undefined') {
-    const stored = localStorage.getItem(STORAGE_KEYS.THEME);
-    const initial = stored ? (JSON.parse(stored) as string) : theme;
+    let initial: unknown = theme;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.THEME);
+      if (stored) initial = JSON.parse(stored);
+    } catch {
+      // corrupt value — fall back to theme state
+    }
     if (initial === 'dark' || initial === 'light') {
       document.documentElement.setAttribute('data-theme', initial);
     }

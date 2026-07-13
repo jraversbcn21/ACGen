@@ -58,6 +58,12 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
     }, 250);
   }, []);
 
+  const clearSearch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSearchQuery('');
+    setDebouncedQuery('');
+  }, []);
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -165,7 +171,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
             key={tab}
             type="button"
             className={`btn-ghost ${activeTab === tab ? 'sprint-tab-active' : ''}`}
-            onClick={() => { setActiveTab(tab); setSearchQuery(''); setDebouncedQuery(''); }}
+            onClick={() => { setActiveTab(tab); clearSearch(); }}
           >
             {TAB_LABELS[tab]}
           </button>
@@ -193,7 +199,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
           placeholder="Buscar por ticket, fecha, squad..."
           value={searchQuery}
           onChange={(e) => handleSearchChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Escape') { setSearchQuery(''); setDebouncedQuery(''); } }}
+          onKeyDown={(e) => { if (e.key === 'Escape') clearSearch(); }}
           style={{
             width: 240, height: 30, padding: '0 10px', fontSize: 12,
             fontFamily: 'var(--font-ui)', background: 'var(--surface-2)',

@@ -116,6 +116,19 @@ describe('useSprints', () => {
     expect(result.current.sprints).toHaveLength(0);
   });
 
+  it('deleteSprint removes the matching column-widths key from localStorage', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    const id = result.current.sprints[0].id;
+    localStorage.setItem(`acgen_sprint_col_widths_${id}`, JSON.stringify({ 'resolved-0': 150 }));
+    act(() => {
+      result.current.deleteSprint(id);
+    });
+    expect(localStorage.getItem(`acgen_sprint_col_widths_${id}`)).toBeNull();
+  });
+
   it('persists sprints to localStorage', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
