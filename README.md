@@ -50,7 +50,7 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 |---|---|
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (endpoint compatible con OpenAI) |
-| Proxy Jira | Express.js (bypass CORS) |
+| Proxy Jira | Funciones serverless de Vercel (`api/`) |
 | PDF | jsPDF + jspdf-autotable |
 | Tests | Vitest + React Testing Library (79 tests) |
 | Estilos | CSS personalizado (sin framework) |
