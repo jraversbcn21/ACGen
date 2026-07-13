@@ -5,8 +5,7 @@
 | Command | Action |
 |---|---|
 | `npm run dev` | Start Vite dev server (port 5173) |
-| `npm run server` | Start Express proxy (port 3002) |
-| `npm run dev:all` | Start both Vite + proxy concurrently |
+| `npm run dev:all` | Start Vite + Jira functions together via `vercel dev` |
 | `npm run build` | Type-check (`tsc -b`) + Vite build |
 | `npm run lint` | ESLint |
 | `npm run preview` | Vite preview |
@@ -103,14 +102,13 @@ In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body param
 
 Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 for keywords `model_decommissioned`, `model_not_found`, `invalid model`, `model not found`. Used in `generateWithGroq()` to surface: *"El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo."* Also handles HTTP 401 (invalid API key) and HTTP 429 (rate limit) with specific Spanish messages.
 
-### Proxy Server
+### Jira serverless functions (Vercel)
 
-- **`server/index.js`** — Express app on port 3002, CORS origin `http://localhost:5173`, JSON middleware, mounts Jira routes at `/api/jira`.
-- **`server/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`).
-- **`server/jiraRoutes.js`** routes:
-  - `GET /api/jira/issue/:issueKey` — validates issueKey, validates baseUrl, proxies with 30s timeout. Returns 400 on invalid input, 504 on timeout.
-  - `GET /api/jira/search?jql=` — validates baseUrl, proxies with 30s timeout. Returns 400 on invalid input, 504 on timeout.
-- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish.
+- **`api/jira/issue/[issueKey].js`** — `GET /api/jira/issue/:issueKey`. Validates issueKey + baseUrl, proxies to Jira with an 8s `AbortSignal.timeout` (under the 10s Hobby function limit). Returns 400 on invalid input, 404 on missing ticket, 504 on timeout, 405 on non-GET.
+- **`api/jira/search.js`** — `GET /api/jira/search?jql=`. Validates baseUrl, proxies with 8s timeout. Returns 400 on invalid input/JQL, 504 on timeout, 405 on non-GET.
+- **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
+- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish. Same-origin, so no CORS layer.
+- `FETCH_TIMEOUT_MS = 8_000` in each handler and `maxDuration: 10` in `vercel.json` are the two knobs to raise on a Pro plan.
 
 ### Jira ticket integration
 
@@ -164,10 +162,10 @@ AVAILABLE_MODELS = [
 
 | File | Purpose |
 |---|---|
-| `server/index.js` | Express proxy entry: CORS, JSON middleware, mounts Jira routes |
-| `server/jiraRoutes.js` | `GET /issue/:issueKey` and `GET /search?jql=` — validates inputs, proxies with 30s timeout |
-| `server/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — input validation |
-| `server/jiraUtils.test.js` | 16 unit tests for validation functions |
+| `api/jira/issue/[issueKey].js` | Serverless function: `GET /api/jira/issue/:issueKey`, 8s timeout |
+| `api/jira/search.js` | Serverless function: `GET /api/jira/search?jql=`, 8s timeout |
+| `api/_lib/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — shared validation |
+| `api/_lib/jiraUtils.test.js` | 16 unit tests for validation functions |
 | `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, BERSHKA_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
 | `src/services/apiService.ts` | `generateWithGroq()`, `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `extractJsonArray()` |
 | `src/services/apiService.test.ts` | 17 unit tests — validation type checks, model decommission detection |
@@ -198,7 +196,7 @@ AVAILABLE_MODELS = [
 
 - Entrypoint: `src/main.tsx` -> `App.tsx`.
 - `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
-- `express` + `cors` + `concurrently` are devDependencies (proxy server).
+- Jira proxying runs as Vercel serverless functions under `api/` (no Express/CORS). `vercel dev` serves frontend + functions together locally.
 - ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
 - Sprint Tracker operates fully offline — no Groq or Jira API calls.
 - Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `server/`).

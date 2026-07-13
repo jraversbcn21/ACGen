@@ -76,15 +76,13 @@ npm install
 
 ## Uso
 
-### Desarrollo (con servidor proxy de Jira)
+### Desarrollo (con integración Jira)
 
 ```bash
 npm run dev:all
 ```
 
-Esto inicia simultáneamente:
-- **Vite dev server** en `http://localhost:5173`
-- **Express proxy** en `http://localhost:3002`
+Ejecuta `vercel dev`, que sirve el frontend y las funciones serverless de `/api` juntos en el mismo origen (por defecto `http://localhost:3000`). Requiere el [Vercel CLI](https://vercel.com/docs/cli) instalado y, la primera vez, ejecutar `vercel link` para vincular el proyecto.
 
 ### Solo Vite (sin integración Jira)
 
@@ -118,12 +116,12 @@ npm run lint
 
 ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
-1. Inicia el servidor proxy con `npm run dev:all` o `npm run server`
+1. Inicia el entorno con `npm run dev:all` (`vercel dev`), que levanta las funciones de `/api`
 2. En la herramienta deseada, configura la **URL base de Jira** y un **Personal Access Token** (PAT)
 3. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
 4. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
 
-> El proxy se ejecuta localmente en el puerto 3002. Las credenciales nunca se envían a servidores externos — solo viajan desde tu navegador al proxy local y de ahí a tu instancia de Jira.
+> Las funciones de `/api` se ejecutan en el mismo origen que la app (local vía `vercel dev`, o en Vercel en producción). Las credenciales viajan desde tu navegador a la función y de ahí a tu instancia de Jira; nunca a terceros.
 
 ---
 
@@ -131,10 +129,9 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
 ```
 acgen/
-├── server/                 # Proxy Express para API de Jira
-│   ├── index.js
-│   ├── jiraRoutes.js       # Rutas /issue y /search con timeouts
-│   └── jiraUtils.js        # Validación de issue keys y URL base
+├── api/                    # Funciones serverless de Vercel (proxy Jira)
+│   ├── _lib/               # Validación compartida (issue keys, URL base)
+│   └── jira/               # Endpoints /issue/[issueKey] y /search
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
 │   ├── config/             # Constantes, prompts, configuración de modelos
