@@ -19,7 +19,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `server/jiraUtils.test.js` | 16 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema) |
+| `api/_lib/jiraUtils.test.js` | 16 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema) |
 | `src/services/apiService.test.ts` | 17 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection) |
 | `src/hooks/useSprints.test.ts` | 18 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience |
@@ -32,7 +32,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ## Architecture
 
-- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
+- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Jira API calls proxy through Vercel serverless functions under `api/` (same origin as the frontend, no CORS needed).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library. The view router is wrapped in `<ErrorBoundary key={view}>`: a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recoverable fallback (message + "Reintentar" button). Keyed by `view` so switching tools remounts it and clears any stuck error state.
 - **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **`useLocalStorage` cross-instance/cross-tab sync**: on write, dispatches a custom `acgen-local-storage` window event (same-tab instances sharing a key stay in sync) and listens for the native `storage` event (cross-tab sync; `newValue: null` resets to `initialValue`). All `localStorage.setItem` calls are wrapped in try/catch so `QuotaExceededError` degrades to a console error instead of crashing the render.
@@ -199,7 +199,7 @@ AVAILABLE_MODELS = [
 - Jira proxying runs as Vercel serverless functions under `api/` (no Express/CORS). `vercel dev` serves frontend + functions together locally.
 - ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
 - Sprint Tracker operates fully offline — no Groq or Jira API calls.
-- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `server/`).
+- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `api/_lib/`).
 - `tsconfig.app.json` excludes `*.test.ts` and `*.test.tsx` from production typecheck/build.
 
 ## Bug-fix history (2026-07-10)
