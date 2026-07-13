@@ -7,7 +7,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
 
-ACGen es una aplicación web (SPA) que integra cuatro herramientas impulsadas por IA para agilizar el trabajo diario de equipos QA en ecommerce. Utiliza la API de Groq (LLM) para generar contenido estructurado y se conecta opcionalmente con Jira para enriquecer las generaciones con contexto de tickets reales.
+ACGen es una aplicación web (SPA) que integra cinco herramientas para agilizar el trabajo diario de equipos QA en ecommerce: cuatro impulsadas por IA mediante la API de Groq (LLM) y un Sprint Tracker offline para seguimiento de tickets. Se conecta opcionalmente con Jira para enriquecer las generaciones con contexto de tickets reales.
 
 Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-mercado europeo con pruebas en web (https://localhost:3443/) y apps nativas (Android APK, iOS IPA).
 
@@ -16,9 +16,11 @@ Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-merca
 - **Criterios de Aceptación** — Genera criterios Dado/Cuando/Entonces desde tickets de Jira o requisitos. Validación automática de formato. Historial persistente de las últimas 10 generaciones.
 - **Test Case Generator** — Genera casos de prueba QA estructurados (JSON) con prioridad, tipo, pasos y resultado esperado. Exporta como tabla Jira o PDF.
 - **Bug Report Generator** — Genera bug reports en formato Jira wiki con paneles estructurados, selección de plataforma (web/App Android/App iOS), campos dinámicos y contexto de tickets Jira. Historial persistente de las últimas 10 generaciones.
-- **Datos de Prueba** — Genera datos realistas (direcciones, facturación, registros, tarjetas, cupones) adaptados a 22 mercados europeos. Exporta como TSV o CSV.
-- **Tema oscuro** — Alterna entre modo claro y oscuro. Persistencia en localStorage.
-- **Integración Jira** — Conexión opcional mediante proxy local para leer tickets y enriquecer generaciones.
+- **Datos de Prueba** — Genera datos realistas (direcciones, facturación, registros, tarjetas, cupones) adaptados a 217 mercados. Exporta como TSV o CSV (con protección contra inyección de fórmulas en Excel).
+- **Sprint Tracker** — Hoja de cálculo offline por sprint con 4 pestañas (Resueltos, Creados, ReOpen, Prioridad Alta): filas reordenables por drag-and-drop, búsqueda con debounce, columnas redimensionables, enlaces a tickets Jira (Ctrl+click), pegado desde SnapLink y archivado histórico. Sin dependencia de Groq ni Jira API.
+- **Tema oscuro** — Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
+- **Integración Jira** — Conexión opcional mediante proxy local para leer tickets y enriquecer generaciones. Proxy endurecido: validación de issue keys y URL base, timeouts de 30s.
+- **Text-to-speech** — Lectura en voz alta del razonamiento del modelo en Criterios y Bug Report.
 
 
 ---
@@ -26,10 +28,19 @@ Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-merca
 ## Herramientas
 
 ### Criterios de Aceptación
+Genera criterios Dado/Cuando/Entonces en formato Confluence wiki a partir de requisitos escritos o de un ticket de Jira (URL o clave). El contexto del ticket se añade al texto introducido, sin reemplazarlo. Valida automáticamente que la salida contenga los marcadores requeridos.
+
 ### Test Case Generator
+Genera casos de prueba estructurados (clave, resumen, prioridad, tipo, precondiciones, pasos, resultado esperado) validados campo a campo. Se renderizan como tabla HTML con badges de prioridad y tipo, exportables como tabla Jira o PDF.
+
 ### Bug Report Generator
+Genera bug reports en formato Jira wiki con paneles estructurados. Cuatro plataformas (Web Desktop, Web Mobile, App Android, App iOS) con campos dinámicos por plataforma y contexto opcional de tickets Jira.
+
 ### Datos de Prueba
-Genera datos de prueba realistas y con formato válido para cada mercado europeo. Cinco tipos de dato: direcciones de envío, datos de facturación, registros de usuario, tarjetas de pago (con números de prueba de Adyen) y códigos promocionales. La salida se muestra en una tabla HTML con cabeceras en español, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
+Genera datos de prueba realistas y con formato válido para cada mercado. Cinco tipos de dato: direcciones de envío, datos de facturación, registros de usuario, tarjetas de pago (con números de prueba de Adyen) y códigos promocionales. La salida se muestra en una tabla HTML con cabeceras en español, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
+
+### Sprint Tracker
+Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 4 pestañas (Resueltos, Creados, ReOpen, Prioridad Alta) con una hoja de cálculo editable: columnas redimensionables, filas reordenables por drag-and-drop, búsqueda instantánea, navegación con teclado y enlaces directos a Jira (Ctrl+click sobre la clave del ticket). Los sprints se archivan con fecha de cierre y permanecen consultables. Funciona completamente offline — los datos viven en localStorage.
 
 ---
 
@@ -41,6 +52,7 @@ Genera datos de prueba realistas y con formato válido para cada mercado europeo
 | LLM API | Groq (endpoint compatible con OpenAI) |
 | Proxy Jira | Express.js (bypass CORS) |
 | PDF | jsPDF + jspdf-autotable |
+| Tests | Vitest + React Testing Library (79 tests) |
 | Estilos | CSS personalizado (sin framework) |
 
 ---
@@ -86,6 +98,12 @@ npm run dev
 npm run build
 ```
 
+### Tests
+
+```bash
+npm test
+```
+
 ### Lint
 
 ```bash
@@ -115,20 +133,23 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 acgen/
 ├── server/                 # Proxy Express para API de Jira
 │   ├── index.js
-│   └── jiraRoutes.js
+│   ├── jiraRoutes.js       # Rutas /issue y /search con timeouts
+│   └── jiraUtils.js        # Validación de issue keys y URL base
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
 │   ├── config/             # Constantes, prompts, configuración de modelos
-│   ├── hooks/              # Hooks personalizados (useLocalStorage)
+│   ├── hooks/              # useLocalStorage, useHistory, useSprints
 │   ├── services/           # Servicio API (Groq) + servicio Jira
 │   ├── types/              # Interfaces TypeScript
-│   ├── App.tsx             # Componente principal con ruteo por vista
+│   ├── App.tsx             # Componente principal con ruteo por vista + ErrorBoundary
 │   ├── App.css             # Todos los estilos
 │   └── main.tsx            # Punto de entrada
 ├── AGENTS.md               # Guía técnica detallada para desarrolladores
 ├── README.md
 ├── package.json
 └── vite.config.ts
+
+Tests unitarios co-localizados con el código (*.test.ts / *.test.tsx / *.test.js).
 ```
 
 ---
