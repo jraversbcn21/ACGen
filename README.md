@@ -9,7 +9,7 @@
 
 ACGen es una aplicación web (SPA) que integra cinco herramientas para agilizar el trabajo diario de equipos QA en ecommerce: cuatro impulsadas por IA mediante la API de Groq (LLM) y un Sprint Tracker offline para seguimiento de tickets. Se conecta opcionalmente con Jira para enriquecer las generaciones con contexto de tickets reales.
 
-Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-mercado europeo con pruebas en web (https://localhost:3443/) y apps nativas (Android APK, iOS IPA).
+Construida a partir de mi experiencia real en QA de ecommerce — pensada para un contexto de moda multi-mercado europeo, con pruebas en web y apps nativas (Android APK, iOS IPA).
 
 ## Características
 
@@ -123,6 +123,8 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 5. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
 
 > Las funciones de `/api` se ejecutan en el mismo origen que la app (local vía `vercel dev`, o en Vercel en producción). Las credenciales viajan desde tu navegador a la función y de ahí a tu instancia de Jira; nunca a terceros. `JIRA_ALLOWED_HOSTS` restringe a qué hosts pueden apuntar esas peticiones — sin esta lista, cualquiera en internet podría usar la función para sondear otros hosts.
+
+> **Limitación conocida:** si tu Jira solo es accesible desde tu red corporativa (IP privada), la integración con Jira **no funcionará en el despliegue público** — las funciones de Vercel corren en la nube pública y no pueden alcanzar direcciones internas. Para ese caso, usa `npm run dev:all` en tu red corporativa; el resto de herramientas (Criterios, Test Cases, Bug Report, Datos de Prueba, Sprint Tracker) funcionan igual en público, ya que no dependen de Jira.
 
 ---
 

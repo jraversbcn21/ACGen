@@ -70,7 +70,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ### Test Data Generator
 
-- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for Bershka ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
+- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for a fashion ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
 - `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`, then validates row shape via `validateTestDataRows()` — rejects nested objects/arrays from the LLM.
 - **CSV export**: BOM for Excel. Values starting with `=+-@` prefixed with `'` to neutralize formula injection.
 - **TSV export**: tabs and newlines in cell values replaced with spaces.
@@ -109,7 +109,9 @@ Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 f
 - **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`, plus a `JIRA_ALLOWED_HOSTS` host allowlist — see below). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
 - Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish. Same-origin, so no CORS layer.
 - `FETCH_TIMEOUT_MS = 8_000` in each handler and `maxDuration: 10` in `vercel.json` are the two knobs to raise on a Pro plan.
-- **`JIRA_ALLOWED_HOSTS`** (env var, comma-separated hostnames, e.g. `jira.inditex.com`) — `validateBaseUrl()` rejects any host not in this list (case-insensitive, quotes/whitespace trimmed per entry). Required: unset or empty means every request is rejected (fail-closed). Once these endpoints run on a public domain instead of `localhost`, they're reachable by anyone; without a host allowlist a caller could point `X-Jira-Base-Url` at an arbitrary http/https host (constrained SSRF — fixed REST paths only, caller supplies their own credentials, but still usable for internal-network probing or burning the project's function quota). Configure with `vercel env add JIRA_ALLOWED_HOSTS <environment>` for each of `development`/`preview`/`production`, then `vercel env pull .env.local` to sync locally — hand-editing `.env.local` directly does **not** work, `vercel dev`'s function runtime only picks up variables that are registered with the linked Vercel project.
+- **`JIRA_ALLOWED_HOSTS`** (env var, comma-separated hostnames, e.g. `mycompany.atlassian.net`) — `validateBaseUrl()` rejects any host not in this list (case-insensitive, quotes/whitespace trimmed per entry). Required: unset or empty means every request is rejected (fail-closed). Once these endpoints run on a public domain instead of `localhost`, they're reachable by anyone; without a host allowlist a caller could point `X-Jira-Base-Url` at an arbitrary http/https host (constrained SSRF — fixed REST paths only, caller supplies their own credentials, but still usable for internal-network probing or burning the project's function quota). Configure with `vercel env add JIRA_ALLOWED_HOSTS <environment>` for each of `development`/`preview`/`production`, then `vercel env pull .env.local` to sync locally — hand-editing `.env.local` directly does **not** work, `vercel dev`'s function runtime only picks up variables that are registered with the linked Vercel project.
+
+**Known limitation — a private-network Jira instance won't work on a public deployment.** If `X-Jira-Base-Url` points at a host that only resolves to a private (RFC1918) IP — a self-hosted Jira reachable only from inside a corporate network/VPN — the request fails at the public deployment with `500 "Error de conexión con el servidor proxy."` (a `fetch()`-level network failure, not a timeout), because Vercel's serverless functions run on Vercel's own public cloud and cannot route to private addresses. This is an infrastructure constraint, not a bug in this code, and reproduces on any public host, not just Vercel. It does **not** affect Jira Cloud instances (`*.atlassian.net`), which have public IPs. Workaround for a private instance: run `npm run dev:all` (`vercel dev`) on a machine with network access to it, or expose it through a tunnel/reverse-proxy and add that public hostname to `JIRA_ALLOWED_HOSTS`. The other four tools (Groq-based) and Sprint Tracker (fully offline) are unaffected either way.
 
 ### Jira ticket integration
 
@@ -167,7 +169,7 @@ AVAILABLE_MODELS = [
 | `api/jira/search.js` | Serverless function: `GET /api/jira/search?jql=`, 8s timeout |
 | `api/_lib/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — shared validation |
 | `api/_lib/jiraUtils.test.js` | 16 unit tests for validation functions |
-| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, BERSHKA_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
+| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
 | `src/services/apiService.ts` | `generateWithGroq()`, `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `extractJsonArray()` |
 | `src/services/apiService.test.ts` | 17 unit tests — validation type checks, model decommission detection |
 | `src/services/jiraService.ts` | `extractIssueKey()` (URLs + bare keys), `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()` |

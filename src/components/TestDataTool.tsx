@@ -3,7 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { generateTestData } from '../services/apiService';
-import { BERSHKA_MARKETS, DATA_TYPES, STORAGE_KEYS } from '../config/constants';
+import { SUPPORTED_MARKETS, DATA_TYPES, STORAGE_KEYS } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { TestDataFormData } from '../types';
@@ -105,7 +105,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
   const hasOutput = generatedData.length > 0;
 
   const marketOptions = useMemo(
-    () => BERSHKA_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
+    () => SUPPORTED_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
     [],
   );
 

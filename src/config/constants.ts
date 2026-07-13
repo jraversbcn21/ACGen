@@ -32,7 +32,7 @@ export const REQUIRED_MARKERS = [
   '*Entonces*',
 ];
 
-export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para el sitio web de moda ecommerce Bershka ([www.bershka.com](https://www.bershka.com)). Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
+export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para un sitio web de ecommerce de moda. Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
 
 Basa tu respuesta en patrones estándar de ecommerce — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: Home, Footer, Menú/Navegación, Buscador, Parrillas de productos, Filtros, PDP (Detalle de Producto), Cesta y Checkout.
 
@@ -83,7 +83,7 @@ export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'te
 
 export const JIRA_URL_REGEX = /https?:\/\/(?:[^/]+\/)?(?:jira\/)?browse\/([A-Z]+-\d+)/i;
 
-export const BERSHKA_MARKETS = [
+export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },
   { code: 'DZ', label: 'Algérie', currency: 'DZD', locale: 'fr' },
   { code: 'AD', label: 'Andorra', currency: '€', locale: 'ca' },
@@ -328,10 +328,10 @@ export const DATA_TYPES = [
   { id: 'promo-codes', label: 'Cupones y códigos promocionales' },
 ] as const;
 
-export const TEST_DATA_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda (Bershka, grupo Inditex). Tu tarea es generar datos de prueba realistas y válidos para testing manual.
+export const TEST_DATA_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda. Tu tarea es generar datos de prueba realistas y válidos para testing manual.
 
 CONTEXTO:
-- Ecommerce: Bershka (www.bershka.com), multi-mercado europeo
+- Ecommerce de moda, multi-mercado europeo
 - Los datos se usan para testing manual en entornos de prueba
 - Los datos deben ser FICTICIOS pero con formato VÁLIDO para cada país/mercado
 - Cada mercado tiene formatos específicos: direcciones, códigos postales, teléfonos, documentos de identidad, divisas
@@ -347,7 +347,7 @@ REGLAS:
    - Amex: 3700 0000 0000 002
    - Usar fecha de expiración futura (03/2030) y CVV genérico (737 para Amex, 123 para el resto)
    - Variar el tipo de tarjeta entre registros
-6. Para cupones/códigos promocionales, genera códigos con formato realista (WELCOME10, SUMMER2026, FREESHIP, BERSHKA20, etc.) e indica tipo (porcentaje, monto fijo, envío gratis), valor, y condiciones de uso.
+6. Para cupones/códigos promocionales, genera códigos con formato realista (WELCOME10, SUMMER2026, FREESHIP, MODA20, etc.) e indica tipo (porcentaje, monto fijo, envío gratis), valor, y condiciones de uso.
 7. Los códigos postales, formatos de teléfono y formatos de dirección DEBEN ser válidos para el país seleccionado.
 8. Para datos de tipo "user-registration": los emails DEBEN seguir este formato: un nombre corto y común del país en minúsculas (sin apellidos, sin números, sin puntos, sin guiones) seguido de un dominio de prueba QA. Rota los dominios en este orden: @qa, @qa1, @qa2, @qa.1, @qa.2, @qa.3, @qa.4, etc. Ejemplos: maria@qa, jean@qa1, luca@qa2, anna@qa.1, pedro@qa.2.
 9. Para datos de tipo "user-registration": la contraseña SIEMPRE debe ser exactamente "Test1234" para TODOS los registros generados. Sin excepciones ni variaciones.
@@ -371,10 +371,10 @@ Para "promo-codes":
 
 IMPORTANTE: Devuelve SOLO el JSON array. Nada más.`;
 
-export const BUG_REPORT_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda (Bershka, grupo Inditex). Tu tarea es generar un bug report profesional y detallado en formato Jira wiki a partir de una descripción informal de un defecto.
+export const BUG_REPORT_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda. Tu tarea es generar un bug report profesional y detallado en formato Jira wiki a partir de una descripción informal de un defecto.
 
 CONTEXTO DEL PROYECTO:
-- Ecommerce: Bershka (www.bershka.com)
+- Ecommerce de moda online
 - Multi-mercado europeo con particularidades por país (impuestos, métodos de pago, idiomas, divisas)
 - Plataformas: Web Desktop, Web Mobile, App Android (APK), App iOS (IPA)
 - Entorno de pruebas web: https://localhost:3443/

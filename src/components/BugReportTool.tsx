@@ -4,7 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { generateBugReport } from '../services/apiService';
-import { BERSHKA_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
+import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useHistory } from '../hooks/useHistory';
@@ -57,7 +57,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
 
   const marketOptions = useMemo(
-    () => BERSHKA_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
+    () => SUPPORTED_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
     [],
   );
 
