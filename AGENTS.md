@@ -79,7 +79,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 - **5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`. Fully offline — no Groq or Jira API dependency.
 - **Data model**: sprints stored in `acgen_sprints`. Each sprint has `tabGrid: Record<TabId, string[][]>`, JQL strings per tab, and metadata. Column widths stored in `acgen_sprint_col_widths_{sprintId}`. **`deleteSprint` removes orphaned width keys.**
-- **4 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has its own spreadsheet grid.
+- **5 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta, JSD. Each tab has its own spreadsheet grid. JSD only has 3 named columns (JSD, Fecha, Motivo) — same pattern as ReOpen/Prioridad Alta having fewer named columns than the 6-column grid.
 - **Grid**: editable 2D array (20 rows x 6 columns). Resizable columns via drag handle. "+ Fila" to expand rows.
 - **Row drag-and-drop**: via drag handle on row number cells. `moveRow()` correctly handles downward moves (off-by-one fixed). Disabled on archived sprints. Drop target indicator only shown for internal row drags.
 - **Search bar**: debounced at 250ms. Shows "N de M filas" counter. Escape clears. "+ Fila" hidden during search.
