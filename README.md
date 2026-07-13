@@ -9,7 +9,7 @@
 
 ACGen es una aplicación web (SPA) que integra cinco herramientas para agilizar el trabajo diario de equipos QA en ecommerce: cuatro impulsadas por IA mediante la API de Groq (LLM) y un Sprint Tracker offline para seguimiento de tickets. Se conecta opcionalmente con Jira para enriquecer las generaciones con contexto de tickets reales.
 
-Desarrollada para el contexto de **Bershka / Inditex** — ecommerce multi-mercado europeo con pruebas en web (https://localhost:3443/) y apps nativas (Android APK, iOS IPA).
+Construida a partir de mi experiencia real en QA de ecommerce — pensada para un contexto de moda multi-mercado europeo, con pruebas en web y apps nativas (Android APK, iOS IPA).
 
 ## Características
 
@@ -50,9 +50,9 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 |---|---|
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (endpoint compatible con OpenAI) |
-| Proxy Jira | Express.js (bypass CORS) |
+| Proxy Jira | Funciones serverless de Vercel (`api/`) |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (79 tests) |
+| Tests | Vitest + React Testing Library (86 tests) |
 | Estilos | CSS personalizado (sin framework) |
 
 ---
@@ -76,15 +76,13 @@ npm install
 
 ## Uso
 
-### Desarrollo (con servidor proxy de Jira)
+### Desarrollo (con integración Jira)
 
 ```bash
 npm run dev:all
 ```
 
-Esto inicia simultáneamente:
-- **Vite dev server** en `http://localhost:5173`
-- **Express proxy** en `http://localhost:3002`
+Ejecuta `vercel dev`, que sirve el frontend y las funciones serverless de `/api` juntos en el mismo origen (por defecto `http://localhost:3000`). Requiere el [Vercel CLI](https://vercel.com/docs/cli) instalado y, la primera vez, ejecutar `vercel link` para vincular el proyecto.
 
 ### Solo Vite (sin integración Jira)
 
@@ -118,12 +116,15 @@ npm run lint
 
 ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
-1. Inicia el servidor proxy con `npm run dev:all` o `npm run server`
-2. En la herramienta deseada, configura la **URL base de Jira** y un **Personal Access Token** (PAT)
-3. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
-4. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
+1. Configura la variable de entorno **`JIRA_ALLOWED_HOSTS`** en el proyecto de Vercel (host o lista separada por comas, ej. `jira.tuempresa.com`) — es obligatoria: sin ella, las funciones rechazan cualquier petición. `vercel env add JIRA_ALLOWED_HOSTS development` (y `preview`/`production`), luego `vercel env pull .env.local` para tenerla en local
+2. Inicia el entorno con `npm run dev:all` (`vercel dev`), que levanta las funciones de `/api`
+3. En la herramienta deseada, configura la **URL base de Jira** y un **Personal Access Token** (PAT)
+4. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
+5. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
 
-> El proxy se ejecuta localmente en el puerto 3002. Las credenciales nunca se envían a servidores externos — solo viajan desde tu navegador al proxy local y de ahí a tu instancia de Jira.
+> Las funciones de `/api` se ejecutan en el mismo origen que la app (local vía `vercel dev`, o en Vercel en producción). Las credenciales viajan desde tu navegador a la función y de ahí a tu instancia de Jira; nunca a terceros. `JIRA_ALLOWED_HOSTS` restringe a qué hosts pueden apuntar esas peticiones — sin esta lista, cualquiera en internet podría usar la función para sondear otros hosts.
+
+> **Limitación conocida:** si tu Jira solo es accesible desde tu red corporativa (IP privada), la integración con Jira **no funcionará en el despliegue público** — las funciones de Vercel corren en la nube pública y no pueden alcanzar direcciones internas. Para ese caso, usa `npm run dev:all` en tu red corporativa; el resto de herramientas (Criterios, Test Cases, Bug Report, Datos de Prueba, Sprint Tracker) funcionan igual en público, ya que no dependen de Jira.
 
 ---
 
@@ -131,10 +132,9 @@ ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
 ```
 acgen/
-├── server/                 # Proxy Express para API de Jira
-│   ├── index.js
-│   ├── jiraRoutes.js       # Rutas /issue y /search con timeouts
-│   └── jiraUtils.js        # Validación de issue keys y URL base
+├── api/                    # Funciones serverless de Vercel (proxy Jira)
+│   ├── _lib/               # Validación compartida (issue keys, URL base)
+│   └── jira/               # Endpoints /issue/[issueKey] y /search
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
 │   ├── config/             # Constantes, prompts, configuración de modelos

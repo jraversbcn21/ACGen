@@ -62,9 +62,9 @@ describe('useSprints', () => {
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateTabJql(id, 'resolved', 'project = BERSHKA AND status = Done');
+      result.current.updateTabJql(id, 'resolved', 'project = PROJ AND status = Done');
     });
-    expect(result.current.sprints[0].jql.resolved).toBe('project = BERSHKA AND status = Done');
+    expect(result.current.sprints[0].jql.resolved).toBe('project = PROJ AND status = Done');
   });
 
   it('updateGridCell sets a value at row,col', () => {
@@ -74,9 +74,9 @@ describe('useSprints', () => {
     });
     const id = result.current.sprints[0].id;
     act(() => {
-      result.current.updateGridCell(id, 'resolved', 0, 0, 'BERSHKA-123');
+      result.current.updateGridCell(id, 'resolved', 0, 0, 'PROJ-123');
     });
-    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('BERSHKA-123');
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('PROJ-123');
   });
 
   it('updateGridCell expands grid if col is out of bounds', () => {
@@ -97,7 +97,7 @@ describe('useSprints', () => {
       result.current.addSprint('Sprint 24', '2026-07-08');
     });
     const id = result.current.sprints[0].id;
-    const newGrid = [['BERSHKA-1', '2026-07-08'], ['BERSHKA-2', '2026-07-09']];
+    const newGrid = [['PROJ-1', '2026-07-08'], ['PROJ-2', '2026-07-09']];
     act(() => {
       result.current.setTabGrid(id, 'resolved', newGrid);
     });
@@ -148,14 +148,14 @@ describe('useSprints', () => {
         endDate: '2026-07-07',
         archived: true,
         jql: { resolved: 'jql1', created: '', reopened: '', highPriority: '' },
-        tabGrid: { resolved: [['BERSHKA-1', '2026-07-08']], created: [], reopened: [], highPriority: [] },
+        tabGrid: { resolved: [['PROJ-1', '2026-07-08']], created: [], reopened: [], highPriority: [] },
       },
     ];
     localStorage.setItem('acgen_sprints', JSON.stringify(existing));
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toHaveLength(1);
     expect(result.current.sprints[0].name).toBe('Sprint 23');
-    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('BERSHKA-1');
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('PROJ-1');
   });
 
   it('recovers from invalid JSON in localStorage', () => {
@@ -182,6 +182,31 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(6);
   });
 
+  it('migrates existing sprints that have a tabGrid but are missing the jsd tab', () => {
+    const oldSprint = [
+      {
+        id: 'old-2',
+        name: 'Sprint 21',
+        startDate: '2026-06-08',
+        endDate: null,
+        archived: false,
+        jql: { resolved: '', created: '', reopened: '', highPriority: '' },
+        tabGrid: {
+          resolved: [['PROJ-1', '2026-06-08']],
+          created: [],
+          reopened: [],
+          highPriority: [],
+        },
+      },
+    ];
+    localStorage.setItem('acgen_sprints', JSON.stringify(oldSprint));
+    const { result } = renderHook(() => useSprints());
+    expect(result.current.sprints).toHaveLength(1);
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual([['PROJ-1', '2026-06-08']]);
+    expect(result.current.sprints[0].tabGrid.jsd).toHaveLength(20);
+    expect(result.current.sprints[0].tabGrid.jsd[0]).toHaveLength(6);
+  });
+
   it('moveRow reorders rows within a tab grid (move down)', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {
@@ -190,11 +215,11 @@ describe('useSprints', () => {
     const id = result.current.sprints[0].id;
 
     const grid = [
-      ['BERSHKA-1', 'A'],
-      ['BERSHKA-2', 'B'],
-      ['BERSHKA-3', 'C'],
-      ['BERSHKA-4', 'D'],
-      ['BERSHKA-5', 'E'],
+      ['PROJ-1', 'A'],
+      ['PROJ-2', 'B'],
+      ['PROJ-3', 'C'],
+      ['PROJ-4', 'D'],
+      ['PROJ-5', 'E'],
     ];
     act(() => {
       result.current.setTabGrid(id, 'resolved', grid);
@@ -205,11 +230,11 @@ describe('useSprints', () => {
     });
 
     const moved = result.current.sprints[0].tabGrid.resolved;
-    expect(moved[0][0]).toBe('BERSHKA-2');
-    expect(moved[1][0]).toBe('BERSHKA-1');
-    expect(moved[2][0]).toBe('BERSHKA-3');
-    expect(moved[3][0]).toBe('BERSHKA-4');
-    expect(moved[4][0]).toBe('BERSHKA-5');
+    expect(moved[0][0]).toBe('PROJ-2');
+    expect(moved[1][0]).toBe('PROJ-1');
+    expect(moved[2][0]).toBe('PROJ-3');
+    expect(moved[3][0]).toBe('PROJ-4');
+    expect(moved[4][0]).toBe('PROJ-5');
   });
 
   it('moveRow reorders rows within a tab grid (move up)', () => {
@@ -220,11 +245,11 @@ describe('useSprints', () => {
     const id = result.current.sprints[0].id;
 
     const grid = [
-      ['BERSHKA-1', 'A'],
-      ['BERSHKA-2', 'B'],
-      ['BERSHKA-3', 'C'],
-      ['BERSHKA-4', 'D'],
-      ['BERSHKA-5', 'E'],
+      ['PROJ-1', 'A'],
+      ['PROJ-2', 'B'],
+      ['PROJ-3', 'C'],
+      ['PROJ-4', 'D'],
+      ['PROJ-5', 'E'],
     ];
     act(() => {
       result.current.setTabGrid(id, 'resolved', grid);
@@ -235,11 +260,11 @@ describe('useSprints', () => {
     });
 
     const moved = result.current.sprints[0].tabGrid.resolved;
-    expect(moved[0][0]).toBe('BERSHKA-5');
-    expect(moved[1][0]).toBe('BERSHKA-1');
-    expect(moved[2][0]).toBe('BERSHKA-2');
-    expect(moved[3][0]).toBe('BERSHKA-3');
-    expect(moved[4][0]).toBe('BERSHKA-4');
+    expect(moved[0][0]).toBe('PROJ-5');
+    expect(moved[1][0]).toBe('PROJ-1');
+    expect(moved[2][0]).toBe('PROJ-2');
+    expect(moved[3][0]).toBe('PROJ-3');
+    expect(moved[4][0]).toBe('PROJ-4');
   });
 
   it('moveRow is a no-op when source and target are the same', () => {
@@ -250,8 +275,8 @@ describe('useSprints', () => {
     const id = result.current.sprints[0].id;
 
     const grid = [
-      ['BERSHKA-1'],
-      ['BERSHKA-2'],
+      ['PROJ-1'],
+      ['PROJ-2'],
     ];
     act(() => {
       result.current.setTabGrid(id, 'resolved', grid);
@@ -271,7 +296,7 @@ describe('useSprints', () => {
     });
     const id = result.current.sprints[0].id;
 
-    const grid = [['BERSHKA-1']];
+    const grid = [['PROJ-1']];
     act(() => {
       result.current.setTabGrid(id, 'resolved', grid);
     });

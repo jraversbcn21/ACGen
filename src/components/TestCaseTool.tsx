@@ -90,7 +90,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
   const handleDownloadPdf = useCallback(() => {
     const doc = new jsPDF('landscape');
     doc.setFontSize(16);
-    doc.text('Casos de prueba - Bershka', 14, 15);
+    doc.text('Casos de prueba', 14, 15);
 
     const rows = testCases.map(tc => [
       tc.key,
@@ -119,7 +119,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
       },
     });
 
-    doc.save('casos-de-prueba-bershka.pdf');
+    doc.save('casos-de-prueba.pdf');
   }, [testCases]);
 
   return (

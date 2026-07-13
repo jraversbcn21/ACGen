@@ -52,7 +52,7 @@ export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModel
   return (
     <>
       <div className="hero">
-        <p className="eyebrow">Sesión de QA · Jorgito</p>
+        <p className="eyebrow">Sesión de QA · Quality Assurance</p>
         <h1 className="hero-title">
           <span className="b">AC</span>Gen{' '}
           <span className="greet-serif">¿En qué quieres trabajar hoy?</span>

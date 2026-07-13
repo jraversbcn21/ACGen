@@ -5,11 +5,10 @@ import { useSprints } from '../hooks/useSprints';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
 interface SprintTrackerProps {
-  jiraToken: string;
   jiraBaseUrl: string;
 }
 
-export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
+export function SprintTracker({ jiraBaseUrl }: SprintTrackerProps) {
   const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
@@ -43,25 +42,6 @@ export function SprintTracker({ jiraToken, jiraBaseUrl }: SprintTrackerProps) {
     if (!selectedSprint) return;
     moveRow(selectedSprint.id, tabId, fromRow, toRow);
   }, [selectedSprint, moveRow]);
-
-  const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
-
-  if (!jiraConfigured) {
-    return (
-      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
-          Sprint Tracker
-        </h2>
-        <p style={{ color: 'var(--text-2)', marginBottom: 8, fontSize: 15 }}>
-          Configura la conexión con Jira para usar el Sprint Tracker.
-        </p>
-        <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
-          Necesitas configurar la URL base y el token PAT de Jira en las herramientas que ya usan Jira
-          (Criterios de aceptación, Bug Report o Datos de Prueba).
-        </p>
-      </div>
-    );
-  }
 
   if (selectedSprint) {
     return (

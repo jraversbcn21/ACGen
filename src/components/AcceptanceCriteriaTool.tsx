@@ -179,6 +179,9 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
             />
           </div>
         </div>
+        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+          Estos datos pasan por el servidor de esta demo antes de llegar a tu Jira (no se guardan). Si prefieres no compartirlos, escribe los requisitos a mano — la app funciona igual.
+        </p>
       </div>
 
       <div className="criteria-grid">

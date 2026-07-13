@@ -1,5 +1,12 @@
 const ISSUE_KEY_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 
+function getAllowedHosts() {
+  return (process.env.JIRA_ALLOWED_HOSTS || '')
+    .split(',')
+    .map((host) => host.trim().replace(/^['"]|['"]$/g, '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function validateAndEncodeIssueKey(key) {
   if (!key || typeof key !== 'string') {
     throw new Error('Clave de ticket inválida.');
@@ -24,6 +31,10 @@ export function validateBaseUrl(url) {
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('URL base de Jira inválida.');
+  }
+
+  if (!getAllowedHosts().includes(parsed.hostname.toLowerCase())) {
+    throw new Error('Host de Jira no permitido.');
   }
 
   return parsed.origin;

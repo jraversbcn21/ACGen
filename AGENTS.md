@@ -5,8 +5,7 @@
 | Command | Action |
 |---|---|
 | `npm run dev` | Start Vite dev server (port 5173) |
-| `npm run server` | Start Express proxy (port 3002) |
-| `npm run dev:all` | Start both Vite + proxy concurrently |
+| `npm run dev:all` | Start Vite + Jira functions together via `vercel dev` |
 | `npm run build` | Type-check (`tsc -b`) + Vite build |
 | `npm run lint` | ESLint |
 | `npm run preview` | Vite preview |
@@ -20,20 +19,20 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `server/jiraUtils.test.js` | 16 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema) |
+| `api/_lib/jiraUtils.test.js` | 22 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema, `JIRA_ALLOWED_HOSTS` allowlist: case-insensitivity, quote/whitespace tolerance, fail-closed on unset/empty, no subdomain-suffix bypass) |
 | `src/services/apiService.test.ts` | 17 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection) |
-| `src/hooks/useSprints.test.ts` | 18 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint, moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience |
+| `src/hooks/useSprints.test.ts` | 19 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint (removes column-widths key), moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration, quota-exceeded resilience |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load from history, clear, quota-exceeded resilience |
 | `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches render crash, recovers on reset |
 
-**Total: 79 tests across 6 files.**
+**Total: 86 tests across 6 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
 ## Architecture
 
-- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Express proxy (`server/`) for Jira API calls (CORS bypass).
+- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Jira API calls proxy through Vercel serverless functions under `api/` (same origin as the frontend, no CORS needed).
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library. The view router is wrapped in `<ErrorBoundary key={view}>`: a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recoverable fallback (message + "Reintentar" button). Keyed by `view` so switching tools remounts it and clears any stuck error state.
 - **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **`useLocalStorage` cross-instance/cross-tab sync**: on write, dispatches a custom `acgen-local-storage` window event (same-tab instances sharing a key stay in sync) and listens for the native `storage` event (cross-tab sync; `newValue: null` resets to `initialValue`). All `localStorage.setItem` calls are wrapped in try/catch so `QuotaExceededError` degrades to a console error instead of crashing the render.
@@ -71,7 +70,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ### Test Data Generator
 
-- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for Bershka ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
+- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for a fashion ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
 - `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`, then validates row shape via `validateTestDataRows()` — rejects nested objects/arrays from the LLM.
 - **CSV export**: BOM for Excel. Values starting with `=+-@` prefixed with `'` to neutralize formula injection.
 - **TSV export**: tabs and newlines in cell values replaced with spaces.
@@ -80,7 +79,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 - **5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`. Fully offline — no Groq or Jira API dependency.
 - **Data model**: sprints stored in `acgen_sprints`. Each sprint has `tabGrid: Record<TabId, string[][]>`, JQL strings per tab, and metadata. Column widths stored in `acgen_sprint_col_widths_{sprintId}`. **`deleteSprint` removes orphaned width keys.**
-- **4 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta. Each tab has its own spreadsheet grid.
+- **5 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta, JSD. Each tab has its own spreadsheet grid. JSD only has 3 named columns (JSD, Fecha, Motivo) — same pattern as ReOpen/Prioridad Alta having fewer named columns than the 6-column grid.
 - **Grid**: editable 2D array (20 rows x 6 columns). Resizable columns via drag handle. "+ Fila" to expand rows.
 - **Row drag-and-drop**: via drag handle on row number cells. `moveRow()` correctly handles downward moves (off-by-one fixed). Disabled on archived sprints. Drop target indicator only shown for internal row drags.
 - **Search bar**: debounced at 250ms. Shows "N de M filas" counter. Escape clears. "+ Fila" hidden during search.
@@ -103,14 +102,16 @@ In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body param
 
 Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 for keywords `model_decommissioned`, `model_not_found`, `invalid model`, `model not found`. Used in `generateWithGroq()` to surface: *"El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo."* Also handles HTTP 401 (invalid API key) and HTTP 429 (rate limit) with specific Spanish messages.
 
-### Proxy Server
+### Jira serverless functions (Vercel)
 
-- **`server/index.js`** — Express app on port 3002, CORS origin `http://localhost:5173`, JSON middleware, mounts Jira routes at `/api/jira`.
-- **`server/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`).
-- **`server/jiraRoutes.js`** routes:
-  - `GET /api/jira/issue/:issueKey` — validates issueKey, validates baseUrl, proxies with 30s timeout. Returns 400 on invalid input, 504 on timeout.
-  - `GET /api/jira/search?jql=` — validates baseUrl, proxies with 30s timeout. Returns 400 on invalid input, 504 on timeout.
-- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish.
+- **`api/jira/issue/[issueKey].js`** — `GET /api/jira/issue/:issueKey`. Validates issueKey + baseUrl, proxies to Jira with an 8s `AbortSignal.timeout` (under the 10s Hobby function limit). Returns 400 on invalid input, 404 on missing ticket, 504 on timeout, 405 on non-GET.
+- **`api/jira/search.js`** — `GET /api/jira/search?jql=`. Validates baseUrl, proxies with 8s timeout. Returns 400 on invalid input/JQL, 504 on timeout, 405 on non-GET.
+- **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`, plus a `JIRA_ALLOWED_HOSTS` host allowlist — see below). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
+- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish. Same-origin, so no CORS layer.
+- `FETCH_TIMEOUT_MS = 8_000` in each handler and `maxDuration: 10` in `vercel.json` are the two knobs to raise on a Pro plan.
+- **`JIRA_ALLOWED_HOSTS`** (env var, comma-separated hostnames, e.g. `mycompany.atlassian.net`) — `validateBaseUrl()` rejects any host not in this list (case-insensitive, quotes/whitespace trimmed per entry). Required: unset or empty means every request is rejected (fail-closed). Once these endpoints run on a public domain instead of `localhost`, they're reachable by anyone; without a host allowlist a caller could point `X-Jira-Base-Url` at an arbitrary http/https host (constrained SSRF — fixed REST paths only, caller supplies their own credentials, but still usable for internal-network probing or burning the project's function quota). Configure with `vercel env add JIRA_ALLOWED_HOSTS <environment>` for each of `development`/`preview`/`production`, then `vercel env pull .env.local` to sync locally — hand-editing `.env.local` directly does **not** work, `vercel dev`'s function runtime only picks up variables that are registered with the linked Vercel project.
+
+**Known limitation — a private-network Jira instance won't work on a public deployment.** If `X-Jira-Base-Url` points at a host that only resolves to a private (RFC1918) IP — a self-hosted Jira reachable only from inside a corporate network/VPN — the request fails at the public deployment with `500 "Error de conexión con el servidor proxy."` (a `fetch()`-level network failure, not a timeout), because Vercel's serverless functions run on Vercel's own public cloud and cannot route to private addresses. This is an infrastructure constraint, not a bug in this code, and reproduces on any public host, not just Vercel. It does **not** affect Jira Cloud instances (`*.atlassian.net`), which have public IPs. Workaround for a private instance: run `npm run dev:all` (`vercel dev`) on a machine with network access to it, or expose it through a tunnel/reverse-proxy and add that public hostname to `JIRA_ALLOWED_HOSTS`. The other four tools (Groq-based) and Sprint Tracker (fully offline) are unaffected either way.
 
 ### Jira ticket integration
 
@@ -126,7 +127,7 @@ Tools that use Jira: AcceptanceCriteria, BugReport, TestData, SprintTracker.
 
 ### Landing screen
 
-Hero section with eyebrow "Sesion de QA . Jorgito", config strip (ApiKeyConfig + ModelSelector in 1.5fr 1fr grid), "Generadores" header with **"05"** badge, 5-tool list with SVG icons and descriptions, extensibility slot.
+Hero section with eyebrow "Sesion de QA . Quality Assurance", config strip (ApiKeyConfig + ModelSelector in 1.5fr 1fr grid), "Generadores" header with **"05"** badge, 5-tool list with SVG icons and descriptions, extensibility slot.
 
 ### Acceptance Criteria Tool
 
@@ -164,11 +165,11 @@ AVAILABLE_MODELS = [
 
 | File | Purpose |
 |---|---|
-| `server/index.js` | Express proxy entry: CORS, JSON middleware, mounts Jira routes |
-| `server/jiraRoutes.js` | `GET /issue/:issueKey` and `GET /search?jql=` — validates inputs, proxies with 30s timeout |
-| `server/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — input validation |
-| `server/jiraUtils.test.js` | 16 unit tests for validation functions |
-| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, BERSHKA_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
+| `api/jira/issue/[issueKey].js` | Serverless function: `GET /api/jira/issue/:issueKey`, 8s timeout |
+| `api/jira/search.js` | Serverless function: `GET /api/jira/search?jql=`, 8s timeout |
+| `api/_lib/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — shared validation |
+| `api/_lib/jiraUtils.test.js` | 16 unit tests for validation functions |
+| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
 | `src/services/apiService.ts` | `generateWithGroq()`, `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `extractJsonArray()` |
 | `src/services/apiService.test.ts` | 17 unit tests — validation type checks, model decommission detection |
 | `src/services/jiraService.ts` | `extractIssueKey()` (URLs + bare keys), `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()` |
@@ -198,10 +199,10 @@ AVAILABLE_MODELS = [
 
 - Entrypoint: `src/main.tsx` -> `App.tsx`.
 - `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
-- `express` + `cors` + `concurrently` are devDependencies (proxy server).
+- Jira proxying runs as Vercel serverless functions under `api/` (no Express/CORS). `vercel dev` serves frontend + functions together locally.
 - ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
 - Sprint Tracker operates fully offline — no Groq or Jira API calls.
-- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `server/`).
+- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `api/_lib/`).
 - `tsconfig.app.json` excludes `*.test.ts` and `*.test.tsx` from production typecheck/build.
 
 ## Bug-fix history (2026-07-10)
