@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { validateAndEncodeIssueKey, validateBaseUrl } from './jiraUtils.js';
 
 describe('validateAndEncodeIssueKey', () => {
@@ -44,35 +44,88 @@ describe('validateAndEncodeIssueKey', () => {
 });
 
 describe('validateBaseUrl', () => {
-  test('accepts a valid https Jira URL', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test('accepts a valid https Jira URL whose host is in JIRA_ALLOWED_HOSTS', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
     expect(validateBaseUrl('https://mycompany.atlassian.net')).toBe(
       'https://mycompany.atlassian.net',
     );
   });
 
-  test('accepts a valid http URL', () => {
+  test('accepts a valid http URL whose host is in JIRA_ALLOWED_HOSTS', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'localhost');
     expect(validateBaseUrl('http://localhost:8080')).toBe('http://localhost:8080');
   });
 
   test('accepts a URL with a trailing slash and normalizes it', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
     expect(validateBaseUrl('https://mycompany.atlassian.net/')).toBe(
       'https://mycompany.atlassian.net',
     );
   });
 
+  test('matches allowed hosts case-insensitively and trims whitespace in the list', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', ' MyCompany.Atlassian.Net , other.example.com ');
+    expect(validateBaseUrl('https://mycompany.atlassian.net')).toBe(
+      'https://mycompany.atlassian.net',
+    );
+  });
+
+  test('tolerates a JIRA_ALLOWED_HOSTS entry wrapped in stray quotes', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', '"mycompany.atlassian.net"');
+    expect(validateBaseUrl('https://mycompany.atlassian.net')).toBe(
+      'https://mycompany.atlassian.net',
+    );
+  });
+
   test('rejects an empty base URL', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
     expect(() => validateBaseUrl('')).toThrow();
   });
 
   test('rejects a base URL with no host', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
     expect(() => validateBaseUrl('not-a-url')).toThrow();
   });
 
   test('rejects a base URL with unsupported protocol (ftp)', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'evil.com');
     expect(() => validateBaseUrl('ftp://evil.com')).toThrow();
   });
 
   test('rejects a base URL with javascript: protocol (XSS)', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'evil.com');
     expect(() => validateBaseUrl('javascript:alert(1)')).toThrow();
+  });
+
+  test('rejects a host not present in JIRA_ALLOWED_HOSTS', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
+    expect(() => validateBaseUrl('https://attacker.example.com')).toThrow(
+      'Host de Jira no permitido.',
+    );
+  });
+
+  test('rejects every host when JIRA_ALLOWED_HOSTS is unset', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', undefined);
+    expect(() => validateBaseUrl('https://mycompany.atlassian.net')).toThrow(
+      'Host de Jira no permitido.',
+    );
+  });
+
+  test('rejects every host when JIRA_ALLOWED_HOSTS is an empty string', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', '');
+    expect(() => validateBaseUrl('https://mycompany.atlassian.net')).toThrow(
+      'Host de Jira no permitido.',
+    );
+  });
+
+  test('does not allow a subdomain-suffix bypass (e.g. evilmycompany.atlassian.net)', () => {
+    vi.stubEnv('JIRA_ALLOWED_HOSTS', 'mycompany.atlassian.net');
+    expect(() => validateBaseUrl('https://evilmycompany.atlassian.net')).toThrow(
+      'Host de Jira no permitido.',
+    );
   });
 });

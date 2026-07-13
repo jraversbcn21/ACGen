@@ -116,12 +116,13 @@ npm run lint
 
 ACGen puede leer tickets de Jira para aportar contexto a las generaciones:
 
-1. Inicia el entorno con `npm run dev:all` (`vercel dev`), que levanta las funciones de `/api`
-2. En la herramienta deseada, configura la **URL base de Jira** y un **Personal Access Token** (PAT)
-3. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
-4. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
+1. Configura la variable de entorno **`JIRA_ALLOWED_HOSTS`** en el proyecto de Vercel (host o lista separada por comas, ej. `jira.tuempresa.com`) — es obligatoria: sin ella, las funciones rechazan cualquier petición. `vercel env add JIRA_ALLOWED_HOSTS development` (y `preview`/`production`), luego `vercel env pull .env.local` para tenerla en local
+2. Inicia el entorno con `npm run dev:all` (`vercel dev`), que levanta las funciones de `/api`
+3. En la herramienta deseada, configura la **URL base de Jira** y un **Personal Access Token** (PAT)
+4. Introduce la URL del ticket (ej: `https://jira.tuempresa.com/browse/PROJECT-123`)
+5. La app obtendrá los datos del ticket (resumen, descripción, prioridad, etiquetas, criterios de aceptación existentes) y los usará como contexto para la generación
 
-> Las funciones de `/api` se ejecutan en el mismo origen que la app (local vía `vercel dev`, o en Vercel en producción). Las credenciales viajan desde tu navegador a la función y de ahí a tu instancia de Jira; nunca a terceros.
+> Las funciones de `/api` se ejecutan en el mismo origen que la app (local vía `vercel dev`, o en Vercel en producción). Las credenciales viajan desde tu navegador a la función y de ahí a tu instancia de Jira; nunca a terceros. `JIRA_ALLOWED_HOSTS` restringe a qué hosts pueden apuntar esas peticiones — sin esta lista, cualquiera en internet podría usar la función para sondear otros hosts.
 
 ---
 

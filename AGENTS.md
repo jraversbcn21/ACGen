@@ -106,9 +106,10 @@ Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 f
 
 - **`api/jira/issue/[issueKey].js`** — `GET /api/jira/issue/:issueKey`. Validates issueKey + baseUrl, proxies to Jira with an 8s `AbortSignal.timeout` (under the 10s Hobby function limit). Returns 400 on invalid input, 404 on missing ticket, 504 on timeout, 405 on non-GET.
 - **`api/jira/search.js`** — `GET /api/jira/search?jql=`. Validates baseUrl, proxies with 8s timeout. Returns 400 on invalid input/JQL, 504 on timeout, 405 on non-GET.
-- **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
+- **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`, plus a `JIRA_ALLOWED_HOSTS` host allowlist — see below). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
 - Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish. Same-origin, so no CORS layer.
 - `FETCH_TIMEOUT_MS = 8_000` in each handler and `maxDuration: 10` in `vercel.json` are the two knobs to raise on a Pro plan.
+- **`JIRA_ALLOWED_HOSTS`** (env var, comma-separated hostnames, e.g. `jira.inditex.com`) — `validateBaseUrl()` rejects any host not in this list (case-insensitive, quotes/whitespace trimmed per entry). Required: unset or empty means every request is rejected (fail-closed). Once these endpoints run on a public domain instead of `localhost`, they're reachable by anyone; without a host allowlist a caller could point `X-Jira-Base-Url` at an arbitrary http/https host (constrained SSRF — fixed REST paths only, caller supplies their own credentials, but still usable for internal-network probing or burning the project's function quota). Configure with `vercel env add JIRA_ALLOWED_HOSTS <environment>` for each of `development`/`preview`/`production`, then `vercel env pull .env.local` to sync locally — hand-editing `.env.local` directly does **not** work, `vercel dev`'s function runtime only picks up variables that are registered with the linked Vercel project.
 
 ### Jira ticket integration
 
