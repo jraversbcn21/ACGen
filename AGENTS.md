@@ -127,7 +127,7 @@ Tools that use Jira: AcceptanceCriteria, BugReport, TestData, SprintTracker.
 
 ### Landing screen
 
-Hero section with eyebrow "Sesion de QA . Jorgito", config strip (ApiKeyConfig + ModelSelector in 1.5fr 1fr grid), "Generadores" header with **"05"** badge, 5-tool list with SVG icons and descriptions, extensibility slot.
+Hero section with eyebrow "Sesion de QA . Quality Assurance", config strip (ApiKeyConfig + ModelSelector in 1.5fr 1fr grid), "Generadores" header with **"05"** badge, 5-tool list with SVG icons and descriptions, extensibility slot.
 
 ### Acceptance Criteria Tool
 
