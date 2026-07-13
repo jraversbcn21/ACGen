@@ -245,6 +245,9 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
               />
             </div>
           </div>
+          <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+            Estos datos pasan por el servidor de esta demo antes de llegar a tu Jira (no se guardan). Si prefieres no compartirlos, deja estos campos vacíos — la app funciona igual, solo sin el contexto del ticket.
+          </p>
           {jiraConfigured && (
             <button
               type="button"
