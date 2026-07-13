@@ -8,6 +8,7 @@ const TAB_LABELS: Record<TabId, string> = {
   created: 'Creados',
   reopened: 'ReOpen',
   highPriority: 'Prioridad Alta',
+  jsd: 'JSD',
 };
 
 const TAB_HEADERS: Record<TabId, string[]> = {
@@ -15,6 +16,7 @@ const TAB_HEADERS: Record<TabId, string[]> = {
   created: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
   reopened: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
   highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
+  jsd: ['JSD', 'Fecha', 'Motivo'],
 };
 
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
@@ -105,7 +107,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
     document.body.style.userSelect = 'none';
   };
 
-  const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority'];
+  const tabs: TabId[] = ['resolved', 'created', 'reopened', 'highPriority', 'jsd'];
   const grid = sprint.tabGrid[activeTab] || [];
   const colCount = grid[0]?.length || 6;
 

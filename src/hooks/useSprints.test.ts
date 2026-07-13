@@ -182,6 +182,31 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.resolved[0]).toHaveLength(6);
   });
 
+  it('migrates existing sprints that have a tabGrid but are missing the jsd tab', () => {
+    const oldSprint = [
+      {
+        id: 'old-2',
+        name: 'Sprint 21',
+        startDate: '2026-06-08',
+        endDate: null,
+        archived: false,
+        jql: { resolved: '', created: '', reopened: '', highPriority: '' },
+        tabGrid: {
+          resolved: [['PROJ-1', '2026-06-08']],
+          created: [],
+          reopened: [],
+          highPriority: [],
+        },
+      },
+    ];
+    localStorage.setItem('acgen_sprints', JSON.stringify(oldSprint));
+    const { result } = renderHook(() => useSprints());
+    expect(result.current.sprints).toHaveLength(1);
+    expect(result.current.sprints[0].tabGrid.resolved).toEqual([['PROJ-1', '2026-06-08']]);
+    expect(result.current.sprints[0].tabGrid.jsd).toHaveLength(20);
+    expect(result.current.sprints[0].tabGrid.jsd[0]).toHaveLength(6);
+  });
+
   it('moveRow reorders rows within a tab grid (move down)', () => {
     const { result } = renderHook(() => useSprints());
     act(() => {

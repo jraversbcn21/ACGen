@@ -3,13 +3,14 @@ import { STORAGE_KEYS } from '../config/constants';
 
 const STORAGE_KEY = 'acgen_sprints';
 
-export type TabId = 'resolved' | 'created' | 'reopened' | 'highPriority';
+export type TabId = 'resolved' | 'created' | 'reopened' | 'highPriority' | 'jsd';
 
 export interface SprintJql {
   resolved: string;
   created: string;
   reopened: string;
   highPriority: string;
+  jsd: string;
 }
 
 export interface Sprint {
@@ -27,6 +28,7 @@ const EMPTY_JQL: SprintJql = {
   created: '',
   reopened: '',
   highPriority: '',
+  jsd: '',
 };
 
 function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
@@ -39,6 +41,7 @@ function emptyTabGrid(): Record<TabId, string[][]> {
     created: createEmptyGrid(),
     reopened: createEmptyGrid(),
     highPriority: createEmptyGrid(),
+    jsd: createEmptyGrid(),
   };
 }
 
@@ -58,7 +61,7 @@ export function useSprints() {
       const parsed = JSON.parse(raw);
       return parsed.map((s: Sprint) => ({
         ...s,
-        tabGrid: s.tabGrid || emptyTabGrid(),
+        tabGrid: { ...emptyTabGrid(), ...(s.tabGrid || {}) },
       }));
     } catch {
       return [];
