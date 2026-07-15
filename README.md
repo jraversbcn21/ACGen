@@ -54,7 +54,7 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 | LLM API | Groq (endpoint compatible con OpenAI) |
 | Proxy Jira | Funciones serverless de Vercel (`api/`) |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (86 tests) |
+| Tests | Vitest + React Testing Library (87 tests) |
 | Estilos | CSS personalizado (sin framework) |
 
 ---
