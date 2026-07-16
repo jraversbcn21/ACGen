@@ -1,4 +1,5 @@
 import { API_URL, TEMPERATURE, DEFAULT_PROMPTS } from '../config/constants';
+import { baseUrlStatus } from '../config/providers';
 import type { GroqApiError, TestCaseData } from '../types';
 import type { ProjectProfile } from '../types/context';
 import { deanonymize, splitPendingPlaceholder } from './anonymizer';
@@ -128,6 +129,15 @@ export async function* streamWithGroq(
   anonymizeMap?: Record<string, string>,
   baseUrl?: string,
 ): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
+  // undefined = "use the default endpoint"; a DEFINED baseUrl comes from provider
+  // config and must be usable — an empty one would silently hit the default host
+  // with the wrong key.
+  if (baseUrl !== undefined) {
+    const status = baseUrlStatus(baseUrl);
+    if (status === 'missing') throw i18nError('error.baseUrlMissing');
+    if (status === 'invalid') throw i18nError('error.baseUrlInvalid');
+  }
+
   const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
   const reasoningParams = getReasoningParams(model, tool);
   const body = {

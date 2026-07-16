@@ -18,14 +18,15 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `src/services/apiService.test.ts` | 31 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection), `streamWithGroq` deanonymization incl. placeholders split across SSE chunks, `streamWithGroq` HTTP-error `I18nError` shape (message = i18n key, params, cause = upstream text) |
+| `src/services/apiService.test.ts` | 35 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection), `streamWithGroq` deanonymization incl. placeholders split across SSE chunks, `streamWithGroq` HTTP-error `I18nError` shape (message = i18n key, params, cause = upstream text), base URL validation (missing/invalid thrown before fetch; undefined keeps the default endpoint) |
 | `src/services/anonymizer.test.ts` | 24 — all 7 regex patterns, edge cases, round-trip identity, `applyPlaceholderEdits`, `splitPendingPlaceholder` |
 | `src/hooks/useSprints.test.ts` | 20 — init, add, archive, update, delete, moveRow, persistence, hydration, recovery |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, cross-tab sync, ignore unrelated keys, quota resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load, clear, quota resilience |
 | `src/hooks/useWorkspace.test.ts` | 15 — CRUD, artifact cap at 50, export/import, validation, `saveArtifact` fallback (valid/null/stale `activeId`) |
 | `src/hooks/useStreamingResponse.test.ts` | 4 — token accumulation + `onComplete`, mid-stream error rethrown to the caller, partial text kept, `onComplete` not called on failure |
-| `src/config/providers.test.ts` | 12 — provider definitions, unknown-id fallback, `sanitizeModel` per-provider validation |
+| `src/config/providers.test.ts` | 17 — provider definitions, unknown-id fallback, `sanitizeModel` per-provider validation, `baseUrlStatus` (missing/invalid/valid) |
+| `src/components/ProviderConfig.test.tsx` | 5 — base URL inline hint (missing/invalid/valid + `aria-invalid`), no field for fixed-URL providers, translated labels |
 | `src/components/ErrorBoundary.test.tsx` | 4 — renders children, catches crash, recovers on reset, renders the fallback/retry text in English via `contextType` when `lang` is `en` |
 | `src/components/TestCaseTool.confidential.test.tsx` | 5 — confidential mode end-to-end: anonymized text sent (not raw input), edited placeholders honored, raw text when disabled, modal skipped/cancelled |
 | `src/components/BugReportTool.confidential.test.tsx` | 2 — same, for the composite-message form (whole assembled message anonymized, not just one field) |
@@ -43,7 +44,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
 
-**Total: 197 tests across 24 files.**
+**Total: 211 tests across 25 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -149,7 +150,7 @@ Run `npm test` before committing when modifying hooks or services.
 ### Multi-provider LLM
 
 - `src/config/providers.ts` — `PROVIDERS` registry with Groq (5 models), OpenRouter (8 models), Custom (free-text). `sanitizeModel(providerId, model)` validates a stored model against its provider's list (open-list providers like Custom accept anything); falls back to the provider's `defaultModel` otherwise. `App.tsx` derives `model` through it on every render (`useMemo(() => sanitizeModel(provider, storedModel), [provider, storedModel])`) so switching provider — or reloading with a non-Groq model already stored — never sends a model foreign to the active provider.
-- `<ProviderConfig>` — unified provider + model + API key selector. Provider dropdown dynamically changes model list. Custom provider shows base URL input.
+- `<ProviderConfig>` — unified provider + model + API key selector. Provider dropdown dynamically changes model list. Custom provider shows base URL input with inline validation (`baseUrlStatus` in providers.ts: missing/invalid/valid → hint + `aria-invalid`). `streamWithGroq` re-validates any DEFINED baseUrl before fetching and throws `error.baseUrlMissing`/`error.baseUrlInvalid` (an `undefined` baseUrl still means "default endpoint" for tests/direct calls; App passes the custom URL through even when empty so the guard fires).
 - Per-provider API keys: `acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`
 - Auto-migration: old `acgen_api_key` → `acgen_key_groq` on first load
 - `streamWithGroq()` accepts `baseUrl` parameter
@@ -305,8 +306,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledger's "review clean" claims did not hold — the reviews checked each task in isolation, not the data flow end to end. Three stacked PRs fixed 10 of the findings (`fix/fase3-audit-bugs` → `fix/fase3-audit-cleanup` → `fix/stream-error-rethrow`; see their descriptions on GitHub for full detail per fix — the last one fixed the mid-stream-errors-silently-swallowed bug by having `useStreamingResponse.stream()` rethrow after recording its state, which also un-swallowed errors thrown from `onComplete` callbacks such as EdgeCaseTool's no-parseable-JSON error). Branch `fix/i18n-leftovers` then closed out the i18n leftovers those PRs deferred (see "Evolution history" below). What's left, in priority order:
 
-1. **Custom provider base URL isn't validated.** `App.tsx`: `currentBaseUrl = provider === 'custom' ? (customBaseUrl || undefined) : ...`. An empty custom URL becomes `undefined`, and `apiService.ts` falls back `baseUrl || API_URL` — so an empty Custom URL silently sends the custom API key to **Groq's** endpoint, producing a misleading 401 instead of a "set your base URL" message.
-2. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
+1. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
 
 ## Evolution history
 
@@ -320,5 +320,6 @@ A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledg
 | Post-audit fix | 2026-07-16 | Mid-stream errors no longer silently swallowed: `useStreamingResponse.stream()` rethrows after recording its state, so every tool's existing `catch` (ErrorBanner or toast) finally fires; also un-swallows errors thrown from `onComplete` (EdgeCaseTool's no-parseable-JSON case). 168 → 172 tests. |
 | i18n completion | 2026-07-16 | apiService throws i18n keys + params (I18nError), translated at tool catch blocks; ExportBar, ErrorBoundary (contextType), HistoryModal (+ inline 2-step confirm replacing the last window.confirm), SearchableSelect. Key-parity guard test. |
 | saveArtifact hardening | 2026-07-16 | Workspace target resolution moved from App.tsx into `useWorkspace.saveArtifact(artifact, fallbackName)`: a stale `activeId` (workspace deleted from storage but still active) now falls back to auto-creating "Sin nombre" instead of silently dropping the artifact. 194 → 197 tests. |
+| Custom base URL validation | 2026-07-16 | `baseUrlStatus()` in providers.ts, applied twice: inline hint + `aria-invalid` in ProviderConfig, and a pre-fetch guard in `streamWithGroq` throwing `error.baseUrlMissing`/`error.baseUrlInvalid` — an empty custom URL no longer silently sends the custom key to Groq's endpoint. ProviderConfig's last two hardcoded labels translated. 197 → 211 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.

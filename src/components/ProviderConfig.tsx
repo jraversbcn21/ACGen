@@ -1,4 +1,4 @@
-import { PROVIDERS, DEFAULT_PROVIDER } from '../config/providers';
+import { PROVIDERS, DEFAULT_PROVIDER, baseUrlStatus } from '../config/providers';
 import { useT } from '../i18n/I18nContext';
 
 interface ProviderConfigProps {
@@ -18,11 +18,12 @@ export function ProviderConfig({
 }: ProviderConfigProps) {
   const t = useT();
   const def = PROVIDERS[provider] ?? PROVIDERS[DEFAULT_PROVIDER];
+  const urlStatus = baseUrlStatus(baseUrl);
 
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
       <div>
-        <label className="field-label">Proveedor</label>
+        <label className="field-label">{t('landing.provider')}</label>
         <select value={provider} onChange={(e) => { const newDef = PROVIDERS[e.target.value]; onProviderChange(e.target.value); if (newDef) onModelChange(newDef.defaultModel); }}
           className="field-select" style={{ minWidth: 120 }}>
           {Object.values(PROVIDERS).map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
@@ -30,9 +31,15 @@ export function ProviderConfig({
       </div>
       {def.needsBaseUrl && onBaseUrlChange && (
         <div>
-          <label className="field-label">URL del API</label>
-          <input type="text" value={baseUrl} onChange={(e) => onBaseUrlChange(e.target.value)}
+          <label className="field-label" htmlFor="provider-base-url">{t('landing.baseUrl')}</label>
+          <input id="provider-base-url" type="text" value={baseUrl} onChange={(e) => onBaseUrlChange(e.target.value)}
+            aria-invalid={urlStatus !== 'valid'}
             placeholder="https://api.openai.com/v1/chat/completions" className="field-input" style={{ minWidth: 280 }} />
+          {urlStatus !== 'valid' && (
+            <div role="alert" style={{ fontSize: 12, color: 'var(--color-error, #e5484d)', marginTop: 4 }}>
+              {t(urlStatus === 'missing' ? 'error.baseUrlMissing' : 'error.baseUrlInvalid')}
+            </div>
+          )}
         </div>
       )}
       <div>

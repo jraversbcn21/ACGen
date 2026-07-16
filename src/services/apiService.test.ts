@@ -95,6 +95,54 @@ describe('streamWithGroq HTTP errors', () => {
   });
 });
 
+describe('streamWithGroq base URL validation', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  async function captureWithBaseUrl(baseUrl: string | undefined): Promise<I18nError | null> {
+    const fetchMock = vi.fn(async () => errorResponse(500, 'should not be reached'));
+    vi.stubGlobal('fetch', fetchMock);
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria', undefined, undefined, baseUrl);
+    try {
+      await gen.next();
+    } catch (e) {
+      return e as I18nError;
+    }
+    return null;
+  }
+
+  it('throws error.baseUrlMissing before fetching when baseUrl is an empty string', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria', undefined, undefined, '');
+    let caught: I18nError | null = null;
+    try { await gen.next(); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.baseUrlMissing');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws error.baseUrlMissing on a whitespace-only baseUrl', async () => {
+    const caught = await captureWithBaseUrl('   ');
+    expect(caught?.message).toBe('error.baseUrlMissing');
+  });
+
+  it('throws error.baseUrlInvalid before fetching when baseUrl is not a parseable URL', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria', undefined, undefined, 'not a url');
+    let caught: I18nError | null = null;
+    try { await gen.next(); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.baseUrlInvalid');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('an undefined baseUrl keeps falling back to the default endpoint (no validation)', async () => {
+    const caught = await captureWithBaseUrl(undefined);
+    // reaches fetch and fails with the mocked 500 → generic passthrough, not a baseUrl key
+    expect(caught?.message).not.toBe('error.baseUrlMissing');
+    expect(caught?.message).not.toBe('error.baseUrlInvalid');
+  });
+});
+
 function validCase(overrides: Record<string, unknown> = {}) {
   return {
     key: 'TC-1',
