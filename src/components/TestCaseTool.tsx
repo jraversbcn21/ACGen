@@ -3,6 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { generateTestCases } from '../services/apiService';
 import { TESTCASE_PROMPT } from '../config/constants';
+import { DEMO_DATA } from '../config/demoData';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -58,13 +59,20 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
   }, [apiKey, model, input, canGenerate]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
+    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
     setInput('');
     setTestCases([]);
     setError(null);
     setStatus('idle');
     setGeneratedModel(undefined);
     setCopied(false);
+  }, []);
+
+  const handleLoadDemo = useCallback(() => {
+    const demo = DEMO_DATA.testcase;
+    setInput(demo.input);
+    setTestCases(JSON.parse(demo.output));
+    setStatus('success');
   }, []);
 
   const handleCopyJira = useCallback(async () => {
@@ -146,6 +154,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
           label="Generar casos de prueba"
           loadingLabel="Generando..."
         />
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
         <button
           type="button"
           className="btn-ghost"

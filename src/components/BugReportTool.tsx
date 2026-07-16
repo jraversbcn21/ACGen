@@ -5,6 +5,7 @@ import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { generateBugReport } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
+import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
 import type { BugReportFormData, PlatformId } from '../types';
 
@@ -93,12 +94,18 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   }, [apiKey, model, formData, canGenerate, addEntry]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
+    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
     setFormData(DEFAULT_FORM);
     setOutput('');
     setReasoning(undefined);
     setError(null);
     setCopied(false);
+  }, []);
+
+  const handleLoadDemo = useCallback(() => {
+    const demo = DEMO_DATA.bugreport;
+    setFormData(prev => ({ ...prev, description: demo.input }));
+    setOutput(demo.output);
   }, []);
 
   const startSpeech = (text: string) => {
@@ -398,6 +405,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
         <button
           type="button"
           className="btn-ghost"

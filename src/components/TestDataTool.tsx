@@ -4,6 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { generateTestData } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
+import { DEMO_DATA } from '../config/demoData';
 import type { TestDataFormData } from '../types';
 
 interface TestDataToolProps {
@@ -128,13 +129,18 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
   }, [apiKey, model, formData, canGenerate]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
+    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
     setFormData(DEFAULT_FORM);
     setGeneratedData([]);
     setGeneratedModel(undefined);
     setError(null);
     setCopied(false);
     setCopiedRowIndex(null);
+  }, []);
+
+  const handleLoadDemo = useCallback(() => {
+    setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));
+    setGeneratedModel('demo');
   }, []);
 
   const handleCopyRow = useCallback(async (row: Record<string, string>, index: number) => {
@@ -260,6 +266,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
         <button
           type="button"
           className="btn-ghost"

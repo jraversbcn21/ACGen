@@ -4,6 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { generateCriteria } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
+import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
 import type { GenerationStatus } from '../types';
 
@@ -58,7 +59,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
   }, [apiKey, model, requirements, canGenerate, additionalContext, addEntry]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
+    if (!window.confirm('Seguro que quieres limpiar los campos?')) return;
     stopSpeech();
     setRequirements('');
     setCriteria('');
@@ -67,6 +68,14 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
     setStatus('idle');
     setCopied(false);
     setAdditionalContext('');
+  }, []);
+
+  const handleLoadDemo = useCallback(() => {
+    const demo = DEMO_DATA.acceptance;
+    setRequirements(demo.input);
+    setCriteria(demo.output);
+    setError(null);
+    setStatus('success');
   }, []);
 
   const reasoningRef = useRef<HTMLDetailsElement>(null);
@@ -231,6 +240,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
         <button
           type="button"
           className="btn-ghost"
