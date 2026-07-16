@@ -14,7 +14,7 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
 *Pais/Entorno:* Espana/Pro
 *Fecha:* 15/07/2026
 *Evidencia:*
-*Validado por:* Jorge-QA
+*Validado por:*
 {quote}{panel}
 
 {panel:title=Criterios aceptacion}
@@ -25,7 +25,7 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
 *Pais/Entorno:* Espana/Pro
 *Fecha:* 15/07/2026
 *Evidencia:*
-*Validado por:* Jorge-QA
+*Validado por:*
 {quote}{panel}`,
   },
   testcase: {
@@ -63,8 +63,8 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
   bugreport: {
     input: 'El boton de pago no responde en iOS Safari 17. Al intentar finalizar la compra en el checkout, el boton "Pagar ahora" no ejecuta ninguna accion.',
     output: `{panel:title=DESCRIPCION:}
-- Entorno/Pais: ES
-- Version: iOS 17 / Safari
+- Entorno/Pais: Pro/ES
+- Version:
 {panel}
 {panel:title=PRECONDICION:}
 - Usuario logueado con productos en el carrito
@@ -93,8 +93,8 @@ Entonces el pago se procesa correctamente y veo la pantalla de confirmacion de p
 ResultadoQA: (/)/(x)
 Pais/Entorno: ES/Pro
 Fecha: 15-07-2026
-Evidencia: Adjuntar captura de pantalla
-Validado por: Jorge-QA
+Evidencia:
+Validado por:
 {quote}
 {panel}`,
   },
