@@ -26,6 +26,7 @@ export function useStreamingResponse() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error inesperado';
       setState({ text: full, isStreaming: false, error: message });
+      throw err;
     }
   }, []);
 
