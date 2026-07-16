@@ -9,6 +9,9 @@ import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICE
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ProjectProfile } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
 
@@ -24,6 +27,27 @@ const MOBILE_BROWSERS = [...DESKTOP_BROWSERS, 'Samsung Internet'];
 function getAvailableBrowsers(platform: PlatformId): string[] {
   if (platform === 'web-mobile') return MOBILE_BROWSERS;
   return DESKTOP_BROWSERS;
+}
+
+function buildBugReportMessage(formData: BugReportFormData): string {
+  const now = new Date();
+  const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+  let userMessage = `Descripcion del bug: ${formData.description}\n\n`;
+  userMessage += `Plataforma: ${formData.platform}\n`;
+  userMessage += `Mercado: ${formData.market}\n`;
+  userMessage += `Fecha actual: ${today}\n`;
+  if (formData.platform === 'web-desktop' || formData.platform === 'web-mobile') {
+    if (formData.browser) userMessage += `Navegador: ${formData.browser}\n`;
+    if (formData.url) userMessage += `URL: ${formData.url}\n`;
+  } else {
+    if (formData.appVersion) userMessage += `Version de la app: ${formData.appVersion}\n`;
+    if (formData.device) userMessage += `Dispositivo: ${formData.device}\n`;
+    if (formData.osVersion) userMessage += `Version del OS: ${formData.osVersion}\n`;
+  }
+  if (formData.additionalContext?.trim()) {
+    userMessage += `\nContexto adicional:\n${formData.additionalContext.trim()}\n`;
+  }
+  return userMessage;
 }
 
 const DEFAULT_FORM: BugReportFormData = {
@@ -51,6 +75,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
 
@@ -77,35 +102,13 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
     });
   }, []);
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || isLoading || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setIsLoading(true);
     setError(null);
     setOutput('');
     setReasoning(undefined);
-
     try {
-      const now = new Date();
-      const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-      let userMessage = `Descripcion del bug: ${formData.description}\n\n`;
-      userMessage += `Plataforma: ${formData.platform}\n`;
-      userMessage += `Mercado: ${formData.market}\n`;
-      userMessage += `Fecha actual: ${today}\n`;
-
-      if (formData.platform === 'web-desktop' || formData.platform === 'web-mobile') {
-        if (formData.browser) userMessage += `Navegador: ${formData.browser}\n`;
-        if (formData.url) userMessage += `URL: ${formData.url}\n`;
-      } else {
-        if (formData.appVersion) userMessage += `Version de la app: ${formData.appVersion}\n`;
-        if (formData.device) userMessage += `Dispositivo: ${formData.device}\n`;
-        if (formData.osVersion) userMessage += `Version del OS: ${formData.osVersion}\n`;
-      }
-
-      if (formData.additionalContext?.trim()) {
-        userMessage += `\nContexto adicional:\n${formData.additionalContext.trim()}\n`;
-      }
-
-      const gen = streamWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, 'criteria', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, BUG_REPORT_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setOutput(fullText);
         addEntry(formData.description, fullText);
@@ -116,8 +119,26 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
+      setConfMap(null);
     }
-  }, [apiKey, model, formData, canGenerate, isLoading, isStreaming, profile, stream, addEntry]);
+  }, [apiKey, model, formData.description, profile, stream, addEntry]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || isLoading || isStreaming) return;
+    const userMessage = buildBugReportMessage(formData);
+    const confKey = `acgen_confidential_bugreport`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(userMessage);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(userMessage);
+    } else {
+      await doGenerate(userMessage);
+    }
+  }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -437,6 +458,14 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
 
       {/* Action buttons */}
       <div className="actions-bar">
+        <ConfidentialToggle
+          view="bugreport"
+          substitutionCount={0}
+          onReview={() => {
+            const { map } = anonymize(buildBugReportMessage(formData));
+            setConfMap(map);
+          }}
+        />
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
@@ -473,6 +502,16 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
           onLoad={(output) => setOutput(output)}
           onClearAll={clearHistory}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            doGenerate(buildBugReportMessage(formData), editedMap);
+            setConfMap(null);
+          }}
         />
       )}
     </div>

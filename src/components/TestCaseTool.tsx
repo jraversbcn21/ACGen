@@ -6,6 +6,9 @@ import { streamWithGroq, extractJsonArray, validateTestCases } from '../services
 import { TESTCASE_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
@@ -40,6 +43,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
   const [error, setError] = useState<string | null>(null);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
 
@@ -50,14 +54,13 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
   const hasOutput = testCases.length > 0;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || status === 'loading' || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setStatus('loading');
     setError(null);
     setTestCases([]);
     setGeneratedModel(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, input, TESTCASE_PROMPT, 'testcase', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, TESTCASE_PROMPT, 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (items.length === 0) {
@@ -73,8 +76,26 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
       setError(message);
       setStatus('error');
       setTestCases([]);
+    } finally {
+      setConfMap(null);
     }
-  }, [apiKey, model, input, canGenerate, status, isStreaming, profile, stream]);
+  }, [apiKey, model, profile, stream]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || status === 'loading' || isStreaming) return;
+    const confKey = `acgen_confidential_testcase`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(input);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(input);
+    } else {
+      await doGenerate(input);
+    }
+  }, [canGenerate, status, isStreaming, input, doGenerate]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -183,6 +204,14 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
       </div>
 
       <div className="actions-bar">
+        <ConfidentialToggle
+          view="testcase"
+          substitutionCount={0}
+          onReview={() => {
+            const { map } = anonymize(input);
+            setConfMap(map);
+          }}
+        />
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
@@ -266,6 +295,16 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            doGenerate(input, editedMap);
+            setConfMap(null);
+          }}
+        />
+      )}
     </div>
   );
 }

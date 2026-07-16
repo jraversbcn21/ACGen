@@ -5,6 +5,9 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq } from '../services/apiService';
 import { CONVERTER_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ProjectProfile } from '../types/context';
 
 const FORMATS = [
@@ -27,26 +30,43 @@ export function ConverterTool({ apiKey, model, profile }: ConverterToolProps) {
   const [outputFormat, setOutputFormat] = useState('markdown');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setLoading(true);
     setResult('');
     try {
-      const prompt = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
-      const gen = streamWithGroq(apiKey, model, prompt, CONVERTER_PROMPT, 'criteria', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, CONVERTER_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => { setResult(fullText); });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       showToast(message);
     } finally {
       setLoading(false);
+      setConfMap(null);
     }
-  }, [apiKey, model, input, inputFormat, outputFormat, canGenerate, loading, isStreaming, profile, stream, showToast]);
+  }, [apiKey, model, profile, stream, showToast]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || loading || isStreaming) return;
+    const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
+    const confKey = `acgen_confidential_converter`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(effectiveInput);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(effectiveInput);
+    } else {
+      await doGenerate(effectiveInput);
+    }
+  }, [canGenerate, loading, isStreaming, input, inputFormat, outputFormat, doGenerate]);
 
   const handleClear = useCallback(() => {
     setInput('');
@@ -111,6 +131,15 @@ export function ConverterTool({ apiKey, model, profile }: ConverterToolProps) {
           </div>
         </div>
         <div className="actions-bar">
+          <ConfidentialToggle
+            view="converter"
+            substitutionCount={0}
+            onReview={() => {
+              const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
+              const { map } = anonymize(effectiveInput);
+              setConfMap(map);
+            }}
+          />
           <GenerateButton
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
@@ -125,6 +154,17 @@ export function ConverterTool({ apiKey, model, profile }: ConverterToolProps) {
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
+            doGenerate(effectiveInput, editedMap);
+            setConfMap(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,9 @@ import { streamWithGroq } from '../services/apiService';
 import { REFINER_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { ChainMenu } from './ChainMenu';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
@@ -21,6 +24,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
   const [requirement, setRequirement] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
 
@@ -30,12 +34,11 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, requirement, REFINER_PROMPT, 'criteria', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, REFINER_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setResult(fullText);
       });
@@ -44,8 +47,25 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
       showToast(message);
     } finally {
       setLoading(false);
+      setConfMap(null);
     }
-  }, [apiKey, model, requirement, canGenerate, loading, isStreaming, profile, stream, showToast]);
+  }, [apiKey, model, profile, stream, showToast]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || loading || isStreaming) return;
+    const confKey = `acgen_confidential_refiner`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(requirement);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(requirement);
+    } else {
+      await doGenerate(requirement);
+    }
+  }, [canGenerate, loading, isStreaming, requirement, doGenerate]);
 
   const handleClear = useCallback(() => {
     const prev = requirement;
@@ -80,6 +100,14 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
           style={{ minHeight: 200 }}
         />
         <div className="actions-bar">
+          <ConfidentialToggle
+            view="refiner"
+            substitutionCount={0}
+            onReview={() => {
+              const { map } = anonymize(requirement);
+              setConfMap(map);
+            }}
+          />
           <GenerateButton
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
@@ -103,6 +131,16 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            doGenerate(requirement, editedMap);
+            setConfMap(null);
+          }}
+        />
+      )}
     </div>
   );
 }

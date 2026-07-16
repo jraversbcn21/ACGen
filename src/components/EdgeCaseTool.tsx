@@ -5,6 +5,9 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq, extractJsonArray } from '../services/apiService';
 import { EDGE_CASE_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ProjectProfile } from '../types/context';
 
 const CATEGORY_BADGES: Record<string, string> = {
@@ -22,6 +25,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
   const [edgeCases, setEdgeCases] = useState<Array<{ categoria: string; escenario: string; resultadoEsperado: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
 
@@ -31,13 +35,12 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setLoading(true);
     setError(null);
     setEdgeCases([]);
     try {
-      const gen = streamWithGroq(apiKey, model, requirement, EDGE_CASE_PROMPT, 'testcase', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, EDGE_CASE_PROMPT, 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (!items || items.length === 0) {
@@ -50,8 +53,25 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
       setError(message);
     } finally {
       setLoading(false);
+      setConfMap(null);
     }
-  }, [apiKey, model, requirement, canGenerate, loading, isStreaming, profile, stream]);
+  }, [apiKey, model, profile, stream]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || loading || isStreaming) return;
+    const confKey = `acgen_confidential_edgecase`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(requirement);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(requirement);
+    } else {
+      await doGenerate(requirement);
+    }
+  }, [canGenerate, loading, isStreaming, requirement, doGenerate]);
 
   const handleClear = useCallback(() => {
     const prev = requirement;
@@ -87,6 +107,14 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
           style={{ minHeight: 200 }}
         />
         <div className="actions-bar">
+          <ConfidentialToggle
+            view="edgecase"
+            substitutionCount={0}
+            onReview={() => {
+              const { map } = anonymize(requirement);
+              setConfMap(map);
+            }}
+          />
           <GenerateButton
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
@@ -126,6 +154,16 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            doGenerate(requirement, editedMap);
+            setConfMap(null);
+          }}
+        />
+      )}
     </div>
   );
 }

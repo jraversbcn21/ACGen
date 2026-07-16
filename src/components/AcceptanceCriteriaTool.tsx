@@ -13,6 +13,9 @@ import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
 
 import { ChainMenu } from './ChainMenu';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 
 interface AcceptanceCriteriaToolProps {
   apiKey: string;
@@ -37,6 +40,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
   const { toast, showToast } = useToast();
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
 
   useEffect(() => {
@@ -47,24 +51,13 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || status === 'loading' || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setStatus('loading');
     setError(null);
     setCriteria('');
     setReasoning(undefined);
-
     try {
-      let inputText = requirements;
-      if (additionalContext.trim()) {
-        inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
-      }
-
-      const now = new Date();
-      const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-      const inputWithDate = `${inputText}\n\nFecha actual: ${today}`;
-
-      const gen = streamWithGroq(apiKey, model, inputWithDate, HARDCODED_PROMPT, 'criteria', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, HARDCODED_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setCriteria(fullText);
         setReasoning(undefined);
@@ -77,8 +70,32 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
       setStatus('error');
     } finally {
       setLoadingStatus('');
+      setConfMap(null);
     }
-  }, [apiKey, model, requirements, canGenerate, status, isStreaming, additionalContext, profile, stream, addEntry]);
+  }, [apiKey, model, requirements, profile, stream, addEntry]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || status === 'loading' || isStreaming) return;
+    let inputText = requirements;
+    if (additionalContext.trim()) {
+      inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
+    }
+    const now = new Date();
+    const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const effectiveInput = `${inputText}\n\nFecha actual: ${today}`;
+    const confKey = `acgen_confidential_acceptance`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(effectiveInput);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(effectiveInput);
+    } else {
+      await doGenerate(effectiveInput);
+    }
+  }, [canGenerate, status, isStreaming, requirements, additionalContext, doGenerate]);
 
   const handleClear = useCallback(() => {
     stopSpeech();
@@ -282,6 +299,21 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
       </div>
 
       <div className="actions-bar">
+        <ConfidentialToggle
+          view="acceptance"
+          substitutionCount={0}
+          onReview={() => {
+            let inputText = requirements;
+            if (additionalContext.trim()) {
+              inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
+            }
+            const now = new Date();
+            const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+            const effectiveInput = `${inputText}\n\nFecha actual: ${today}`;
+            const { map } = anonymize(effectiveInput);
+            setConfMap(map);
+          }}
+        />
         <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
@@ -311,6 +343,23 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
           onLoad={(output) => setCriteria(output)}
           onClearAll={clearHistory}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            let inputText = requirements;
+            if (additionalContext.trim()) {
+              inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
+            }
+            const now = new Date();
+            const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+            const effectiveInput = `${inputText}\n\nFecha actual: ${today}`;
+            doGenerate(effectiveInput, editedMap);
+            setConfMap(null);
+          }}
         />
       )}
     </div>

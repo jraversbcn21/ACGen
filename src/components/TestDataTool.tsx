@@ -7,6 +7,9 @@ import { streamWithGroq, extractJsonArray, validateTestDataRows } from '../servi
 import { SUPPORTED_MARKETS, DATA_TYPES, TEST_DATA_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { anonymize } from '../services/anonymizer';
+import { ConfidentialToggle } from './ConfidentialToggle';
+import { AnonymizerReview } from './AnonymizerReview';
 import type { ProjectProfile } from '../types/context';
 import type { TestDataFormData } from '../types';
 
@@ -83,6 +86,22 @@ function formatTableAsTSV(data: Record<string, string>[]): string {
   return [header, ...rows].join('\n');
 }
 
+function buildTestDataMessage(formData: TestDataFormData): string {
+  const dataTypeLabels: Record<string, string> = {
+    'shipping-address': 'direcciones de envio',
+    'billing-data': 'datos de facturacion',
+    'user-registration': 'datos de registro de usuario',
+    'payment-cards': 'tarjetas de pago de prueba',
+    'promo-codes': 'cupones y codigos promocionales',
+  };
+  let userMessage = `Genera ${formData.quantity} registro(s) de ${dataTypeLabels[formData.dataType]} para el mercado ${formData.market}.\n`;
+  userMessage += `Tipo de dato: ${formData.dataType}\n`;
+  if (formData.additionalContext?.trim()) {
+    userMessage += `\nContexto adicional (usa esta informacion para hacer los datos mas relevantes al escenario de prueba):\n${formData.additionalContext.trim()}\n`;
+  }
+  return userMessage;
+}
+
 const DEFAULT_FORM: TestDataFormData = {
   dataType: 'shipping-address',
   market: 'ES',
@@ -98,6 +117,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
+  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
 
@@ -113,28 +133,13 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
     setFormData(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || isLoading || isStreaming) return;
+  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setIsLoading(true);
     setError(null);
     setGeneratedData([]);
     setGeneratedModel(undefined);
-
     try {
-      const dataTypeLabels: Record<string, string> = {
-        'shipping-address': 'direcciones de envio',
-        'billing-data': 'datos de facturacion',
-        'user-registration': 'datos de registro de usuario',
-        'payment-cards': 'tarjetas de pago de prueba',
-        'promo-codes': 'cupones y codigos promocionales',
-      };
-      let userMessage = `Genera ${formData.quantity} registro(s) de ${dataTypeLabels[formData.dataType]} para el mercado ${formData.market}.\n`;
-      userMessage += `Tipo de dato: ${formData.dataType}\n`;
-      if (formData.additionalContext?.trim()) {
-        userMessage += `\nContexto adicional (usa esta informacion para hacer los datos mas relevantes al escenario de prueba):\n${formData.additionalContext.trim()}\n`;
-      }
-
-      const gen = streamWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, 'testcase', profile);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, TEST_DATA_PROMPT, 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const jsonArray = extractJsonArray(fullText);
         if (!jsonArray || jsonArray.length === 0) {
@@ -149,8 +154,26 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
+      setConfMap(null);
     }
-  }, [apiKey, model, formData, canGenerate, isLoading, isStreaming, profile, stream]);
+  }, [apiKey, model, profile, stream]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!canGenerate || isLoading || isStreaming) return;
+    const userMessage = buildTestDataMessage(formData);
+    const confKey = `acgen_confidential_testdata`;
+    const confEnabled = localStorage.getItem(confKey) === 'true';
+    if (confEnabled) {
+      const { map } = anonymize(userMessage);
+      if (Object.keys(map).length > 0) {
+        setConfMap(map);
+        return;
+      }
+      await doGenerate(userMessage);
+    } else {
+      await doGenerate(userMessage);
+    }
+  }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -296,6 +319,14 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
 
       {/* Action buttons */}
       <div className="actions-bar" style={{ marginTop: '24px' }}>
+        <ConfidentialToggle
+          view="testdata"
+          substitutionCount={0}
+          onReview={() => {
+            const { map } = anonymize(buildTestDataMessage(formData));
+            setConfMap(map);
+          }}
+        />
         <GenerateButton
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
@@ -377,6 +408,16 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
+      {confMap && (
+        <AnonymizerReview
+          map={confMap}
+          onCancel={() => setConfMap(null)}
+          onConfirm={(editedMap) => {
+            doGenerate(buildTestDataMessage(formData), editedMap);
+            setConfMap(null);
+          }}
+        />
+      )}
     </div>
   );
 }
