@@ -7,7 +7,11 @@ const PATTERNS: { regex: RegExp; prefix: string }[] = [
   { regex: /https?:\/\/[^\s)]+/g, prefix: 'URL' },
   { regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, prefix: 'IP' },
   { regex: /\b[A-Z]{2,}-\d{3,}\b/g, prefix: 'TICKET' },
-  { regex: /\+?[\d\s()-]{7,}/g, prefix: 'PHONE' },
+  // 7+ DIGITS (not chars), starting at +/digit and ending on a digit: separator
+  // runs like "\n    - " and short ids must not match, and the match must not
+  // swallow surrounding whitespace. Bare long numbers stay masked on purpose —
+  // in confidential mode, masking an id is cheaper than leaking a phone.
+  { regex: /\+?\d(?:[\s()-]*\d){6,}/g, prefix: 'PHONE' },
   { regex: /@[\w.-]+\.(?:local|internal|corp|lan)\b/gi, prefix: 'DOMAIN' },
   { regex: /\b(?:Sr|Sra|Dra?|Ing|Lic|Prof)\.\s+[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\b/g, prefix: 'NAME' },
 ];

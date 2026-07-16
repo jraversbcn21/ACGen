@@ -19,7 +19,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | Test file | Tests |
 |---|---|
 | `src/services/apiService.test.ts` | 35 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection), `streamWithGroq` deanonymization incl. placeholders split across SSE chunks, `streamWithGroq` HTTP-error `I18nError` shape (message = i18n key, params, cause = upstream text), base URL validation (missing/invalid thrown before fetch; undefined keeps the default endpoint) |
-| `src/services/anonymizer.test.ts` | 24 — all 7 regex patterns, edge cases, round-trip identity, `applyPlaceholderEdits`, `splitPendingPlaceholder` |
+| `src/services/anonymizer.test.ts` | 29 — all 7 regex patterns, edge cases, round-trip identity, `applyPlaceholderEdits`, `splitPendingPlaceholder`, PHONE digit floor (list runs / short numbers not flagged, no whitespace swallowed, bare long numbers still masked) |
 | `src/hooks/useSprints.test.ts` | 20 — init, add, archive, update, delete, moveRow, persistence, hydration, recovery |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, cross-tab sync, ignore unrelated keys, quota resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load, clear, quota resilience |
@@ -44,7 +44,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
 
-**Total: 211 tests across 25 files.**
+**Total: 216 tests across 25 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -302,11 +302,9 @@ Run `npm test` before committing when modifying hooks or services.
 - `tsconfig.app.json` excludes `*.test.ts` and `*.test.tsx` from production typecheck/build
 - All prompts are in Spanish. UI strings are i18n ES/EN. Prompts interpolate project profile via `{dominio}`, `{tipoProducto}`, `{mercados}`, `{terminologia}`, `{tono}`
 
-## Known issues (as of 2026-07-16 audit)
+## Known issues
 
-A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledger's "review clean" claims did not hold — the reviews checked each task in isolation, not the data flow end to end. Three stacked PRs fixed 10 of the findings (`fix/fase3-audit-bugs` → `fix/fase3-audit-cleanup` → `fix/stream-error-rethrow`; see their descriptions on GitHub for full detail per fix — the last one fixed the mid-stream-errors-silently-swallowed bug by having `useStreamingResponse.stream()` rethrow after recording its state, which also un-swallowed errors thrown from `onComplete` callbacks such as EdgeCaseTool's no-parseable-JSON error). Branch `fix/i18n-leftovers` then closed out the i18n leftovers those PRs deferred (see "Evolution history" below). What's left, in priority order:
-
-1. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
+None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across PRs #2–#7 plus the PHONE-regex fix — the full trail is in "Evolution history" below and in each PR's description on GitHub. (The audit's meta-lesson stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
 
 ## Evolution history
 
@@ -321,5 +319,6 @@ A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledg
 | i18n completion | 2026-07-16 | apiService throws i18n keys + params (I18nError), translated at tool catch blocks; ExportBar, ErrorBoundary (contextType), HistoryModal (+ inline 2-step confirm replacing the last window.confirm), SearchableSelect. Key-parity guard test. |
 | saveArtifact hardening | 2026-07-16 | Workspace target resolution moved from App.tsx into `useWorkspace.saveArtifact(artifact, fallbackName)`: a stale `activeId` (workspace deleted from storage but still active) now falls back to auto-creating "Sin nombre" instead of silently dropping the artifact. 194 → 197 tests. |
 | Custom base URL validation | 2026-07-16 | `baseUrlStatus()` in providers.ts, applied twice: inline hint + `aria-invalid` in ProviderConfig, and a pre-fetch guard in `streamWithGroq` throwing `error.baseUrlMissing`/`error.baseUrlInvalid` — an empty custom URL no longer silently sends the custom key to Groq's endpoint. ProviderConfig's last two hardcoded labels translated. 197 → 211 tests. |
+| PHONE regex digit floor | 2026-07-16 | `/\+?\d(?:[\s()-]*\d){6,}/g`: requires 7+ digits (not 7+ chars of the class), starts at +/digit, ends on a digit — indented list runs and short ids no longer become false `[PHONE_N]` rows, matches no longer swallow surrounding whitespace. Bare 7+ digit numbers stay masked on purpose (privacy-first). Closes the last known issue. 211 → 216 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
