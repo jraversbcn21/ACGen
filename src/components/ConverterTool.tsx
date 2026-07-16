@@ -76,7 +76,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setInput('');
     setResult('');
     showToast(t('common.cleared'));
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -137,7 +137,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         <div className="actions-bar">
           <ConfidentialToggle
             view="converter"
-            substitutionCount={0}
+            text={buildEffectiveInput()}
             onReview={() => setConf(anonymize(buildEffectiveInput()))}
           />
           <GenerateButton

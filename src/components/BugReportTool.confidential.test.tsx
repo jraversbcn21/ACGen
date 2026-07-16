@@ -39,8 +39,6 @@ const generate = () => fireEvent.click(screen.getByRole('button', { name: /gener
 
 describe('BugReportTool — confidential mode', () => {
   beforeEach(() => {
-    // jsdom has no speechSynthesis; BugReportTool's read-aloud cleanup calls it unguarded.
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] });
     streamMock.mockReset();
     streamMock.mockImplementation(async function* () {
       yield { token: 'reporte generado', done: false };

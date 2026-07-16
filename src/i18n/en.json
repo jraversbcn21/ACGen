@@ -195,5 +195,11 @@
   "sprint.namePlaceholder": "Sprint 25",
   "sprint.enCurso": "In progress",
   "sprint.openTicket": "Open {ticket} in tracker",
-  "error.noEdgeCases": "No edge cases were generated. Try a more detailed description."
+  "error.noEdgeCases": "No edge cases were generated. Try a more detailed description.",
+  "workspace.none": "No workspace",
+  "workspace.new": "+ New workspace",
+  "workspace.create": "Create",
+  "workspace.namePlaceholder": "Workspace name",
+  "workspace.confirmDelete": "Delete \"{name}\"?",
+  "workspace.importError": "Invalid JSON file."
 }

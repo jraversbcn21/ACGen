@@ -5,9 +5,7 @@ import { useSprints } from '../hooks/useSprints';
 import { useT } from '../i18n/I18nContext';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
-interface SprintTrackerProps {}
-
-export function SprintTracker(_props: SprintTrackerProps) {
+export function SprintTracker() {
   const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
@@ -26,7 +24,7 @@ export function SprintTracker(_props: SprintTrackerProps) {
     if (!confirm(t('sprint.archiveConfirm'))) return;
     archiveSprint(selectedSprint.id);
     setSelectedSprintId(null);
-  }, [selectedSprint, archiveSprint]);
+  }, [selectedSprint, archiveSprint, t]);
 
   const handleUpdateGridCell = useCallback((tabId: TabId, row: number, col: number, value: string) => {
     if (!selectedSprint) return;

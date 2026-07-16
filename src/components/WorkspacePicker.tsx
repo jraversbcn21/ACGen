@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useT } from '../i18n/I18nContext';
 import type { Workspace } from '../types/workspace';
 
 interface WorkspacePickerProps {
@@ -27,8 +28,10 @@ export function WorkspacePicker({
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -70,7 +73,7 @@ export function WorkspacePicker({
         onImport(reader.result as string);
         setOpen(false);
       } catch {
-        alert('Archivo JSON invalido.');
+        alert(t('workspace.importError'));
       }
     };
     reader.readAsText(file);
@@ -84,7 +87,7 @@ export function WorkspacePicker({
         onClick={() => setOpen((o) => !o)}
         style={{ fontSize: 13 }}
       >
-        {activeWorkspace ? activeWorkspace.name : 'Sin workspace'}
+        {activeWorkspace ? activeWorkspace.name : t('workspace.none')}
         <span style={{ marginLeft: 6, color: 'var(--text-3)' }}>
           {activeWorkspace ? `(${activeWorkspace.artifacts.length})` : ''}
         </span>
@@ -118,44 +121,62 @@ export function WorkspacePicker({
                 background: ws.id === activeId ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
               }}
             >
-              {editingId === ws.id ? (
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRename(ws.id);
-                    if (e.key === 'Escape') setEditingId(null);
-                  }}
-                  onBlur={() => handleRename(ws.id)}
-                  className="field-input"
-                  style={{ flex: 1, fontSize: 13 }}
-                  autoFocus
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { onSelect(ws.id); setOpen(false); }}
-                  style={{
-                    flex: 1,
-                    textAlign: 'left',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    color: 'var(--text)',
-                  }}
-                >
-                  {ws.name}
-                  <span style={{ color: 'var(--text-3)', marginLeft: 6 }}>
-                    {ws.artifacts.length}
+              {confirmingId === ws.id ? (
+                <>
+                  <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)' }}>
+                    {t('workspace.confirmDelete', { name: ws.name })}
                   </span>
-                </button>
+                  <button type="button" className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }}
+                    aria-label={t('common.confirm')} title={t('common.confirm')}
+                    onClick={() => { onDelete(ws.id); setConfirmingId(null); }}>✓</button>
+                  <button type="button" className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }}
+                    aria-label={t('common.cancel')} title={t('common.cancel')}
+                    onClick={() => setConfirmingId(null)}>✗</button>
+                </>
+              ) : (
+                <>
+                  {editingId === ws.id ? (
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRename(ws.id);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      onBlur={() => handleRename(ws.id)}
+                      className="field-input"
+                      style={{ flex: 1, fontSize: 13 }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { onSelect(ws.id); setOpen(false); }}
+                      style={{
+                        flex: 1,
+                        textAlign: 'left',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        color: 'var(--text)',
+                      }}
+                    >
+                      {ws.name}
+                      <span style={{ color: 'var(--text-3)', marginLeft: 6 }}>
+                        {ws.artifacts.length}
+                      </span>
+                    </button>
+                  )}
+                  <button type="button" onClick={() => { setEditingId(ws.id); setEditName(ws.name); }}
+                    className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }}
+                    aria-label={t('common.rename')} title={t('common.rename')}>✎</button>
+                  <button type="button" onClick={() => setConfirmingId(ws.id)}
+                    className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }}
+                    aria-label={t('common.delete')} title={t('common.delete')}>🗑</button>
+                </>
               )}
-              <button type="button" onClick={() => { setEditingId(ws.id); setEditName(ws.name); }}
-                className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }} title="Renombrar">✎</button>
-              <button type="button" onClick={() => onDelete(ws.id)}
-                className="btn-ghost" style={{ padding: '2px 4px', fontSize: 12 }} title="Eliminar">🗑</button>
             </div>
           ))}
 
@@ -165,20 +186,20 @@ export function WorkspacePicker({
             <div style={{ padding: '4px 8px', display: 'flex', gap: 4 }}>
               <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
-                placeholder="Nombre del workspace" className="field-input" style={{ flex: 1, fontSize: 13 }} autoFocus />
-              <button type="button" className="btn-primary" onClick={handleCreate} style={{ fontSize: 12, padding: '2px 8px' }}>Crear</button>
+                placeholder={t('workspace.namePlaceholder')} className="field-input" style={{ flex: 1, fontSize: 13 }} autoFocus />
+              <button type="button" className="btn-primary" onClick={handleCreate} style={{ fontSize: 12, padding: '2px 8px' }}>{t('workspace.create')}</button>
             </div>
           ) : (
             <button type="button" onClick={() => setCreating(true)} className="btn-ghost" style={{ width: '100%', textAlign: 'left', fontSize: 13 }}>
-              + Nuevo workspace
+              {t('workspace.new')}
             </button>
           )}
 
           <div style={{ display: 'flex', gap: 4, marginTop: 4, padding: '0 8px' }}>
             <button type="button" className="btn-ghost" style={{ flex: 1, fontSize: 12 }}
-              onClick={() => { if (activeId) { onExport(activeId); setOpen(false); } }} disabled={!activeId}>Exportar</button>
+              onClick={() => { if (activeId) { onExport(activeId); setOpen(false); } }} disabled={!activeId}>{t('common.export')}</button>
             <button type="button" className="btn-ghost" style={{ flex: 1, fontSize: 12 }}
-              onClick={handleImport}>Importar</button>
+              onClick={handleImport}>{t('common.import')}</button>
           </div>
           <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
         </div>

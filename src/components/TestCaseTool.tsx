@@ -119,7 +119,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setTestCases(prevTestCases);
       setGeneratedModel(prevModel);
     });
-  }, [input, testCases, generatedModel, showToast]);
+  }, [input, testCases, generatedModel, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.testcase;
@@ -202,7 +202,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       <div className="actions-bar">
         <ConfidentialToggle
           view="testcase"
-          substitutionCount={0}
+          text={input}
           onReview={() => setConf(anonymize(input))}
         />
         <GenerateButton

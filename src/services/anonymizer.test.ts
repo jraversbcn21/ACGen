@@ -38,15 +38,21 @@ describe('anonymize', () => {
   });
 
   it('replaces phone numbers with [PHONE_N] placeholders', () => {
-    const { text, map } = anonymize('Llama al +34 612 345 678 o 555-1234');
+    const input = 'Llama al +34 612 345 678 o 555-1234';
+    const { text, map } = anonymize(input);
     expect(text).toContain('[PHONE_1]');
     expect(text).toContain('[PHONE_2]');
+    expect(text).not.toContain('612 345 678');
+    expect(deanonymize(text, map)).toBe(input);
   });
 
   it('replaces internal domains with [DOMAIN_N] placeholders', () => {
-    const { text, map } = anonymize('Usuarios: @miempresa.corp y @interno.local');
+    const input = 'Usuarios: @miempresa.corp y @interno.local';
+    const { text, map } = anonymize(input);
     expect(text).toContain('[DOMAIN_1]');
     expect(text).toContain('[DOMAIN_2]');
+    expect(text).not.toContain('miempresa.corp');
+    expect(deanonymize(text, map)).toBe(input);
   });
 
   it('replaces proper names with [NAME_N] placeholders', () => {

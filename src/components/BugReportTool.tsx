@@ -164,7 +164,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setOutput(prevOutput);
       setReasoning(prevReasoning);
     });
-  }, [output, reasoning, showToast]);
+  }, [output, reasoning, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;
@@ -201,12 +201,15 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   };
 
   const stopSpeech = () => {
-    window.speechSynthesis.cancel();
+    // Read-aloud is optional: without the API there is nothing to stop.
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     setIsSpeaking(false);
   };
 
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    };
   }, []);
 
   useEffect(() => {
@@ -461,7 +464,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       <div className="actions-bar">
         <ConfidentialToggle
           view="bugreport"
-          substitutionCount={0}
+          text={buildBugReportMessage(formData)}
           onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
         />
         <GenerateButton

@@ -200,7 +200,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
-  }, [generatedData, generatedModel, showToast]);
+  }, [generatedData, generatedModel, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));
@@ -322,7 +322,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       <div className="actions-bar" style={{ marginTop: '24px' }}>
         <ConfidentialToggle
           view="testdata"
-          substitutionCount={0}
+          text={buildTestDataMessage(formData)}
           onReview={() => setConf(anonymize(buildTestDataMessage(formData)))}
         />
         <GenerateButton

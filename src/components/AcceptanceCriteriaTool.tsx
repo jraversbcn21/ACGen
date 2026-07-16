@@ -171,12 +171,15 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
   };
 
   const stopSpeech = () => {
-    window.speechSynthesis.cancel();
+    // Read-aloud is optional: without the API there is nothing to stop.
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     setIsSpeaking(false);
   };
 
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    };
   }, []);
 
   useEffect(() => {
@@ -305,7 +308,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       <div className="actions-bar">
         <ConfidentialToggle
           view="acceptance"
-          substitutionCount={0}
+          text={buildEffectiveInput()}
           onReview={() => setConf(anonymize(buildEffectiveInput()))}
         />
         <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />

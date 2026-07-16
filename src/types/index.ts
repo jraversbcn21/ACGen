@@ -1,14 +1,3 @@
-export interface GroqResponse {
-  content: string;
-  model: string;
-  reasoning?: string;
-}
-
-export interface TestCaseResponse {
-  testCases: TestCaseData[];
-  model: string;
-}
-
 export interface GroqApiError {
   message: string;
   code?: string;
