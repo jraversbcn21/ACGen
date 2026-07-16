@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 import { Header } from './components/Header';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -12,8 +12,15 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import type { ViewType } from './config/constants';
 
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker'];
+
+function getViewFromHash(): ViewType {
+  const hash = window.location.hash.replace('#/', '') || 'landing';
+  return VALID_VIEWS.includes(hash as ViewType) ? (hash as ViewType) : 'landing';
+}
+
 const toolNames: Record<string, string> = {
-  acceptance: 'Criterios de aceptación',
+  acceptance: 'Criterios de aceptacion',
   testcase: 'Test Case Generator',
   bugreport: 'Bug Report',
   testdata: 'Datos de Prueba',
@@ -23,8 +30,18 @@ const toolNames: Record<string, string> = {
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
-  const [view, setView] = useState<ViewType>('landing');
+  const [view, setView] = useState<ViewType>(getViewFromHash);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
+
+  useEffect(() => {
+    const onHashChange = () => setView(getViewFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const navigate = useCallback((v: ViewType) => {
+    window.location.hash = `#/${v}`;
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -43,11 +60,13 @@ export default function App() {
     }
   }
 
+  const subtitle = useMemo(() => view !== 'landing' ? toolNames[view] : undefined, [view]);
+
   return (
     <div className="page">
       <Header
-        onBack={view !== 'landing' ? () => setView('landing') : undefined}
-        subtitle={view !== 'landing' ? toolNames[view] : undefined}
+        onBack={view !== 'landing' ? () => navigate('landing') : undefined}
+        subtitle={subtitle}
         model={model}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
@@ -56,7 +75,7 @@ export default function App() {
         <ErrorBoundary key={view}>
           {view === 'landing' && (
             <LandingScreen
-              onSelect={setView}
+              onSelect={navigate}
               apiKey={apiKey}
               onApiKeyChange={setApiKey}
               model={model}
