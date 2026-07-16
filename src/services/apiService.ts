@@ -158,14 +158,16 @@ export async function* streamWithGroq(
       code: errorBody?.error?.type,
     };
 
+    const { message: upstreamMessage, ...meta } = apiError;
+
     if (response.status === 401) {
-      throw Object.assign(i18nError('error.apiKey'), apiError);
+      throw Object.assign(i18nError('error.apiKey'), { ...meta, cause: upstreamMessage });
     }
     if (response.status === 429) {
-      throw Object.assign(i18nError('error.rateLimit'), apiError);
+      throw Object.assign(i18nError('error.rateLimit'), { ...meta, cause: upstreamMessage });
     }
     if (isModelDecommissioned(apiError.message, response.status)) {
-      throw Object.assign(i18nError('error.modelDecommissioned'), apiError);
+      throw Object.assign(i18nError('error.modelDecommissioned'), { ...meta, cause: upstreamMessage });
     }
     throw Object.assign(new Error(apiError.message), apiError);
   }

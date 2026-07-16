@@ -28,6 +28,26 @@ async function collect(chunks: string[], anonymizeMap?: Record<string, string>):
   return out;
 }
 
+/** Builds a non-ok Groq error response with the given HTTP status and upstream error message. */
+function errorResponse(status: number, message: string): Response {
+  return {
+    ok: false,
+    status,
+    json: async () => ({ error: { message } }),
+  } as unknown as Response;
+}
+
+async function captureStreamError(status: number, message: string): Promise<I18nError & { status?: number; cause?: unknown }> {
+  vi.stubGlobal('fetch', vi.fn(async () => errorResponse(status, message)));
+  const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+  try {
+    await gen.next();
+  } catch (e) {
+    return e as I18nError & { status?: number; cause?: unknown };
+  }
+  throw new Error('expected streamWithGroq to throw');
+}
+
 describe('streamWithGroq deanonymization', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -54,6 +74,24 @@ describe('streamWithGroq deanonymization', () => {
   it('passes text through untouched when no map is given', async () => {
     const out = await collect(['texto [EMAIL_1] normal']);
     expect(out).toBe('texto [EMAIL_1] normal');
+  });
+});
+
+describe('streamWithGroq HTTP errors', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('throws error.apiKey on 401, preserving status and the upstream message as cause', async () => {
+    const caught = await captureStreamError(401, 'Invalid Authentication');
+    expect(caught.message).toBe('error.apiKey');
+    expect(caught.status).toBe(401);
+    expect(caught.cause).toBe('Invalid Authentication');
+  });
+
+  it('throws error.rateLimit on 429, preserving status and the upstream message as cause', async () => {
+    const caught = await captureStreamError(429, 'Rate limit exceeded, please try again later');
+    expect(caught.message).toBe('error.rateLimit');
+    expect(caught.status).toBe(429);
+    expect(caught.cause).toBe('Rate limit exceeded, please try again later');
   });
 });
 
