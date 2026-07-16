@@ -207,5 +207,9 @@
   "workspace.create": "Create",
   "workspace.namePlaceholder": "Workspace name",
   "workspace.confirmDelete": "Delete \"{name}\"?",
-  "workspace.importError": "Invalid JSON file."
+  "workspace.importError": "Invalid JSON file.",
+  "export.copy": "Copy",
+  "export.pdf": "Download PDF",
+  "export.csv": "Download CSV",
+  "export.tsv": "Copy TSV"
 }
