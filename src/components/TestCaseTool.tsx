@@ -119,7 +119,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setTestCases(prevTestCases);
       setGeneratedModel(prevModel);
     });
-  }, [input, testCases, generatedModel, showToast]);
+  }, [input, testCases, generatedModel, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.testcase;

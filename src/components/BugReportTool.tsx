@@ -164,7 +164,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setOutput(prevOutput);
       setReasoning(prevReasoning);
     });
-  }, [output, reasoning, showToast]);
+  }, [output, reasoning, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;

@@ -76,7 +76,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
       setRequirement(prev);
       setResult(prevResult);
     });
-  }, [requirement, result, showToast]);
+  }, [requirement, result, showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

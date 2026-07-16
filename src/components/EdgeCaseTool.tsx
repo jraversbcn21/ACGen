@@ -81,7 +81,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setRequirement(prev);
       setEdgeCases(prevCases);
     });
-  }, [requirement, edgeCases, showToast]);
+  }, [requirement, edgeCases, showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

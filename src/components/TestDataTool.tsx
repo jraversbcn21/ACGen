@@ -200,7 +200,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
-  }, [generatedData, generatedModel, showToast]);
+  }, [generatedData, generatedModel, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));

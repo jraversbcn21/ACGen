@@ -76,7 +76,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       setIdea(prev);
       setResult(prevResult);
     });
-  }, [idea, result, showToast]);
+  }, [idea, result, showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

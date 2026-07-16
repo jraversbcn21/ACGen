@@ -24,7 +24,7 @@ export function SprintTracker() {
     if (!confirm(t('sprint.archiveConfirm'))) return;
     archiveSprint(selectedSprint.id);
     setSelectedSprintId(null);
-  }, [selectedSprint, archiveSprint]);
+  }, [selectedSprint, archiveSprint, t]);
 
   const handleUpdateGridCell = useCallback((tabId: TabId, row: number, col: number, value: string) => {
     if (!selectedSprint) return;
