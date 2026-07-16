@@ -34,7 +34,7 @@ function generateJiraTable(testCases: TestCaseData[], t: (key: string) => string
   return [header, ...rows].join('\n');
 }
 
-export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void }) {
+export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {
   const [input, setInput] = useState('');
   const [testCases, setTestCases] = useState<TestCaseData[]>([]);
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -59,7 +59,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setTestCases([]);
     setGeneratedModel(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testcase'), 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testcase'), 'testcase', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (items.length === 0) {

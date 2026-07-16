@@ -1,14 +1,17 @@
-import { ApiKeyConfig } from './ApiKeyConfig';
-import { ModelSelector } from './ModelSelector';
+import { ProviderConfig } from './ProviderConfig';
 import { Icon } from './Icons';
 import { useT } from '../i18n/I18nContext';
 
 interface LandingScreenProps {
   onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker') => void;
+  provider: string;
+  onProviderChange: (provider: string) => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   model: string;
   onModelChange: (model: string) => void;
+  customBaseUrl: string;
+  onCustomBaseUrlChange: (url: string) => void;
 }
 
 const tools = [
@@ -77,7 +80,7 @@ const tools = [
   },
 ];
 
-export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModelChange }: LandingScreenProps) {
+export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, onApiKeyChange, model, onModelChange, customBaseUrl, onCustomBaseUrlChange }: LandingScreenProps) {
   const t = useT();
 
   return (
@@ -91,8 +94,16 @@ export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModel
       </div>
 
       <div className="config-strip">
-        <ApiKeyConfig apiKey={apiKey} onChange={onApiKeyChange} />
-        <ModelSelector model={model} onChange={onModelChange} />
+        <ProviderConfig
+          provider={provider}
+          onProviderChange={onProviderChange}
+          apiKey={apiKey}
+          onApiKeyChange={onApiKeyChange}
+          model={model}
+          onModelChange={onModelChange}
+          baseUrl={customBaseUrl}
+          onBaseUrlChange={onCustomBaseUrlChange}
+        />
       </div>
 
       <div className="sec-head">

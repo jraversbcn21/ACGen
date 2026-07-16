@@ -20,6 +20,7 @@ interface BugReportToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
@@ -64,7 +65,7 @@ const DEFAULT_FORM: BugReportFormData = {
   additionalContext: '',
 };
 
-export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugReportToolProps) {
+export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact }: BugReportToolProps) {
   const [formData, setFormData] = useState<BugReportFormData>(DEFAULT_FORM);
   const [output, setOutput] = useState('');
   const [reasoning, setReasoning] = useState<string | undefined>();
@@ -111,7 +112,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
     setOutput('');
     setReasoning(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('bugreport'), 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('bugreport'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         setOutput(fullText);
         onSaveArtifact?.(effectiveInput, fullText);

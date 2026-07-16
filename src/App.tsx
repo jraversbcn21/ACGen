@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 import { Header } from './components/Header';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -16,6 +16,7 @@ import { ConverterTool } from './components/ConverterTool';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
+import { DEFAULT_PROVIDER, PROVIDERS } from './config/providers';
 import { useProfile } from './components/ContextProfile';
 import { I18nProvider } from './i18n/I18nContext';
 import type { ViewType } from './config/constants';
@@ -28,14 +29,38 @@ function getViewFromHash(): ViewType {
 }
 
 export default function App() {
-  const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
+  const [apiKey, setApiKey] = useLocalStorage<string>('acgen_key_groq', (() => {
+    try {
+      const oldKey = localStorage.getItem('acgen_api_key');
+      if (oldKey) {
+        const parsed = JSON.parse(oldKey);
+        if (typeof parsed === 'string' && parsed) return parsed;
+      }
+    } catch { /* migration parse error */ }
+    return '';
+  })());
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
+  const [provider, setProvider] = useLocalStorage('acgen_provider', DEFAULT_PROVIDER);
+  const [openrouterKey, setOpenrouterKey] = useLocalStorage('acgen_key_openrouter', '');
+  const [customKey, setCustomKey] = useLocalStorage('acgen_key_custom', '');
+  const [customBaseUrl, setCustomBaseUrl] = useLocalStorage('acgen_custom_base_url', '');
   const [profile] = useProfile();
   const [view, setView] = useState<ViewType>(getViewFromHash);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
   const workspace = useWorkspace();
 
   const [prefill, setPrefill] = useState<{ view: ViewType; text: string } | null>(null);
+
+  const currentApiKey = useMemo(() => {
+    if (provider === 'groq') return apiKey;
+    if (provider === 'openrouter') return openrouterKey;
+    return customKey;
+  }, [provider, apiKey, openrouterKey, customKey]);
+
+  const currentBaseUrl = useMemo(() => {
+    if (provider === 'custom') return customBaseUrl || undefined;
+    return PROVIDERS[provider]?.baseUrl;
+  }, [provider, customBaseUrl]);
 
   const saveArtifact = useCallback((artifact: { tool: ViewType; input: string; output: string }) => {
     let targetId = workspace.activeId;
@@ -79,7 +104,9 @@ export default function App() {
     <I18nProvider>
     <div className="page">
       <Header
+        provider={provider}
         model={model}
+        apiKey={currentApiKey}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         workspaces={workspace.workspaces}
@@ -101,33 +128,41 @@ export default function App() {
           {view === 'landing' && (
             <LandingScreen
               onSelect={navigate}
-              apiKey={apiKey}
-              onApiKeyChange={setApiKey}
+              provider={provider}
+              onProviderChange={setProvider}
+              apiKey={currentApiKey}
+              onApiKeyChange={(key) => {
+                if (provider === 'groq') setApiKey(key);
+                else if (provider === 'openrouter') setOpenrouterKey(key);
+                else setCustomKey(key);
+              }}
               model={model}
               onModelChange={setModel}
+              customBaseUrl={customBaseUrl}
+              onCustomBaseUrlChange={setCustomBaseUrl}
             />
           )}
 
           {view === 'acceptance' && (
-            <AcceptanceCriteriaTool apiKey={apiKey} model={model} profile={profile}
+            <AcceptanceCriteriaTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onChain={(v, text) => navigate(v, { prefill: text })}
               prefill={prefill?.view === 'acceptance' ? prefill.text : undefined}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'acceptance', input, output })} />
           )}
 
           {view === 'testcase' && (
-            <TestCaseTool apiKey={apiKey} model={model} profile={profile}
+            <TestCaseTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               prefill={prefill?.view === 'testcase' ? prefill.text : undefined}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'testcase', input, output })} />
           )}
 
           {view === 'bugreport' && (
-            <BugReportTool apiKey={apiKey} model={model} profile={profile}
+            <BugReportTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'bugreport', input, output })} />
           )}
 
           {view === 'testdata' && (
-            <TestDataTool apiKey={apiKey} model={model} profile={profile}
+            <TestDataTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'testdata', input, output })} />
           )}
 
@@ -136,27 +171,27 @@ export default function App() {
           )}
 
           {view === 'userstory' && (
-            <UserStoryTool apiKey={apiKey} model={model} profile={profile}
+            <UserStoryTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onChain={(v, text) => navigate(v, { prefill: text })}
               prefill={prefill?.view === 'userstory' ? prefill.text : undefined}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'userstory', input, output })} />
           )}
 
           {view === 'refiner' && (
-            <RefinerTool apiKey={apiKey} model={model} profile={profile}
+            <RefinerTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onChain={(v, text) => navigate(v, { prefill: text })}
               prefill={prefill?.view === 'refiner' ? prefill.text : undefined}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'refiner', input, output })} />
           )}
 
           {view === 'edgecase' && (
-            <EdgeCaseTool apiKey={apiKey} model={model} profile={profile}
+            <EdgeCaseTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               prefill={prefill?.view === 'edgecase' ? prefill.text : undefined}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'edgecase', input, output })} />
           )}
 
           {view === 'converter' && (
-            <ConverterTool apiKey={apiKey} model={model} profile={profile}
+            <ConverterTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'converter', input, output })} />
           )}
         </ErrorBoundary>

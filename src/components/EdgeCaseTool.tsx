@@ -20,7 +20,7 @@ const CATEGORY_BADGES: Record<string, string> = {
   'Internacionalizacion': 'badge-info',
 };
 
-export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void }) {
+export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {
   const [requirement, setRequirement] = useState('');
   const [edgeCases, setEdgeCases] = useState<Array<{ categoria: string; escenario: string; resultadoEsperado: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setError(null);
     setEdgeCases([]);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('edgecase'), 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('edgecase'), 'testcase', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (!items || items.length === 0) {

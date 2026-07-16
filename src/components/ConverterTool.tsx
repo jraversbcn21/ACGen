@@ -22,10 +22,11 @@ interface ConverterToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: ConverterToolProps) {
+export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact }: ConverterToolProps) {
   const [input, setInput] = useState('');
   const [inputFormat, setInputFormat] = useState('text');
   const [outputFormat, setOutputFormat] = useState('markdown');
@@ -42,7 +43,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('converter'), 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('converter'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
     } catch (err) {
       const message = err instanceof Error ? err.message : t('error.unexpected');

@@ -18,6 +18,7 @@ interface TestDataToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
@@ -110,7 +111,7 @@ const DEFAULT_FORM: TestDataFormData = {
   quantity: 3,
 };
 
-export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDataToolProps) {
+export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }: TestDataToolProps) {
   const [formData, setFormData] = useState<TestDataFormData>(DEFAULT_FORM);
   const [generatedData, setGeneratedData] = useState<Record<string, string>[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
@@ -142,7 +143,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
     setGeneratedData([]);
     setGeneratedModel(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testdata'), 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testdata'), 'testcase', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         const jsonArray = extractJsonArray(fullText);
         if (!jsonArray || jsonArray.length === 0) {

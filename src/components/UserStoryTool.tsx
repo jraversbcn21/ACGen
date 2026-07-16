@@ -16,12 +16,13 @@ interface UserStoryToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: UserStoryToolProps) {
+export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefill, onSaveArtifact }: UserStoryToolProps) {
   const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('userstory'), 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('userstory'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         setResult(fullText);
         onSaveArtifact?.(effectiveInput, fullText);

@@ -129,6 +129,7 @@ export async function* streamWithGroq(
   tool: ToolType,
   profile?: ProjectProfile,
   anonymizeMap?: Record<string, string>,
+  baseUrl?: string,
 ): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
   const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
   const reasoningParams = getReasoningParams(model, tool);
@@ -143,7 +144,7 @@ export async function* streamWithGroq(
     ...reasoningParams,
   };
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(baseUrl || API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -212,9 +213,10 @@ export async function generateWithGroq(
   signal?: AbortSignal,
   reasoningParams?: Record<string, unknown>,
   profile?: ProjectProfile,
+  baseUrl?: string,
 ): Promise<GroqResponse> {
   const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
-  const response = await fetch(API_URL, {
+  const response = await fetch(baseUrl || API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -286,12 +288,13 @@ export async function generateCriteria(
   systemPrompt: string,
   signal?: AbortSignal,
   profile?: ProjectProfile,
+  baseUrl?: string,
 ): Promise<GroqResponse> {
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const inputWithDate = `${userInput}\n\nFecha actual: ${today}`;
   const reasoningParams = getReasoningParams(model, 'criteria');
-  return generateWithGroq(apiKey, model, inputWithDate, systemPrompt, REQUIRED_MARKERS, signal, reasoningParams, profile);
+  return generateWithGroq(apiKey, model, inputWithDate, systemPrompt, REQUIRED_MARKERS, signal, reasoningParams, profile, baseUrl);
 }
 
 export async function generateTestCases(
@@ -301,9 +304,10 @@ export async function generateTestCases(
   systemPrompt: string,
   signal?: AbortSignal,
   profile?: ProjectProfile,
+  baseUrl?: string,
 ): Promise<TestCaseResponse> {
   const reasoningParams = getReasoningParams(model, 'testcase');
-  const result = await generateWithGroq(apiKey, model, userInput, systemPrompt, [], signal, reasoningParams, profile);
+  const result = await generateWithGroq(apiKey, model, userInput, systemPrompt, [], signal, reasoningParams, profile, baseUrl);
   const items = extractJsonArray(result.content);
   if (items.length === 0) {
     throw new Error('No se generaron casos de prueba. Intenta con una descripción más detallada.');
@@ -317,6 +321,7 @@ export async function generateBugReport(
   model: string,
   formData: BugReportFormData,
   profile?: ProjectProfile,
+  baseUrl?: string,
 ): Promise<GroqResponse> {
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
@@ -339,7 +344,7 @@ export async function generateBugReport(
   }
 
   const reasoningParams = getReasoningParams(model, 'criteria');
-  return generateWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, [], undefined, reasoningParams, profile);
+  return generateWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, [], undefined, reasoningParams, profile, baseUrl);
 }
 
 export function validateTestDataRows(items: unknown[]): Record<string, string>[] {
@@ -362,6 +367,7 @@ export async function generateTestData(
   model: string,
   formData: TestDataFormData,
   profile?: ProjectProfile,
+  baseUrl?: string,
 ): Promise<{ data: Record<string, string>[]; model: string }> {
   const dataTypeLabels: Record<string, string> = {
     'shipping-address': 'direcciones de envio',
@@ -379,7 +385,7 @@ export async function generateTestData(
   }
 
   const reasoningParams = getReasoningParams(model, 'testcase');
-  const response = await generateWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, [], undefined, reasoningParams, profile);
+  const response = await generateWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, [], undefined, reasoningParams, profile, baseUrl);
 
   const jsonArray = extractJsonArray(response.content);
 

@@ -4,7 +4,9 @@ import { useLang } from '../i18n/I18nContext';
 import type { Workspace } from '../types/workspace';
 
 interface HeaderProps {
+  provider: string;
   model: string;
+  apiKey: string;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   workspaces: Workspace[];
@@ -18,7 +20,9 @@ interface HeaderProps {
 }
 
 export function Header({
+  provider,
   model,
+  apiKey: _apiKey,
   theme,
   onToggleTheme,
   workspaces,
@@ -32,7 +36,7 @@ export function Header({
 }: HeaderProps) {
   const { lang, setLang } = useLang();
 
-  return (
+    return (
     <header className="topbar">
       <div className="brand">
         <span className="brand-mark" style={{ width: 38, height: 38, fontSize: 17 }}>A</span>
@@ -52,6 +56,7 @@ export function Header({
         />
         <span className="model-chip">
           <Icon.spark size={14} />
+          {provider !== 'groq' && (<>{provider === 'openrouter' ? 'OR' : 'C'}: </>)}
           {model}
         </span>
         <button type="button" className="btn-ghost" onClick={() => setLang(lang === 'es' ? 'en' : 'es')}

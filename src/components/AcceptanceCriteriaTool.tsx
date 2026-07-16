@@ -22,12 +22,13 @@ interface AcceptanceCriteriaToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: AcceptanceCriteriaToolProps) {
+export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChain, prefill, onSaveArtifact }: AcceptanceCriteriaToolProps) {
   const [requirements, setRequirements] = useState('');
   const [criteria, setCriteria] = useState('');
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -60,7 +61,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
     setCriteria('');
     setReasoning(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('acceptance'), 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('acceptance'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         setCriteria(fullText);
         setReasoning(undefined);

@@ -16,12 +16,13 @@ interface RefinerToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  baseUrl?: string;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
   onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: RefinerToolProps) {
+export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill, onSaveArtifact }: RefinerToolProps) {
   const [requirement, setRequirement] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('refiner'), 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('refiner'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         setResult(fullText);
         onSaveArtifact?.(effectiveInput, fullText);
