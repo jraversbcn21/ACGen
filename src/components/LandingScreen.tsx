@@ -84,7 +84,7 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
   const t = useT();
 
   return (
-    <>
+    <div className="landing">
       <div className="hero">
         <p className="eyebrow">{t('landing.qaSession')} · {t('landing.eyebrow')}</p>
         <h1 className="hero-title">
@@ -127,12 +127,11 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
             </button>
           );
         })}
+        <div className="add-slot">
+          <span className="add-plus">+</span>
+          {t('landing.moreComing')}
+        </div>
       </div>
-
-      <div className="add-slot">
-        <span className="add-plus">+</span>
-        {t('landing.moreComing')}
-      </div>
-    </>
+    </div>
   );
 }

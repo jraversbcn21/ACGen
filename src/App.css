@@ -133,6 +133,11 @@ body {
   padding: clamp(34px, 6vw, 56px) clamp(20px, 5vw, 52px) 80px;
 }
 
+/* === LANDING === */
+/* The landing renders inside .app-layout .container (which is full-bleed for
+   the sidebar views), so it centers itself. */
+.landing { max-width: 1120px; margin: 0 auto; }
+
 /* === HERO === */
 .hero { margin-bottom: 34px; max-width: 760px; }
 .eyebrow {
@@ -150,10 +155,10 @@ body {
 }
 
 /* === CONFIG STRIP === */
-.config-strip {
-  display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px;
-  margin-bottom: 46px; max-width: 760px;
-}
+/* Single child (ProviderConfig) whose own flex row lays the fields out
+   horizontally — the old 1.5fr/1fr grid was for the deleted
+   ApiKeyConfig + ModelSelector pair and cramped it into half the width. */
+.config-strip { margin-bottom: 46px; }
 
 /* === SECTION HEADER === */
 .sec-head {
@@ -166,15 +171,16 @@ body {
 .sec-count { font-size: 13px; font-weight: 700; color: var(--text-3); font-family: var(--font-mono); }
 
 /* === TOOL LIST (editorial numbered rows) === */
-.tool-list { display: flex; flex-direction: column; }
+/* 9 tools + the "more coming" slot = a clean 2x5 grid of cards. */
+.tool-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .tool-row {
-  display: grid; grid-template-columns: 52px 56px 1fr auto auto;
-  align-items: center; gap: 22px; padding: 22px 18px;
-  background: transparent; border: none; border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 44px 56px 1fr auto auto;
+  align-items: center; gap: 16px; padding: 20px 18px;
+  background: transparent; border: 1px solid var(--border);
   cursor: pointer; text-align: left; width: 100%; border-radius: 14px;
-  transition: background .2s var(--ease);
+  transition: background .2s var(--ease), border-color .2s var(--ease);
 }
-.tool-list .tool-row:last-of-type { border-bottom: 1px solid var(--border); }
+.tool-row:hover { border-color: var(--border-strong); }
 .tool-row:hover { background: var(--surface); box-shadow: var(--shadow-sm); }
 .row-num { font-size: 28px; color: var(--text-3); transition: color .2s var(--ease); }
 .tool-row:hover .row-num { color: var(--accent); }
@@ -199,9 +205,10 @@ body {
 .tool-row:hover .row-arrow { opacity: 1; transform: translateX(0); color: var(--accent); }
 
 /* === EXTENSIBILITY SLOT === */
+/* Lives inside .tool-list as its 10th cell. */
 .add-slot {
   display: flex; align-items: center; justify-content: center; gap: 12px;
-  margin-top: 16px; padding: 20px; border: 1.5px dashed var(--border-strong);
+  padding: 20px; border: 1.5px dashed var(--border-strong);
   border-radius: 14px; color: var(--text-3); font-size: 14px; font-weight: 600;
   background: transparent; cursor: default;
 }
@@ -594,10 +601,12 @@ body {
 }
 
 /* === RESPONSIVE === */
+@media (max-width: 950px) {
+  .tool-list { grid-template-columns: 1fr; }
+}
 @media (max-width: 680px) {
   .brand-sub { display: none; }
   .model-chip { display: none; }
-  .config-strip { grid-template-columns: 1fr; }
   .tool-row { grid-template-columns: 40px 48px 1fr; gap: 16px; padding: 18px 12px; }
   .row-num { font-size: 22px; }
   .row-tag, .row-arrow { display: none; }
@@ -923,6 +932,9 @@ body {
   grid-template-columns: auto 1fr;
   min-height: calc(100vh - 56px);
 }
+/* The landing has no sidebar; without this the lone main lands in the `auto`
+   column and hugs the left while the 1fr column sits empty. */
+.app-layout > .container:only-child { grid-column: 1 / -1; }
 .container {
   max-width: 1260px;
   margin: 0 auto;
