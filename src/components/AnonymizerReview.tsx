@@ -1,5 +1,5 @@
 // src/components/AnonymizerReview.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AnonymizerReviewProps {
   map: Record<string, string>;
@@ -11,10 +11,11 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
   const entries = Object.entries(map);
   const [edited, setEdited] = useState<Record<string, string>>({ ...map });
 
-  if (entries.length === 0) {
-    onConfirm(map);
-    return null;
-  }
+  useEffect(() => {
+    if (entries.length === 0) {
+      onConfirm(map);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
