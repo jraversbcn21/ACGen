@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
+import { useToast, Toast } from './Toast';
 import { generateCriteria } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
@@ -29,6 +30,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
   const [loadingStatus, setLoadingStatus] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
+  const { toast, showToast } = useToast();
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
@@ -61,8 +63,11 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
   }, [apiKey, model, requirements, canGenerate, additionalContext, addEntry]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('Seguro que quieres limpiar los campos?')) return;
     stopSpeech();
+    const prevRequirements = requirements;
+    const prevCriteria = criteria;
+    const prevReasoning = reasoning;
+    const prevContext = additionalContext;
     setRequirements('');
     setCriteria('');
     setReasoning(undefined);
@@ -70,7 +75,13 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
     setStatus('idle');
     setCopied(false);
     setAdditionalContext('');
-  }, []);
+    showToast('Campos limpiados', () => {
+      setRequirements(prevRequirements);
+      setCriteria(prevCriteria);
+      setReasoning(prevReasoning);
+      setAdditionalContext(prevContext);
+    });
+  }, [requirements, criteria, reasoning, additionalContext, showToast]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.acceptance;
@@ -131,6 +142,17 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
   useEffect(() => {
     if (isSpeaking) stopSpeech();
   }, [reasoning]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (canGenerate && status !== 'loading') handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [canGenerate, status, handleGenerate]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -260,6 +282,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
         </button>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <Toast toast={toast} />
       {showHistory && (
         <HistoryModal
           entries={history}

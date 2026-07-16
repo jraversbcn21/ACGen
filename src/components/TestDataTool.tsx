@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
+import { useToast, Toast } from './Toast';
 import { generateTestData } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
@@ -96,6 +97,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
+  const { toast, showToast } = useToast();
 
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
@@ -128,17 +130,33 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate]);
+  }, [apiKey, model, formData, canGenerate, profile]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (canGenerate && !isLoading) handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
+    const prevData = generatedData;
+    const prevModel = generatedModel;
     setFormData(DEFAULT_FORM);
     setGeneratedData([]);
     setGeneratedModel(undefined);
     setError(null);
     setCopied(false);
     setCopiedRowIndex(null);
-  }, []);
+    showToast('Campos limpiados', () => {
+      setGeneratedData(prevData);
+      setGeneratedModel(prevModel);
+    });
+  }, [generatedData, generatedModel, showToast]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));
@@ -338,6 +356,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
       )}
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <Toast toast={toast} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
+import { useToast, Toast } from './Toast';
 import { generateTestCases } from '../services/apiService';
 import { TESTCASE_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
@@ -38,6 +39,7 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
   const [error, setError] = useState<string | null>(null);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
+  const { toast, showToast } = useToast();
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
   const hasOutput = testCases.length > 0;
@@ -57,17 +59,35 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
       setError(message);
       setStatus('error');
     }
-  }, [apiKey, model, input, canGenerate]);
+  }, [apiKey, model, input, canGenerate, profile]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (canGenerate && status !== 'loading') handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [canGenerate, status, handleGenerate]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
+    const prevInput = input;
+    const prevTestCases = testCases;
+    const prevModel = generatedModel;
     setInput('');
     setTestCases([]);
     setError(null);
     setStatus('idle');
     setGeneratedModel(undefined);
     setCopied(false);
-  }, []);
+    showToast('Campos limpiados', () => {
+      setInput(prevInput);
+      setTestCases(prevTestCases);
+      setGeneratedModel(prevModel);
+    });
+  }, [input, testCases, generatedModel, showToast]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.testcase;
@@ -230,6 +250,7 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
       )}
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <Toast toast={toast} />
     </div>
   );
 }

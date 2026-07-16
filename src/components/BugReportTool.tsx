@@ -3,6 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
+import { useToast, Toast } from './Toast';
 import { generateBugReport } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
@@ -49,6 +50,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
+  const { toast, showToast } = useToast();
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
@@ -93,16 +95,32 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, addEntry]);
+  }, [apiKey, model, formData, canGenerate, addEntry, profile]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (canGenerate && !isLoading) handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
-    if (!window.confirm('\u00bfSeguro que quieres limpiar los campos?')) return;
+    const prevOutput = output;
+    const prevReasoning = reasoning;
     setFormData(DEFAULT_FORM);
     setOutput('');
     setReasoning(undefined);
     setError(null);
     setCopied(false);
-  }, []);
+    showToast('Campos limpiados', () => {
+      setOutput(prevOutput);
+      setReasoning(prevReasoning);
+    });
+  }, [output, reasoning, showToast]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;
@@ -426,6 +444,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <Toast toast={toast} />
       {showHistory && (
         <HistoryModal
           entries={history}
