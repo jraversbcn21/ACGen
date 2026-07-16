@@ -66,7 +66,6 @@ export const AVAILABLE_MODELS = [
 export const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
 export const STORAGE_KEYS = {
-  API_KEY: 'acgen_api_key',
   MODEL: 'acgen_model',
   THEME: 'acgen_theme',
   CRITERIA_HISTORY: 'acgen_criteria_history',
