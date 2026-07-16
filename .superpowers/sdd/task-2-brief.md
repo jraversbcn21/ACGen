@@ -1,189 +1,91 @@
-### Task 3.1.2: Anonymizer UI components + API integration
+### Task 2: Tool catch blocks translate I18nError
 
 **Files:**
-- Create: `src/components/AnonymizerReview.tsx`
-- Create: `src/components/ConfidentialToggle.tsx`
-- Modify: `src/services/apiService.ts` — `streamWithGroq()` accepts `anonymizeMap`
+- Modify (identical one-line change in each): `src/components/AcceptanceCriteriaTool.tsx:73`, `BugReportTool.tsx:122`, `EdgeCaseTool.tsx:54`, `ConverterTool.tsx:49`, `RefinerTool.tsx:50`, `TestCaseTool.tsx:75`, `TestDataTool.tsx:157`, `UserStoryTool.tsx:50`
+- Create: `src/components/errorTranslation.test.tsx`
 
 **Interfaces:**
-- Consumes: `anonymize()`, `deanonymize()` from `src/services/anonymizer.ts` (already created in Task 3.1.1)
-- Produces: `<AnonymizerReview>` modal, `<ConfidentialToggle>` toggle, `streamWithGroq` with `anonymizeMap` param
+- Consumes: `I18nError` from `src/services/apiService.ts` (Task 1).
+- Produces: nothing downstream.
 
-**Context:** The anonymizer service with 7 regex patterns and 13 passing tests already exists at `src/services/anonymizer.ts`. This task creates the UI layer and integrates deanonymization into the streaming API pipeline.
+- [ ] **Step 1: Write the failing test**
 
-- [ ] **Step 1: Add anonymization support to streamWithGroq in apiService.ts**
+`src/components/errorTranslation.test.tsx` — mock fetch to fail with 401 so `streamWithGroq` throws `error.apiKey`, render in **English**, assert the translated banner. Crib the render/mock scaffolding style from `src/components/tools.confidential.test.tsx` (provider wrapper, fetch mock):
 
-In `src/services/apiService.ts`, add the import for deanonymize (at the top of the file, near existing imports):
+```tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+import { I18nProvider } from '../i18n/I18nContext';
+import { AcceptanceCriteriaTool } from './AcceptanceCriteriaTool';
 
-```typescript
-import { deanonymize } from './anonymizer';
+describe('API errors render translated', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('acgen_lang', '"en"');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: { message: 'Invalid API Key' } }),
+    }));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows the English error.apiKey text when the API returns 401', async () => {
+    render(
+      <I18nProvider>
+        <AcceptanceCriteriaTool apiKey="bad-key" model="m" />
+      </I18nProvider>
+    );
+    await userEvent.type(screen.getByRole('textbox'), 'some requirement');
+    await userEvent.click(screen.getByRole('button', { name: /generate/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Invalid API key. Verify your key and try again.')).toBeInTheDocument();
+    });
+  });
+});
 ```
 
-Find the `streamWithGroq` function signature:
-```typescript
-export async function* streamWithGroq(
-  apiKey: string,
-  model: string,
-  userInput: string,
-  systemPrompt: string,
-  tool: ToolType,
-  profile?: ProjectProfile,
-): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
+Adjust the concrete props/roles to what `AcceptanceCriteriaTool` actually requires — check `tools.confidential.test.tsx` for the exact prop set and generate-button query it already uses, and reuse them verbatim.
+
+- [ ] **Step 2: Run to verify RED**
+
+Run: `npx vitest run src/components/errorTranslation.test.tsx`
+Expected: FAIL — the banner shows the raw key `error.apiKey` (Task 1 made messages keys; nothing translates them yet).
+
+- [ ] **Step 3: Implement — the same one-line change in all 8 tools**
+
+In each file listed above, the catch currently reads:
+
+```ts
+const message = err instanceof Error ? err.message : t('error.unexpected');
 ```
 
-Add a new optional parameter `anonymizeMap` at the end (before the colon):
-```typescript
-export async function* streamWithGroq(
-  apiKey: string,
-  model: string,
-  userInput: string,
-  systemPrompt: string,
-  tool: ToolType,
-  profile?: ProjectProfile,
-  anonymizeMap?: Record<string, string>,
-): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
+Change to:
+
+```ts
+const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
 ```
 
-In the streaming loop, find where tokens are yielded:
-```typescript
-          const token = parsed.choices?.[0]?.delta?.content;
-          if (token) yield { token, done: false, model: parsed.model };
+and add to each file's imports:
+
+```ts
+import type { I18nError } from '../services/apiService';
 ```
 
-Replace with (add deanonymize pass-through):
-```typescript
-          const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
-          if (rawToken) {
-            const token = anonymizeMap ? deanonymize(rawToken, anonymizeMap) : rawToken;
-            yield { token, done: false, model: parsed.model };
-          }
-```
+(`t()` returns unknown keys/messages verbatim, so upstream dynamic messages still display.)
 
-- [ ] **Step 2: Create AnonymizerReview.tsx**
+- [ ] **Step 4: Run to verify GREEN + no regressions**
 
-```typescript
-// src/components/AnonymizerReview.tsx
-import { useState } from 'react';
-
-interface AnonymizerReviewProps {
-  map: Record<string, string>;
-  onConfirm: (editedMap: Record<string, string>) => void;
-  onCancel: () => void;
-}
-
-export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewProps) {
-  const entries = Object.entries(map);
-  const [edited, setEdited] = useState<Record<string, string>>({ ...map });
-
-  if (entries.length === 0) {
-    onConfirm(map);
-    return null;
-  }
-
-  return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
-        <h2 style={{ margin: '0 0 4px' }}>Revision de datos — Modo Confidencial</h2>
-        <p style={{ margin: '0 0 16px', color: 'var(--text-2)', fontSize: 14 }}>
-          Se detectaron {entries.length} datos sensibles. Revisa los reemplazos antes de enviar.
-        </p>
-        <div style={{ maxHeight: 360, overflowY: 'auto', marginBottom: 16 }}>
-          <table className="data-table" style={{ width: '100%' }}>
-            <thead>
-              <tr>
-                <th style={{ width: '40%' }}>Original</th>
-                <th style={{ width: '60%' }}>Se enviara como</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map(([placeholder, original]) => (
-                <tr key={placeholder}>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13, wordBreak: 'break-all' }}>{original}</td>
-                  <td>
-                    <input
-                      type="text"
-                      value={edited[placeholder] ?? placeholder}
-                      onChange={(e) => setEdited(prev => ({ ...prev, [placeholder]: e.target.value }))}
-                      className="field-input"
-                      style={{ fontFamily: 'var(--font-mono)', fontSize: 13, width: '100%' }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button type="button" className="btn-ghost" onClick={onCancel}>Cancelar</button>
-          <button type="button" className="btn-primary" onClick={() => onConfirm(edited)}>
-            Confirmar y enviar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-```
-
-- [ ] **Step 3: Create ConfidentialToggle.tsx**
-
-```typescript
-// src/components/ConfidentialToggle.tsx
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import type { ViewType } from '../config/constants';
-
-interface ConfidentialToggleProps {
-  view: ViewType;
-  substitutionCount: number;
-  onReview: () => void;
-}
-
-export function ConfidentialToggle({ view, substitutionCount, onReview }: ConfidentialToggleProps) {
-  const [enabled, setEnabled] = useLocalStorage(`acgen_confidential_${view}`, false);
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-          style={{ accentColor: 'var(--accent)' }}
-        />
-        Modo confidencial
-      </label>
-      {enabled && substitutionCount > 0 && (
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={onReview}
-          style={{ fontSize: 12, padding: '2px 8px' }}
-        >
-          {substitutionCount} sustituciones — Revisar
-        </button>
-      )}
-    </div>
-  );
-}
-```
-
-- [ ] **Step 4: Verify type check and tests**
-
-```bash
-npx tsc -b --noEmit 2>&1
-```
-
-Expected: no type errors.
-
-```bash
-npm test 2>&1
-```
-
-Expected: all 78 tests pass (13 anonymizer + 65 original).
+Run: `npx vitest run src/components`
+Expected: ALL PASS (confidential suites exercise these same catch paths).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A
-git commit -m "feat(confidential): AnonymizerReview modal, ConfidentialToggle, API deanonymization"
+git add src/components/*.tsx
+git commit -m "feat(i18n): tool catch blocks translate I18nError keys via t()"
 ```
+
+---
+

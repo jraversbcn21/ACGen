@@ -1,179 +1,64 @@
-### Task 3.4: Customizable Prompts
+### Task 7: Key-parity guard, full verification, AGENTS.md sync
 
 **Files:**
-- Modify: `src/config/constants.ts` — export `DEFAULT_PROMPTS` map
-- Modify: `src/services/apiService.ts` — `getPrompt()` function
-- Create: `src/components/PromptEditor.tsx`
-- Modify: `src/components/Sidebar.tsx` — add prompt editor launcher
-- Modify: All 8 LLM tool components — use `getPrompt()` instead of direct import
+- Create: `src/i18n/keyParity.test.ts`
+- Modify: `AGENTS.md` (Known issues item 1 removed + renumber; test table; evolution row)
 
-**Context:** i18n is already in place. Use useT() for any new UI strings.
+**Interfaces:** none.
 
-- [ ] **Step 1: Export DEFAULT_PROMPTS from constants.ts**
+- [ ] **Step 1: Write the parity test**
 
-Add at the end of `src/config/constants.ts`:
-```typescript
-export const DEFAULT_PROMPTS: Record<string, string> = {
-  acceptance: HARDCODED_PROMPT,
-  testcase: TESTCASE_PROMPT,
-  bugreport: BUG_REPORT_PROMPT,
-  testdata: TEST_DATA_PROMPT,
-  userstory: USER_STORY_PROMPT,
-  refiner: REFINER_PROMPT,
-  edgecase: EDGE_CASE_PROMPT,
-  converter: CONVERTER_PROMPT,
-};
-```
+`src/i18n/keyParity.test.ts`:
 
-- [ ] **Step 2: Create getPrompt() in apiService.ts**
+```ts
+import es from './es.json';
+import en from './en.json';
 
-Add at the end of `src/services/apiService.ts` (or near the top after imports):
-```typescript
-import { DEFAULT_PROMPTS } from '../config/constants';
+describe('i18n dictionaries', () => {
+  it('es and en have exactly the same keys', () => {
+    const esKeys = Object.keys(es).sort();
+    const enKeys = Object.keys(en).sort();
+    expect(esKeys).toEqual(enKeys);
+  });
 
-export function getPrompt(tool: string): string {
-  try {
-    const key = `acgen_prompt_${tool}`;
-    const override = localStorage.getItem(key);
-    if (override && override.trim()) return override;
-  } catch { /* localStorage unavailable */ }
-  return DEFAULT_PROMPTS[tool] ?? '';
-}
-```
-
-- [ ] **Step 3: Create PromptEditor.tsx**
-
-```typescript
-// src/components/PromptEditor.tsx
-import { useState } from 'react';
-import { DEFAULT_PROMPTS } from '../config/constants';
-import { getPrompt } from '../services/apiService';
-import { useT } from '../i18n/I18nContext';
-
-const TOOLS = [
-  { key: 'acceptance', labelKey: 'sidebar.criterios' },
-  { key: 'testcase', labelKey: 'sidebar.testcase' },
-  { key: 'bugreport', labelKey: 'sidebar.bugreport' },
-  { key: 'testdata', labelKey: 'sidebar.testdata' },
-  { key: 'userstory', labelKey: 'sidebar.userstory' },
-  { key: 'refiner', labelKey: 'sidebar.refiner' },
-  { key: 'edgecase', labelKey: 'sidebar.edgecase' },
-  { key: 'converter', labelKey: 'sidebar.converter' },
-];
-
-interface PromptEditorProps {
-  onClose: () => void;
-}
-
-export function PromptEditor({ onClose }: PromptEditorProps) {
-  const t = useT();
-  const [tool, setTool] = useState('acceptance');
-  const [text, setText] = useState(() => getPrompt('acceptance'));
-  const [saved, setSaved] = useState(false);
-
-  const handleToolChange = (key: string) => {
-    setTool(key);
-    setText(getPrompt(key));
-    setSaved(false);
-  };
-
-  const handleSave = () => {
-    if (text.trim()) {
-      localStorage.setItem(`acgen_prompt_${tool}`, text);
-    } else {
-      localStorage.removeItem(`acgen_prompt_${tool}`);
+  it('every {param} placeholder in es exists in en and vice versa', () => {
+    const params = (s: string) => (s.match(/\{[a-zA-Z]+\}/g) ?? []).sort();
+    for (const key of Object.keys(es)) {
+      expect(params((en as Record<string, string>)[key] ?? ''), `param mismatch in ${key}`).toEqual(params((es as Record<string, string>)[key]));
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const handleReset = () => {
-    localStorage.removeItem(`acgen_prompt_${tool}`);
-    setText(DEFAULT_PROMPTS[tool]);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const isOverridden = (key: string) => {
-    try {
-      return localStorage.getItem(`acgen_prompt_${key}`) !== null;
-    } catch { return false; }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, maxHeight: '90vh' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>Editor de Prompts</h2>
-          <button type="button" className="btn-ghost" onClick={onClose}>{t('common.close')}</button>
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          {TOOLS.map((tk) => (
-            <button
-              key={tk.key}
-              type="button"
-              className={tool === tk.key ? 'btn-primary' : 'btn-ghost'}
-              onClick={() => handleToolChange(tk.key)}
-              style={{ fontSize: 12 }}
-            >
-              {t(tk.labelKey)}
-              {isOverridden(tk.key) && <span style={{ marginLeft: 4, color: 'var(--success)' }}>*</span>}
-            </button>
-          ))}
-        </div>
-        <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-          Variables: &#123;dominio&#125;, &#123;tipoProducto&#125;, &#123;mercados&#125;, &#123;terminologia&#125;, &#123;tono&#125;
-        </p>
-        <textarea
-          value={text}
-          onChange={(e) => { setText(e.target.value); setSaved(false); }}
-          className="field-textarea"
-          style={{ minHeight: 300, fontFamily: 'var(--font-mono)', fontSize: 13 }}
-        />
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-          <button type="button" className="btn-ghost" onClick={handleReset}>
-            Restaurar por defecto
-          </button>
-          <button type="button" className="btn-primary" onClick={handleSave}>
-            {saved ? 'Guardado!' : t('common.save')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+  });
+});
 ```
 
-- [ ] **Step 4: Wire PromptEditor into Sidebar**
+This is an invariant guard, not a behavior change — it is expected to PASS immediately (parity holds today). If it fails, a previous task drifted: fix the dictionaries, not the test.
 
-In `src/components/Sidebar.tsx`, add:
-```typescript
-import { PromptEditor } from './PromptEditor';
-const [showPromptEditor, setShowPromptEditor] = useState(false);
-```
-Add at bottom of sidebar items:
-```tsx
-<button type="button" className="btn-ghost" onClick={() => setShowPromptEditor(true)}
-  style={{ fontSize: 12, width: '100%', textAlign: 'left', marginTop: 8 }}>
-  {t('sidebar.prompts')}
-</button>
-{showPromptEditor && <PromptEditor onClose={() => setShowPromptEditor(false)} />}
-```
-
-- [ ] **Step 5: Wire getPrompt() into all 8 LLM tools**
-
-Each tool currently imports a prompt constant directly (e.g., `import { HARDCODED_PROMPT } from '../config/constants'`). Replace with `import { getPrompt } from '../services/apiService'`. Compute `const prompt = getPrompt('<tool_key>')` inside the component or in doGenerate. Tool keys: acceptance, testcase, bugreport, testdata, userstory, refiner, edgecase, converter.
-
-- [ ] **Step 6: Type check + tests**
+- [ ] **Step 2: Full verification**
 
 ```bash
-npx tsc -b --noEmit 2>&1    # zero errors
-npm test 2>&1                # all 90 tests pass
+npx vitest run          # expect: all tests pass, count > 172
+npx tsc --noEmit        # expect: silent
+npx eslint src          # expect: 0 errors
+npm run build           # expect: build OK
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 3: Update AGENTS.md**
+
+- "Known issues": delete item 1 (i18n leftovers), renumber 2→1, 3→2, 4→3. Update the intro sentence's PR list to include this branch's PR.
+- Test table: add rows for the new test files (`errorTranslation`, `ExportBar`, `ErrorBoundary` delta, `HistoryModal`, `SearchableSelect`, `keyParity`, apiService delta) and update the total line with the real count from Step 2's output.
+- Evolution history: add a row `| i18n completion | 2026-07-16 | apiService throws i18n keys + params (I18nError), translated at tool catch blocks; ExportBar, ErrorBoundary (contextType), HistoryModal (+ inline 2-step confirm replacing the last window.confirm), SearchableSelect. Key-parity guard test. |`
+- Also remove the now-stale claim (if present) that 7 `error.*` keys sit unused.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add -A
-git commit -m "feat(prompts): customizable prompts — PromptEditor, getPrompt(), per-tool localStorage override"
+git add src/i18n/keyParity.test.ts AGENTS.md
+git commit -m "test(i18n): key-parity guard; docs: sync AGENTS.md after i18n completion"
 ```
+
+---
+
+## Self-Review Notes
+
+- Spec coverage: apiService (Task 1), catch blocks (Task 2), ExportBar (Task 3), ErrorBoundary (Task 4), HistoryModal + confirm upgrade (Task 5), SearchableSelect + call sites (Task 6), parity test + docs (Task 7). All spec rows covered.
+- The spec's "placeholder becomes a required prop" was refined during planning: SearchableSelect already had an optional trigger `placeholder`; the hardcoded string was the **search input**. Resolved as a new optional `searchPlaceholder` prop + translated defaults for everything (trigger, search, empty) — no breaking prop change needed.
+- Deliberate minor UX change (Task 6): BugReportTool's market search input previously implied "Buscar mercado..." via the component's hardcoded string while its trigger said "Buscar..."; both now come from keys, trigger `common.search`, search `common.searchMarket`.

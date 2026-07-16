@@ -148,9 +148,11 @@ Replace each throw:
 | 79 | `throw i18nError('error.testCaseInvalid', { n: i + 1 });` |
 | 87 | `throw i18nError('error.testCaseMissingFields', { n: i + 1, key: String(tc.key \|\| `#${i + 1}`), fields: missing.join(', ') });` |
 | 95 | `throw i18nError('error.testCaseWrongTypes', { n: i + 1, key: String(tc.key \|\| `#${i + 1}`), fields: wrongType.join(', ') });` |
-| 155 | `throw Object.assign(i18nError('error.apiKey'), apiError);` |
-| 158 | `throw Object.assign(i18nError('error.rateLimit'), apiError);` |
-| 162 | `throw Object.assign(i18nError('error.modelDecommissioned'), apiError);` |
+| 155 | `throw Object.assign(i18nError('error.apiKey'), { ...meta, cause: upstreamMessage });` |
+| 158 | `throw Object.assign(i18nError('error.rateLimit'), { ...meta, cause: upstreamMessage });` |
+| 162 | `throw Object.assign(i18nError('error.modelDecommissioned'), { ...meta, cause: upstreamMessage });` |
+
+where `const { message: upstreamMessage, ...meta } = apiError;` is destructured once before the three checks. **Why not `Object.assign(err, apiError)`:** `apiError.message` is enumerable and `Object.assign` overwrites the Error's `message`, silently replacing the i18n key with raw upstream text (found in Task 1 review, decided with Jorge 2026-07-16). Cover with tests: `streamWithGroq` against mocked 401/429 responses must throw `err.message === 'error.apiKey'` / `'error.rateLimit'` with `status` preserved and `cause` carrying the upstream text.
 | 166 | unchanged (`apiError.message` is dynamic upstream text) |
 | 220 | `throw i18nError('error.recordInvalid', { n: i + 1 });` |
 | 224 | `throw i18nError('error.recordNestedValue', { n: i + 1, field });` |

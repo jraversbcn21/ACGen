@@ -1,180 +1,156 @@
-### Task 3.1.1: Anonymizer service + tests
+### Task 1: apiService throws i18n keys with params
 
 **Files:**
-- Create: `src/services/anonymizer.ts`
-- Create: `src/services/anonymizer.test.ts`
+- Modify: `src/services/apiService.ts` (throws at lines 48, 51, 62, 65, 79, 87, 95, 155, 158, 162, 220, 224)
+- Modify: `src/services/apiService.test.ts` (existing assertions at lines 81, 86, 91, 96, 113, 118, 122 match Spanish text — migrate to keys+params)
+- Modify: `src/i18n/es.json`, `src/i18n/en.json` (6 new `error.*` keys)
 
 **Interfaces:**
-- Produces: `anonymize(text: string): { text: string; map: Record<string, string> }`, `deanonymize(text: string, map: Record<string, string>): string`
+- Produces: `export type I18nError = Error & { params?: Record<string, string | number> }` from `src/services/apiService.ts`. Every validation/HTTP error thrown by this module has `message` = i18n key and optional `params`. Task 2 consumes this.
 
-- [ ] **Step 1: Create anonymizer.ts**
+- [ ] **Step 1: Add the 6 new keys to both dictionaries**
 
-```typescript
-// src/services/anonymizer.ts
+In `src/i18n/es.json`, after the `"error.boundary"` entry:
 
-type SubMap = Record<string, string>; // placeholder -> original
-
-const PATTERNS: { regex: RegExp; prefix: string }[] = [
-  { regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, prefix: 'EMAIL' },
-  { regex: /https?:\/\/[^\s)]+/g, prefix: 'URL' },
-  { regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, prefix: 'IP' },
-  { regex: /\b[A-Z]{2,}-\d{3,}\b/g, prefix: 'TICKET' },
-  { regex: /\+?[\d\s()-]{7,}/g, prefix: 'PHONE' },
-  { regex: /@[\w.-]+\.(?:local|internal|corp|lan)\b/gi, prefix: 'DOMAIN' },
-  { regex: /\b(?:Sr|Sra|Dra?|Ing|Lic|Prof)\.\s+[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\b/g, prefix: 'NAME' },
-];
-
-export function anonymize(text: string): { text: string; map: SubMap } {
-  const map: SubMap = {};
-  const counters: Record<string, number> = {};
-  let result = text;
-
-  for (const { regex, prefix } of PATTERNS) {
-    result = result.replace(regex, (match) => {
-      if (!counters[prefix]) counters[prefix] = 0;
-      counters[prefix]++;
-      const placeholder = `[${prefix}_${counters[prefix]}]`;
-      map[placeholder] = match;
-      return placeholder;
-    });
-  }
-
-  return { text: result, map };
-}
-
-export function deanonymize(text: string, map: SubMap): string {
-  let result = text;
-  for (const [placeholder, original] of Object.entries(map)) {
-    result = result.split(placeholder).join(original);
-  }
-  return result;
-}
+```json
+  "error.noTestCaseArray": "La respuesta no contiene un array de casos de prueba.",
+  "error.testCaseInvalid": "El caso de prueba {n} no es un objeto válido.",
+  "error.testCaseMissingFields": "El caso de prueba {n} ({key}) no tiene los campos requeridos: {fields}",
+  "error.testCaseWrongTypes": "El caso de prueba {n} ({key}) tiene campos con tipo incorrecto: {fields}",
+  "error.recordInvalid": "El registro {n} no es un objeto válido.",
+  "error.recordNestedValue": "El registro {n} tiene un valor anidado no soportado en el campo \"{field}\".",
 ```
 
-- [ ] **Step 2: Create anonymizer.test.ts**
+In `src/i18n/en.json`, same position:
 
-```typescript
-// src/services/anonymizer.test.ts
-import { describe, it, expect } from 'vitest';
-import { anonymize, deanonymize } from './anonymizer';
+```json
+  "error.noTestCaseArray": "The response does not contain an array of test cases.",
+  "error.testCaseInvalid": "Test case {n} is not a valid object.",
+  "error.testCaseMissingFields": "Test case {n} ({key}) is missing required fields: {fields}",
+  "error.testCaseWrongTypes": "Test case {n} ({key}) has fields with the wrong type: {fields}",
+  "error.recordInvalid": "Record {n} is not a valid object.",
+  "error.recordNestedValue": "Record {n} has an unsupported nested value in field \"{field}\".",
+```
 
-describe('anonymize', () => {
-  it('replaces emails with [EMAIL_N] placeholders', () => {
-    const { text, map } = anonymize('Contacto: jorge@example.com y maria@test.org');
-    expect(text).toContain('[EMAIL_1]');
-    expect(text).toContain('[EMAIL_2]');
-    expect(text).not.toContain('jorge@example.com');
-    expect(map['[EMAIL_1]']).toBe('jorge@example.com');
-    expect(map['[EMAIL_2]']).toBe('maria@test.org');
+- [ ] **Step 2: Write the failing tests**
+
+In `src/services/apiService.test.ts`, add a new describe block:
+
+```ts
+import type { I18nError } from './apiService';
+
+describe('i18n error keys', () => {
+  it('validateTestCases throws the missing-fields key with params', () => {
+    const items = [{ key: 'TC-1', summary: 's', priority: 'p', type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: '' }];
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseMissingFields');
+    expect(caught?.params).toEqual({ n: 1, key: 'TC-1', fields: 'expectedResult' });
   });
 
-  it('replaces URLs with [URL_N] placeholders', () => {
-    const { text, map } = anonymize('Visita https://example.com/path?q=1 o http://test.org');
-    expect(text).toContain('[URL_1]');
-    expect(text).toContain('[URL_2]');
-    expect(text).not.toContain('https://example.com');
-    expect(map['[URL_1]']).toBe('https://example.com/path?q=1');
-    expect(map['[URL_2]']).toBe('http://test.org');
+  it('validateTestCases throws the wrong-type key with params', () => {
+    const items = [{ key: 'TC-1', summary: 's', priority: 42, type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: 'r' }];
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseWrongTypes');
+    expect(caught?.params).toEqual({ n: 1, key: 'TC-1', fields: 'priority' });
   });
 
-  it('replaces IP addresses with [IP_N] placeholders', () => {
-    const { text, map } = anonymize('Servidor en 192.168.1.1 y 10.0.0.255');
-    expect(text).toContain('[IP_1]');
-    expect(text).toContain('[IP_2]');
-    expect(map['[IP_1]']).toBe('192.168.1.1');
-    expect(map['[IP_2]']).toBe('10.0.0.255');
+  it('validateTestCases throws the invalid-object key with the index', () => {
+    let caught: I18nError | null = null;
+    try { validateTestCases([{ key: 'TC-1', summary: 's', priority: 'p', type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: 'r' }, 'nope']); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseInvalid');
+    expect(caught?.params).toEqual({ n: 2 });
   });
 
-  it('replaces ticket IDs with [TICKET_N] placeholders', () => {
-    const { text, map } = anonymize('Issues: PROJ-1234 y Z2-5678');
-    expect(text).toContain('[TICKET_1]');
-    expect(text).toContain('[TICKET_2]');
-    expect(map['[TICKET_1]']).toBe('PROJ-1234');
-    expect(map['[TICKET_2]']).toBe('Z2-5678');
+  it('validateTestDataRows throws the nested-value key with params', () => {
+    let caught: I18nError | null = null;
+    try { validateTestDataRows([{ nombre: 'x', direccion: { calle: 'y' } }]); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordNestedValue');
+    expect(caught?.params).toEqual({ n: 1, field: 'direccion' });
   });
 
-  it('replaces phone numbers with [PHONE_N] placeholders', () => {
-    const { text, map } = anonymize('Llama al +34 612 345 678 o 555-1234');
-    expect(text).toContain('[PHONE_1]');
-    expect(text).toContain('[PHONE_2]');
+  it('validateTestDataRows throws the invalid-record key with the index', () => {
+    let caught: I18nError | null = null;
+    try { validateTestDataRows(['not-an-object']); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordInvalid');
+    expect(caught?.params).toEqual({ n: 1 });
   });
 
-  it('replaces internal domains with [DOMAIN_N] placeholders', () => {
-    const { text, map } = anonymize('Usuarios: admin@miempresa.corp y soporte@interno.local');
-    expect(text).toContain('[DOMAIN_1]');
-    expect(text).toContain('[DOMAIN_2]');
+  it('extractJsonArray throws error.invalidJson on garbage', () => {
+    expect(() => extractJsonArray('not json at all')).toThrow('error.invalidJson');
   });
 
-  it('replaces proper names with [NAME_N] placeholders', () => {
-    const { text, map } = anonymize('Atendido por Sr. Garcia y Dra. Lopez');
-    expect(text).toContain('[NAME_1]');
-    expect(text).toContain('[NAME_2]');
-    expect(map['[NAME_1]']).toBe('Sr. Garcia');
-    expect(map['[NAME_2]']).toBe('Dra. Lopez');
-  });
-
-  it('returns unchanged text when no patterns match', () => {
-    const { text, map } = anonymize('Este es un texto normal sin datos sensibles.');
-    expect(text).toBe('Este es un texto normal sin datos sensibles.');
-    expect(Object.keys(map)).toHaveLength(0);
-  });
-
-  it('handles overlapping patterns correctly (email vs domain)', () => {
-    const { text, map } = anonymize('Contacto: admin@corp.local');
-    expect(text).toContain('[EMAIL_1]');
-    expect(map['[EMAIL_1]']).toBe('admin@corp.local');
-    expect(text).not.toContain('[DOMAIN');
-  });
-});
-
-describe('deanonymize', () => {
-  it('restores all placeholders to original values', () => {
-    const original = 'Email: jorge@example.com, URL: https://test.com, IP: 10.0.0.1';
-    const { text, map } = anonymize(original);
-    const restored = deanonymize(text, map);
-    expect(restored).toBe(original);
-  });
-
-  it('returns text unchanged when map is empty', () => {
-    const result = deanonymize('Texto sin cambios', {});
-    expect(result).toBe('Texto sin cambios');
-  });
-
-  it('handles partial restoration (some keys missing from map)', () => {
-    const result = deanonymize('Enviar a [EMAIL_1] con copia a [EMAIL_2]', {
-      '[EMAIL_1]': 'a@b.com',
-    });
-    expect(result).toBe('Enviar a a@b.com con copia a [EMAIL_2]');
-  });
-
-  it('round-trip: anonymize + deanonymize = identity', () => {
-    const input = 'Ticket PROJ-5678: usuario jorge@test.com desde IP 192.168.1.100 en https://jira.internal.corp/browse/PROJ-5678. Tel: +34 600 000 000. Atendido por Sr. Martinez.';
-    const { text, map } = anonymize(input);
-    const restored = deanonymize(text, map);
-    expect(restored).toBe(input);
+  it('every thrown key exists in both dictionaries', async () => {
+    const es = (await import('../i18n/es.json')).default as Record<string, string>;
+    const en = (await import('../i18n/en.json')).default as Record<string, string>;
+    for (const key of ['error.invalidJson', 'error.noTestCaseArray', 'error.invalidFormat', 'error.testCaseInvalid', 'error.testCaseMissingFields', 'error.testCaseWrongTypes', 'error.apiKey', 'error.rateLimit', 'error.modelDecommissioned', 'error.recordInvalid', 'error.recordNestedValue']) {
+      expect(es[key], `missing in es: ${key}`).toBeTruthy();
+      expect(en[key], `missing in en: ${key}`).toBeTruthy();
+    }
   });
 });
 ```
 
-- [ ] **Step 3: Run tests to verify they pass**
+Note: `validateTestCases`, `validateTestDataRows`, `extractJsonArray` are already imported at the top of this test file.
 
-```bash
-npx vitest run src/services/anonymizer.test.ts 2>&1
+- [ ] **Step 3: Run to verify RED**
+
+Run: `npx vitest run src/services/apiService.test.ts`
+Expected: the new tests FAIL (messages are still Spanish literals, no `params`). The dictionary-keys test PASSES (keys were added in Step 1) — that is fine, it guards Step 1's work.
+
+- [ ] **Step 4: Implement in apiService.ts**
+
+Add after the imports (line 6, next to `type ToolType`):
+
+```ts
+/** Errors whose message is an i18n key; params feed t()'s interpolation. */
+export type I18nError = Error & { params?: Record<string, string | number> };
+
+function i18nError(key: string, params?: Record<string, string | number>): I18nError {
+  return params ? Object.assign(new Error(key), { params }) : new Error(key);
+}
 ```
 
-Expected: all 12 tests pass.
+Replace each throw:
 
-- [ ] **Step 4: Run full test suite to confirm no regressions**
+| Line (pre-edit) | New code |
+|---|---|
+| 48, 51 | `throw i18nError('error.invalidJson');` |
+| 62 | `throw i18nError('error.noTestCaseArray');` |
+| 65 | `throw i18nError('error.invalidFormat');` |
+| 79 | `throw i18nError('error.testCaseInvalid', { n: i + 1 });` |
+| 87 | `throw i18nError('error.testCaseMissingFields', { n: i + 1, key: String(tc.key \|\| `#${i + 1}`), fields: missing.join(', ') });` |
+| 95 | `throw i18nError('error.testCaseWrongTypes', { n: i + 1, key: String(tc.key \|\| `#${i + 1}`), fields: wrongType.join(', ') });` |
+| 155 | `throw Object.assign(i18nError('error.apiKey'), apiError);` |
+| 158 | `throw Object.assign(i18nError('error.rateLimit'), apiError);` |
+| 162 | `throw Object.assign(i18nError('error.modelDecommissioned'), apiError);` |
+| 166 | unchanged (`apiError.message` is dynamic upstream text) |
+| 220 | `throw i18nError('error.recordInvalid', { n: i + 1 });` |
+| 224 | `throw i18nError('error.recordNestedValue', { n: i + 1, field });` |
+
+- [ ] **Step 5: Migrate the existing Spanish-text assertions**
+
+In `src/services/apiService.test.ts`:
+
+- Line 81/86: `expect(() => validateTestCases(items)).toThrow(/testSteps/)` → catch and assert `caught?.message === 'error.testCaseWrongTypes'` (line 81 case) / `'error.testCaseMissingFields'` (line 86 case) and `expect(String(caught?.params?.fields)).toContain('testSteps')`. Read each test's fixture to pick the right key: missing/empty field → MissingFields, present-but-wrong-type → WrongTypes.
+- Line 91 (`/priority/`): same pattern, assert the key and `params.fields` contains `'priority'`.
+- Line 96 (`/caso de prueba 2/`): assert `caught?.message === 'error.testCaseInvalid'` (or the applicable key per fixture) and `caught?.params?.n === 2`.
+- Line 113 (`/direccion/`): assert key `'error.recordNestedValue'` and `caught?.params?.field === 'direccion'`.
+- Line 118 (`/tags/`): same, `field === 'tags'`.
+- Line 122 (`/registro 1/`): assert key `'error.recordInvalid'` and `params.n === 1`.
+
+- [ ] **Step 6: Run to verify GREEN**
+
+Run: `npx vitest run src/services/apiService.test.ts`
+Expected: ALL PASS.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-npm test 2>&1
+git add src/services/apiService.ts src/services/apiService.test.ts src/i18n/es.json src/i18n/en.json
+git commit -m "feat(i18n): apiService throws i18n keys with params instead of Spanish literals"
 ```
 
-Expected: 12 + 65 = 77 tests pass.
+---
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add -A
-git commit -m "feat(confidential): anonymizer service with 7 regex patterns + tests"
-```
