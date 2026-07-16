@@ -46,6 +46,41 @@ describe('anonymize', () => {
     expect(deanonymize(text, map)).toBe(input);
   });
 
+  it('does not flag indented Markdown/Gherkin list runs as phones', () => {
+    const input = 'Pasos:\n    - Abrir la web\n    - Pulsar comprar\n    - Verificar el carrito';
+    const { text, map } = anonymize(input);
+    expect(text).not.toContain('[PHONE');
+    expect(text).toBe(input);
+    expect(Object.keys(map)).toHaveLength(0);
+  });
+
+  it('does not flag separator runs with fewer than 7 digits as phones', () => {
+    const input = 'Rango: 1 - 2 - 3';
+    const { text } = anonymize(input);
+    expect(text).not.toContain('[PHONE');
+  });
+
+  it('does not flag short numbers as phones', () => {
+    const input = 'El pedido 555-123 tiene 42 unidades';
+    const { text } = anonymize(input);
+    expect(text).not.toContain('[PHONE');
+  });
+
+  it('still masks bare 7+ digit numbers (privacy-first: masking an id beats leaking a phone)', () => {
+    const input = 'Referencia interna 612345678';
+    const { text, map } = anonymize(input);
+    expect(text).toContain('[PHONE_1]');
+    expect(map['[PHONE_1]']).toBe('612345678');
+  });
+
+  it('phone matches do not swallow surrounding whitespace', () => {
+    const input = 'llama al 612 345 678 ya';
+    const { text, map } = anonymize(input);
+    expect(text).toBe('llama al [PHONE_1] ya');
+    expect(map['[PHONE_1]']).toBe('612 345 678');
+    expect(deanonymize(text, map)).toBe(input);
+  });
+
   it('replaces internal domains with [DOMAIN_N] placeholders', () => {
     const input = 'Usuarios: @miempresa.corp y @interno.local';
     const { text, map } = anonymize(input);
