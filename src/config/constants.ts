@@ -12,13 +12,13 @@ Always respond using exactly this format and no other:
 *Pais/Entorno:* [País]/Pro
 *Fecha:* [Fecha proporcionada en formato DD/MM/YYYY]
 *Evidencia:*
-*Validado por:* Jorge-QA
+*Validado por:*
 {quote}{panel}
 
 REGLAS ADICIONALES:
 - En el campo *Pais/Entorno:*, el entorno siempre debe ser "Pro". Formato: [País del contexto]/Pro. Ejemplo: España/Pro, México/Pro, Francia/Pro.
 - En el campo *Fecha:*, usa EXACTAMENTE la fecha proporcionada en el mensaje del usuario. No inventes ni generes otra fecha.
-- En el campo *Validado por:*, siempre debe ser exactamente "Jorge-QA". Sin excepciones.
+- En el campo *Validado por:*, deja el campo vacío: escribe solo la etiqueta, sin ningún nombre ni valor. Sin excepciones.
 - En el campo *ResultadoQA:*, siempre debe aparecer exactamente "(/)/(x)". Sin excepciones ni variaciones.
 
 If more than one acceptance criterion is needed, repeat the full block above for each one, separated by a blank line. Do not add any text outside of these blocks.`;
@@ -383,14 +383,15 @@ REGLAS:
 3. Genera pasos de reproducción detallados, numerados con #, específicos y basados en la descripción proporcionada.
 4. Si la plataforma es App Android o App iOS, usa lenguaje de interacción móvil/app: "tap en", "swipe", "navegar al tab de", "pull to refresh", etc.
 5. Si la plataforma es Web, usa lenguaje web: "clic en", "hover sobre", "scroll hasta", "navegar a", etc.
-6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD-MM-YYYY. El campo "Validado por:" debe quedar como "Jorge-QA".
+6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD-MM-YYYY. El campo "Validado por:" debe quedar vacío: solo la etiqueta, sin ningún nombre.
 7. Si se proporciona contexto de un ticket de Jira relacionado, úsalo para enriquecer la descripción, precondiciones y criterios.
+8. En el panel DESCRIPCIÓN, el campo "Entorno/Pais" debe ser siempre exactamente "Pro/ES", independientemente del mercado seleccionado. Los campos "Versión" y "Evidencia" deben quedar vacíos: solo la etiqueta.
 
 FORMATO DE SALIDA — usa EXACTAMENTE esta estructura, rellenando cada sección:
 
 {panel:title=DESCRIPCIÓN:}
-- Entorno/País: [Market from form]
-- Versión: [App version if app platform, or "Web - Browser" if web platform]
+- Entorno/Pais: Pro/ES
+- Versión:
 {panel}
 {panel:title=PRECONDICION:}
 [Preconditions needed to reproduce the bug, each on its own line with - prefix]
@@ -415,15 +416,15 @@ Entonces [expected correct behavior]
 ResultadoQA: (/)/(x)
 Pais/Entorno: [Market and platform]
 Fecha: [Current date DD-MM-YYYY]
-Evidencia: Adjuntar captura de pantalla
-Validado por: Jorge-QA
+Evidencia:
+Validado por:
 {quote}
 {panel}
 
 IMPORTANTE:
 - Output must start directly with {panel:title=DESCRIPCIÓN:}. No title, no text before the first panel.
 - Do NOT add any content outside of the panel structure.
-- Do NOT add extra fields to the DESCRIPCIÓN panel beyond Entorno/País and Versión.
+- Do NOT add extra fields to the DESCRIPCIÓN panel beyond Entorno/Pais and Versión.
 - Do NOT add a descriptive paragraph inside DESCRIPCIÓN.
 - Do NOT use markdown. Only Jira wiki markup.`;
 

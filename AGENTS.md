@@ -43,8 +43,10 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/utils/download.test.ts` | 7 — `downloadJson` (Blob download, object-URL revoked, no anchor left behind), `toFilename` (slugify, path-separator stripping, fallback) |
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
+| `src/components/LandingScreen.test.tsx` | 4 — 9 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 10th cell, `onSelect` fires |
+| `src/config/promptTemplates.test.ts` | 5 — no prompt or demo output hardcodes a validator name; bug report pins `Entorno/Pais: Pro/ES` and leaves Versión/Evidencia empty |
 
-**Total: 216 tests across 25 files.**
+**Total: 225 tests across 27 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -320,5 +322,7 @@ None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across P
 | saveArtifact hardening | 2026-07-16 | Workspace target resolution moved from App.tsx into `useWorkspace.saveArtifact(artifact, fallbackName)`: a stale `activeId` (workspace deleted from storage but still active) now falls back to auto-creating "Sin nombre" instead of silently dropping the artifact. 194 → 197 tests. |
 | Custom base URL validation | 2026-07-16 | `baseUrlStatus()` in providers.ts, applied twice: inline hint + `aria-invalid` in ProviderConfig, and a pre-fetch guard in `streamWithGroq` throwing `error.baseUrlMissing`/`error.baseUrlInvalid` — an empty custom URL no longer silently sends the custom key to Groq's endpoint. ProviderConfig's last two hardcoded labels translated. 197 → 211 tests. |
 | PHONE regex digit floor | 2026-07-16 | `/\+?\d(?:[\s()-]*\d){6,}/g`: requires 7+ digits (not 7+ chars of the class), starts at +/digit, ends on a digit — indented list runs and short ids no longer become false `[PHONE_N]` rows, matches no longer swallow surrounding whitespace. Bare 7+ digit numbers stay masked on purpose (privacy-first). Closes the last known issue. 211 → 216 tests. |
+| Landing layout restore | 2026-07-16 | Landing re-centered (`:only-child` span for the sidebar-less main + `.landing` wrapper), config strip's stale 1.5fr/1fr grid removed (Proveedor\|Modelo\|API Key now one horizontal row), 9 tools moved to a 2-column card grid with the "more coming" slot as the 10th cell (2×5, no scroll; 1 column <950px). Verified via playwright screenshots. 216 → 220 tests. |
+| Template fields cleanup | 2026-07-16 | "Validado por:" ships as a bare label (no hardcoded name) in the acceptance and bug report templates; bug report DESCRIPCIÓN pins `Entorno/Pais: Pro/ES` (regardless of the market selector) and leaves Versión/Evidencia empty for manual fill-in. Demo data matched. Guarded by `promptTemplates.test.ts`. 220 → 225 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
