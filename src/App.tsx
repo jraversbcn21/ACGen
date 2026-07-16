@@ -115,7 +115,6 @@ export default function App() {
       <Header
         provider={provider}
         model={model}
-        apiKey={currentApiKey}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         workspaces={workspace.workspaces}

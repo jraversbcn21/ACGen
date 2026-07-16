@@ -6,7 +6,6 @@ import type { Workspace } from '../types/workspace';
 interface HeaderProps {
   provider: string;
   model: string;
-  apiKey: string;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   workspaces: Workspace[];
@@ -22,7 +21,6 @@ interface HeaderProps {
 export function Header({
   provider,
   model,
-  apiKey: _apiKey,
   theme,
   onToggleTheme,
   workspaces,
