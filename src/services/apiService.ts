@@ -37,7 +37,7 @@ function validateResponseFormat(content: string, requiredMarkers: string[]): str
   return missing;
 }
 
-function extractJsonArray(text: string): unknown[] {
+export function extractJsonArray(text: string): unknown[] {
   let cleaned = text.trim();
   const fenceMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/i);
   if (fenceMatch) {
@@ -118,6 +118,84 @@ export function isModelDecommissioned(errorMessage: string | undefined, status: 
     msg.includes('invalid model') ||
     msg.includes('model not found')
   );
+}
+
+export async function* streamWithGroq(
+  apiKey: string,
+  model: string,
+  userInput: string,
+  systemPrompt: string,
+  tool: ToolType,
+  profile?: ProjectProfile,
+): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
+  const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
+  const reasoningParams = getReasoningParams(model, tool);
+  const body = {
+    model,
+    messages: [
+      { role: 'system', content: effectivePrompt },
+      { role: 'user', content: userInput },
+    ],
+    temperature: TEMPERATURE,
+    stream: true,
+    ...reasoningParams,
+  };
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const apiError: GroqApiError = {
+      message: errorBody?.error?.message ?? `Error HTTP ${response.status}`,
+      status: response.status,
+      code: errorBody?.error?.type,
+    };
+
+    if (response.status === 401) {
+      throw Object.assign(new Error('API Key invalida. Verifica tu clave e intenta de nuevo.'), apiError);
+    }
+    if (response.status === 429) {
+      throw Object.assign(new Error('Limite de peticiones alcanzado. Espera unos segundos y vuelve a intentar.'), apiError);
+    }
+    if (isModelDecommissioned(apiError.message, response.status)) {
+      throw Object.assign(
+        new Error('El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo.'),
+        apiError,
+      );
+    }
+    throw Object.assign(new Error(apiError.message), apiError);
+  }
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          const parsed = JSON.parse(data);
+          const token = parsed.choices?.[0]?.delta?.content;
+          if (token) yield { token, done: false, model: parsed.model };
+        } catch { /* skip malformed chunks */ }
+      }
+    }
+  }
+  yield { token: '', done: true };
 }
 
 export async function generateWithGroq(

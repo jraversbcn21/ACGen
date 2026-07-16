@@ -3,9 +3,10 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { generateTestData } from '../services/apiService';
-import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
+import { streamWithGroq, extractJsonArray, validateTestDataRows } from '../services/apiService';
+import { SUPPORTED_MARKETS, DATA_TYPES, TEST_DATA_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
+import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import type { ProjectProfile } from '../types/context';
 import type { TestDataFormData } from '../types';
 
@@ -98,6 +99,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const { toast, showToast } = useToast();
+  const { isStreaming, stream } = useStreamingResponse();
 
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
@@ -112,17 +114,35 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!canGenerate) return;
+    if (!canGenerate || isLoading || isStreaming) return;
     setIsLoading(true);
     setError(null);
     setGeneratedData([]);
     setGeneratedModel(undefined);
 
     try {
-      setLoadingStatus('Generando datos de prueba...');
-      const result = await generateTestData(apiKey, model, formData, profile);
-      setGeneratedData(result.data);
-      setGeneratedModel(result.model);
+      const dataTypeLabels: Record<string, string> = {
+        'shipping-address': 'direcciones de envio',
+        'billing-data': 'datos de facturacion',
+        'user-registration': 'datos de registro de usuario',
+        'payment-cards': 'tarjetas de pago de prueba',
+        'promo-codes': 'cupones y codigos promocionales',
+      };
+      let userMessage = `Genera ${formData.quantity} registro(s) de ${dataTypeLabels[formData.dataType]} para el mercado ${formData.market}.\n`;
+      userMessage += `Tipo de dato: ${formData.dataType}\n`;
+      if (formData.additionalContext?.trim()) {
+        userMessage += `\nContexto adicional (usa esta informacion para hacer los datos mas relevantes al escenario de prueba):\n${formData.additionalContext.trim()}\n`;
+      }
+
+      const gen = streamWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, 'testcase', profile);
+      await stream(gen, (fullText) => {
+        const jsonArray = extractJsonArray(fullText);
+        if (!jsonArray || jsonArray.length === 0) {
+          throw new Error('No se pudieron generar los datos de prueba. Intenta de nuevo.');
+        }
+        setGeneratedData(validateTestDataRows(jsonArray));
+        setGeneratedModel(model);
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       setError(message);
@@ -130,7 +150,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, profile]);
+  }, [apiKey, model, formData, canGenerate, isLoading, isStreaming, profile, stream]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -278,7 +298,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
       <div className="actions-bar" style={{ marginTop: '24px' }}>
         <GenerateButton
           onClick={handleGenerate}
-          disabled={!canGenerate}
+          disabled={!canGenerate || isStreaming}
           loading={isLoading}
           label="Generar datos de prueba"
           loadingLabel="Generando..."

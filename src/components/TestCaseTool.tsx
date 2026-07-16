@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { generateTestCases } from '../services/apiService';
+import { streamWithGroq, extractJsonArray, validateTestCases } from '../services/apiService';
 import { TESTCASE_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
+import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
@@ -40,26 +41,36 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
   const { toast, showToast } = useToast();
+  const { isStreaming, stream } = useStreamingResponse();
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
   const hasOutput = testCases.length > 0;
 
   const handleGenerate = useCallback(async () => {
-    if (!canGenerate) return;
+    if (!canGenerate || status === 'loading' || isStreaming) return;
     setStatus('loading');
     setError(null);
     setTestCases([]);
+    setGeneratedModel(undefined);
     try {
-      const result = await generateTestCases(apiKey, model, input, TESTCASE_PROMPT, undefined, profile);
-      setTestCases(result.testCases);
-      setGeneratedModel(result.model);
-      setStatus('success');
+      const gen = streamWithGroq(apiKey, model, input, TESTCASE_PROMPT, 'testcase', profile);
+      await stream(gen, (fullText) => {
+        const items = extractJsonArray(fullText);
+        if (items.length === 0) {
+          throw new Error('No se generaron casos de prueba. Intenta con una descripcion mas detallada.');
+        }
+        const validated = validateTestCases(items);
+        setTestCases(validated);
+        setGeneratedModel(model);
+        setStatus('success');
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       setError(message);
       setStatus('error');
+      setTestCases([]);
     }
-  }, [apiKey, model, input, canGenerate, profile]);
+  }, [apiKey, model, input, canGenerate, status, isStreaming, profile, stream]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -170,7 +181,7 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
       <div className="actions-bar">
         <GenerateButton
           onClick={handleGenerate}
-          disabled={!canGenerate}
+          disabled={!canGenerate || isStreaming}
           loading={status === 'loading'}
           label="Generar casos de prueba"
           loadingLabel="Generando..."

@@ -3,9 +3,10 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { useToast, Toast } from './Toast';
-import { generateCriteria } from '../services/apiService';
+import { streamWithGroq } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
+import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { useHistory } from '../hooks/useHistory';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
@@ -31,11 +32,12 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
   const { toast, showToast } = useToast();
+  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
   const handleGenerate = useCallback(async () => {
-    if (!canGenerate) return;
+    if (!canGenerate || status === 'loading' || isStreaming) return;
     setStatus('loading');
     setError(null);
     setCriteria('');
@@ -47,12 +49,17 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
         inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
       }
 
-      setLoadingStatus('Generando criterios...');
-      const result = await generateCriteria(apiKey, model, inputText, HARDCODED_PROMPT, undefined, profile);
-      setCriteria(result.content);
-      setReasoning(result.reasoning);
-      addEntry(requirements, result.content);
-      setStatus('success');
+      const now = new Date();
+      const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const inputWithDate = `${inputText}\n\nFecha actual: ${today}`;
+
+      const gen = streamWithGroq(apiKey, model, inputWithDate, HARDCODED_PROMPT, 'criteria', profile);
+      await stream(gen, (fullText) => {
+        setCriteria(fullText);
+        setReasoning(undefined);
+        addEntry(requirements, fullText);
+        setStatus('success');
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       setError(message);
@@ -60,10 +67,11 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
     } finally {
       setLoadingStatus('');
     }
-  }, [apiKey, model, requirements, canGenerate, additionalContext, addEntry]);
+  }, [apiKey, model, requirements, canGenerate, status, isStreaming, additionalContext, profile, stream, addEntry]);
 
   const handleClear = useCallback(() => {
     stopSpeech();
+    resetStream();
     const prevRequirements = requirements;
     const prevCriteria = criteria;
     const prevReasoning = reasoning;
@@ -191,11 +199,11 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
           />
           <textarea
             id="criteria-output"
-            value={criteria}
+            value={isStreaming ? streamText : criteria}
             onChange={(e) => setCriteria(e.target.value)}
             className="field-textarea criteria-output-ta"
-            readOnly={false}
-            placeholder={!criteria ? 'Los criterios generados aparecerán aquí...' : ''}
+            readOnly={isStreaming}
+            placeholder={!criteria ? 'Los criterios generados apareceran aqui...' : ''}
           />
           {criteria && (
             <div className="copy-row">
@@ -260,7 +268,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
       </div>
 
       <div className="actions-bar">
-        <GenerateButton onClick={handleGenerate} disabled={!canGenerate} loading={status === 'loading'} />
+        <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}

@@ -4,10 +4,11 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { generateBugReport } from '../services/apiService';
-import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
+import { streamWithGroq } from '../services/apiService';
+import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES, BUG_REPORT_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
+import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import type { ProjectProfile } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
 
@@ -51,6 +52,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
   const { toast, showToast } = useToast();
+  const { text: streamText, isStreaming, stream } = useStreamingResponse();
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
@@ -76,18 +78,38 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!canGenerate) return;
+    if (!canGenerate || isLoading || isStreaming) return;
     setIsLoading(true);
     setError(null);
     setOutput('');
     setReasoning(undefined);
 
     try {
-      setLoadingStatus('Generando bug report...');
-      const result = await generateBugReport(apiKey, model, formData, profile);
-      setOutput(result.content);
-      setReasoning(result.reasoning);
-      addEntry(formData.description, result.content);
+      const now = new Date();
+      const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+      let userMessage = `Descripcion del bug: ${formData.description}\n\n`;
+      userMessage += `Plataforma: ${formData.platform}\n`;
+      userMessage += `Mercado: ${formData.market}\n`;
+      userMessage += `Fecha actual: ${today}\n`;
+
+      if (formData.platform === 'web-desktop' || formData.platform === 'web-mobile') {
+        if (formData.browser) userMessage += `Navegador: ${formData.browser}\n`;
+        if (formData.url) userMessage += `URL: ${formData.url}\n`;
+      } else {
+        if (formData.appVersion) userMessage += `Version de la app: ${formData.appVersion}\n`;
+        if (formData.device) userMessage += `Dispositivo: ${formData.device}\n`;
+        if (formData.osVersion) userMessage += `Version del OS: ${formData.osVersion}\n`;
+      }
+
+      if (formData.additionalContext?.trim()) {
+        userMessage += `\nContexto adicional:\n${formData.additionalContext.trim()}\n`;
+      }
+
+      const gen = streamWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, 'criteria', profile);
+      await stream(gen, (fullText) => {
+        setOutput(fullText);
+        addEntry(formData.description, fullText);
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       setError(message);
@@ -95,7 +117,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, addEntry, profile]);
+  }, [apiKey, model, formData, canGenerate, isLoading, isStreaming, profile, stream, addEntry]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -349,7 +371,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       <div className="br-output-section">
         <textarea
           id="br-output"
-          value={output}
+          value={isStreaming ? streamText : output}
           readOnly
           className="field-textarea br-output-ta"
           placeholder="El bug report generado aparecerá aquí..."
@@ -417,8 +439,8 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       <div className="actions-bar">
         <GenerateButton
           onClick={handleGenerate}
-          disabled={!canGenerate}
-          loading={isLoading}
+          disabled={!canGenerate || isStreaming}
+          loading={isLoading || isStreaming}
           label="Generar bug report"
           loadingLabel="Generando..."
         />
