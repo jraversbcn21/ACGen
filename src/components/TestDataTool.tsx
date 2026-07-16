@@ -5,11 +5,13 @@ import { SearchableSelect } from './SearchableSelect';
 import { generateTestData } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
+import type { ProjectProfile } from '../types/context';
 import type { TestDataFormData } from '../types';
 
 interface TestDataToolProps {
   apiKey: string;
   model: string;
+  profile?: ProjectProfile;
 }
 
 const LABEL_MAP: Record<string, string> = {
@@ -85,7 +87,7 @@ const DEFAULT_FORM: TestDataFormData = {
   quantity: 3,
 };
 
-export function TestDataTool({ apiKey, model }: TestDataToolProps) {
+export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
   const [formData, setFormData] = useState<TestDataFormData>(DEFAULT_FORM);
   const [generatedData, setGeneratedData] = useState<Record<string, string>[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
@@ -116,7 +118,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
 
     try {
       setLoadingStatus('Generando datos de prueba...');
-      const result = await generateTestData(apiKey, model, formData);
+      const result = await generateTestData(apiKey, model, formData, profile);
       setGeneratedData(result.data);
       setGeneratedModel(result.model);
     } catch (err) {

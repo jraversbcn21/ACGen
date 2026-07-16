@@ -7,11 +7,13 @@ import { generateBugReport } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
+import type { ProjectProfile } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
 
 interface BugReportToolProps {
   apiKey: string;
   model: string;
+  profile?: ProjectProfile;
 }
 
 const DESKTOP_BROWSERS = ['Chrome', 'Firefox', 'Safari', 'Edge'];
@@ -34,7 +36,7 @@ const DEFAULT_FORM: BugReportFormData = {
   additionalContext: '',
 };
 
-export function BugReportTool({ apiKey, model }: BugReportToolProps) {
+export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
   const [formData, setFormData] = useState<BugReportFormData>(DEFAULT_FORM);
   const [output, setOutput] = useState('');
   const [reasoning, setReasoning] = useState<string | undefined>();
@@ -80,7 +82,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
 
     try {
       setLoadingStatus('Generando bug report...');
-      const result = await generateBugReport(apiKey, model, formData);
+      const result = await generateBugReport(apiKey, model, formData, profile);
       setOutput(result.content);
       setReasoning(result.reasoning);
       addEntry(formData.description, result.content);

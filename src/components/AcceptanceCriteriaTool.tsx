@@ -6,14 +6,16 @@ import { generateCriteria } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
+import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
 
 interface AcceptanceCriteriaToolProps {
   apiKey: string;
   model: string;
+  profile?: ProjectProfile;
 }
 
-export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaToolProps) {
+export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCriteriaToolProps) {
   const [requirements, setRequirements] = useState('');
   const [criteria, setCriteria] = useState('');
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -44,7 +46,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
       }
 
       setLoadingStatus('Generando criterios...');
-      const result = await generateCriteria(apiKey, model, inputText, HARDCODED_PROMPT);
+      const result = await generateCriteria(apiKey, model, inputText, HARDCODED_PROMPT, undefined, profile);
       setCriteria(result.content);
       setReasoning(result.reasoning);
       addEntry(requirements, result.content);

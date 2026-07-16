@@ -1,4 +1,4 @@
-export const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+﻿export const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export const HARDCODED_PROMPT = `Based on all the information provided, read it, analyze it, and generate one or more acceptance criteria as you consider necessary. Do not be overly detailed; generate only the most important and general criteria. The criteria can be one or several depending on the scope of the information provided. The criteria must be written from the perspective of an end user going through the process, not from a technical point of view. Describe the steps and conditions as if a regular person were navigating or interacting with the system, using natural and everyday language, avoiding technical or implementation-specific terms.
 
@@ -31,9 +31,9 @@ export const REQUIRED_MARKERS = [
   '*Entonces*',
 ];
 
-export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para un sitio web de ecommerce de moda. Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
+export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para un {dominio}. Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
 
-Basa tu respuesta en patrones estándar de ecommerce — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: Home, Footer, Menú/Navegación, Buscador, Parrillas de productos, Filtros, PDP (Detalle de Producto), Cesta y Checkout.
+Basa tu respuesta en patrones estandar de {dominio} — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: Home, Footer, Menú/Navegación, Buscador, Parrillas de productos, Filtros, PDP (Detalle de Producto), Cesta y Checkout.
 
 CRÍTICO: Devuelve ÚNICAMENTE un array JSON válido. NO incluyas bloques de código markdown, comillas invertidas, explicaciones ni ningún texto antes o después del JSON. La respuesta debe ser parseable directamente por JSON.parse().
 
@@ -324,10 +324,10 @@ export const DATA_TYPES = [
   { id: 'promo-codes', label: 'Cupones y códigos promocionales' },
 ] as const;
 
-export const TEST_DATA_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda. Tu tarea es generar datos de prueba realistas y válidos para testing manual.
+export const TEST_DATA_PROMPT = `Eres un QA Engineer senior especializado en {dominio}. Tu tarea es generar datos de prueba realistas y válidos para testing manual.
 
 CONTEXTO:
-- Ecommerce de moda, multi-mercado europeo
+- {dominio} multi-mercado
 - Los datos se usan para testing manual en entornos de prueba
 - Los datos deben ser FICTICIOS pero con formato VÁLIDO para cada país/mercado
 - Cada mercado tiene formatos específicos: direcciones, códigos postales, teléfonos, documentos de identidad, divisas
@@ -367,14 +367,14 @@ Para "promo-codes":
 
 IMPORTANTE: Devuelve SOLO el JSON array. Nada más.`;
 
-export const BUG_REPORT_PROMPT = `Eres un QA Engineer senior especializado en ecommerce de moda. Tu tarea es generar un bug report profesional y detallado en formato Jira wiki a partir de una descripción informal de un defecto.
+export const BUG_REPORT_PROMPT = `Eres un QA Engineer senior especializado en {dominio}. Tu tarea es generar un bug report profesional y detallado en formato Jira wiki a partir de una descripción informal de un defecto.
 
 CONTEXTO DEL PROYECTO:
-- Ecommerce de moda online
+- {dominio}
 - Multi-mercado europeo con particularidades por país (impuestos, métodos de pago, idiomas, divisas)
-- Plataformas: Web Desktop, Web Mobile, App Android (APK), App iOS (IPA)
-- Entorno de pruebas web: https://localhost:3443/
-- Flujos críticos: catálogo/navegación, PDP (ficha de producto), tallas/stock, carrito/minicesta, checkout multi-step, pagos (Adyen), cuenta de usuario, wishlist, store finder, newsletter, SEO, deep links, push notifications (app)
+- Plataformas: {tipoProducto}
+- {mercados}
+- Flujos criticos: {terminologia}
 
 REGLAS:
 1. Todo el contenido DEBE estar en ESPAÑOL.

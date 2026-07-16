@@ -4,6 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { generateTestCases } from '../services/apiService';
 import { TESTCASE_PROMPT } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
+import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -30,7 +31,7 @@ function generateJiraTable(testCases: TestCaseData[]): string {
   return [header, ...rows].join('\n');
 }
 
-export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string }) {
+export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model: string; profile?: ProjectProfile }) {
   const [input, setInput] = useState('');
   const [testCases, setTestCases] = useState<TestCaseData[]>([]);
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -47,7 +48,7 @@ export function TestCaseTool({ apiKey, model }: { apiKey: string; model: string 
     setError(null);
     setTestCases([]);
     try {
-      const result = await generateTestCases(apiKey, model, input, TESTCASE_PROMPT);
+      const result = await generateTestCases(apiKey, model, input, TESTCASE_PROMPT, undefined, profile);
       setTestCases(result.testCases);
       setGeneratedModel(result.model);
       setStatus('success');

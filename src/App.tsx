@@ -10,6 +10,7 @@ import { TestDataTool } from './components/TestDataTool';
 import { SprintTracker } from './components/SprintTracker';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
+import { useProfile } from './components/ContextProfile';
 import type { ViewType } from './config/constants';
 
 const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker'];
@@ -30,6 +31,7 @@ const toolNames: Record<string, string> = {
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
+  const [profile] = useProfile();
   const [view, setView] = useState<ViewType>(getViewFromHash);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
 
@@ -84,19 +86,19 @@ export default function App() {
           )}
 
           {view === 'acceptance' && (
-            <AcceptanceCriteriaTool apiKey={apiKey} model={model} />
+            <AcceptanceCriteriaTool apiKey={apiKey} model={model} profile={profile} />
           )}
 
           {view === 'testcase' && (
-            <TestCaseTool apiKey={apiKey} model={model} />
+            <TestCaseTool apiKey={apiKey} model={model} profile={profile} />
           )}
 
           {view === 'bugreport' && (
-            <BugReportTool apiKey={apiKey} model={model} />
+            <BugReportTool apiKey={apiKey} model={model} profile={profile} />
           )}
 
           {view === 'testdata' && (
-            <TestDataTool apiKey={apiKey} model={model} />
+            <TestDataTool apiKey={apiKey} model={model} profile={profile} />
           )}
 
           {view === 'sprinttracker' && (

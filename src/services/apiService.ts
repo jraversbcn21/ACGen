@@ -1,7 +1,17 @@
 import { API_URL, TEMPERATURE, REQUIRED_MARKERS, BUG_REPORT_PROMPT, TEST_DATA_PROMPT } from '../config/constants';
 import type { GroqResponse, GroqApiError, TestCaseData, TestCaseResponse, BugReportFormData, TestDataFormData } from '../types';
+import type { ProjectProfile } from '../types/context';
 
 type ToolType = 'criteria' | 'testcase';
+
+export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
+  return prompt
+    .replace(/\{dominio\}/g, profile.domain)
+    .replace(/\{tipoProducto\}/g, profile.productType)
+    .replace(/\{mercados\}/g, profile.markets)
+    .replace(/\{terminologia\}/g, profile.terminology)
+    .replace(/\{tono\}/g, profile.tone);
+}
 
 function getReasoningParams(model: string, tool: ToolType): Record<string, unknown> {
   const isQwen3 = model === 'qwen/qwen3-32b';
@@ -118,7 +128,9 @@ export async function generateWithGroq(
   requiredMarkers: string[],
   signal?: AbortSignal,
   reasoningParams?: Record<string, unknown>,
+  profile?: ProjectProfile,
 ): Promise<GroqResponse> {
+  const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
@@ -128,7 +140,7 @@ export async function generateWithGroq(
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: effectivePrompt },
         { role: 'user', content: userInput },
       ],
       temperature: TEMPERATURE,
@@ -190,12 +202,13 @@ export async function generateCriteria(
   userInput: string,
   systemPrompt: string,
   signal?: AbortSignal,
+  profile?: ProjectProfile,
 ): Promise<GroqResponse> {
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const inputWithDate = `${userInput}\n\nFecha actual: ${today}`;
   const reasoningParams = getReasoningParams(model, 'criteria');
-  return generateWithGroq(apiKey, model, inputWithDate, systemPrompt, REQUIRED_MARKERS, signal, reasoningParams);
+  return generateWithGroq(apiKey, model, inputWithDate, systemPrompt, REQUIRED_MARKERS, signal, reasoningParams, profile);
 }
 
 export async function generateTestCases(
@@ -204,9 +217,10 @@ export async function generateTestCases(
   userInput: string,
   systemPrompt: string,
   signal?: AbortSignal,
+  profile?: ProjectProfile,
 ): Promise<TestCaseResponse> {
   const reasoningParams = getReasoningParams(model, 'testcase');
-  const result = await generateWithGroq(apiKey, model, userInput, systemPrompt, [], signal, reasoningParams);
+  const result = await generateWithGroq(apiKey, model, userInput, systemPrompt, [], signal, reasoningParams, profile);
   const items = extractJsonArray(result.content);
   if (items.length === 0) {
     throw new Error('No se generaron casos de prueba. Intenta con una descripción más detallada.');
@@ -219,6 +233,7 @@ export async function generateBugReport(
   apiKey: string,
   model: string,
   formData: BugReportFormData,
+  profile?: ProjectProfile,
 ): Promise<GroqResponse> {
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
@@ -241,7 +256,7 @@ export async function generateBugReport(
   }
 
   const reasoningParams = getReasoningParams(model, 'criteria');
-  return generateWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, [], undefined, reasoningParams);
+  return generateWithGroq(apiKey, model, userMessage, BUG_REPORT_PROMPT, [], undefined, reasoningParams, profile);
 }
 
 export function validateTestDataRows(items: unknown[]): Record<string, string>[] {
@@ -263,6 +278,7 @@ export async function generateTestData(
   apiKey: string,
   model: string,
   formData: TestDataFormData,
+  profile?: ProjectProfile,
 ): Promise<{ data: Record<string, string>[]; model: string }> {
   const dataTypeLabels: Record<string, string> = {
     'shipping-address': 'direcciones de envio',
@@ -280,7 +296,7 @@ export async function generateTestData(
   }
 
   const reasoningParams = getReasoningParams(model, 'testcase');
-  const response = await generateWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, [], undefined, reasoningParams);
+  const response = await generateWithGroq(apiKey, model, userMessage, TEST_DATA_PROMPT, [], undefined, reasoningParams, profile);
 
   const jsonArray = extractJsonArray(response.content);
 
