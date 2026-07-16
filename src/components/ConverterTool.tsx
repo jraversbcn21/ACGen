@@ -3,6 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -46,7 +47,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('converter'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       showToast(message);
     } finally {
       setLoading(false);

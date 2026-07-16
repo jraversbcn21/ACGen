@@ -5,6 +5,7 @@ import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
@@ -119,7 +120,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         addEntry(formData.description, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       setError(message);
     } finally {
       setIsLoading(false);

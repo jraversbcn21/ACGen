@@ -3,6 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, extractJsonArray, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -51,7 +52,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       setError(message);
     } finally {
       setLoading(false);

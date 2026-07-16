@@ -4,6 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, extractJsonArray, validateTestDataRows, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
@@ -154,7 +155,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         setGeneratedModel(model);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       setError(message);
     } finally {
       setIsLoading(false);
