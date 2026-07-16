@@ -987,3 +987,22 @@ body {
 .sidebar-item:hover { background: var(--bg); color: var(--text); }
 .sidebar-item.active { background: var(--accent); color: white; }
 .sidebar-footer { border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}

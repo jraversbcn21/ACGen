@@ -1,6 +1,7 @@
 import { API_URL, TEMPERATURE, REQUIRED_MARKERS, BUG_REPORT_PROMPT, TEST_DATA_PROMPT } from '../config/constants';
 import type { GroqResponse, GroqApiError, TestCaseData, TestCaseResponse, BugReportFormData, TestDataFormData } from '../types';
 import type { ProjectProfile } from '../types/context';
+import { deanonymize } from './anonymizer';
 
 type ToolType = 'criteria' | 'testcase';
 
@@ -127,6 +128,7 @@ export async function* streamWithGroq(
   systemPrompt: string,
   tool: ToolType,
   profile?: ProjectProfile,
+  anonymizeMap?: Record<string, string>,
 ): AsyncGenerator<{ token: string; done: boolean; model?: string }> {
   const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
   const reasoningParams = getReasoningParams(model, tool);
@@ -189,8 +191,11 @@ export async function* streamWithGroq(
         if (data === '[DONE]') return;
         try {
           const parsed = JSON.parse(data);
-          const token = parsed.choices?.[0]?.delta?.content;
-          if (token) yield { token, done: false, model: parsed.model };
+          const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
+          if (rawToken) {
+            const token = anonymizeMap ? deanonymize(rawToken, anonymizeMap) : rawToken;
+            yield { token, done: false, model: parsed.model };
+          }
         } catch { /* skip malformed chunks */ }
       }
     }
