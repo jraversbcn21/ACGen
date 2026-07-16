@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { Header } from './components/Header';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -8,6 +8,7 @@ import { TestCaseTool } from './components/TestCaseTool';
 import { BugReportTool } from './components/BugReportTool';
 import { TestDataTool } from './components/TestDataTool';
 import { SprintTracker } from './components/SprintTracker';
+import { Sidebar } from './components/Sidebar';
 import { UserStoryTool } from './components/UserStoryTool';
 import { RefinerTool } from './components/RefinerTool';
 import { EdgeCaseTool } from './components/EdgeCaseTool';
@@ -22,17 +23,6 @@ function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
   return VALID_VIEWS.includes(hash as ViewType) ? (hash as ViewType) : 'landing';
 }
-
-const toolNames: Record<string, string> = {
-  acceptance: 'Criterios de aceptacion',
-  testcase: 'Test Case Generator',
-  bugreport: 'Bug Report',
-  testdata: 'Datos de Prueba',
-  sprinttracker: 'Sprint Tracker',
-  userstory: 'Historias de Usuario',
-  refiner: 'Refinador de Requisitos',
-  edgecase: 'Casos Limite',
-};
 
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
@@ -73,18 +63,18 @@ export default function App() {
     }
   }
 
-  const subtitle = useMemo(() => view !== 'landing' ? toolNames[view] : undefined, [view]);
-
   return (
     <div className="page">
       <Header
-        onBack={view !== 'landing' ? () => navigate('landing') : undefined}
-        subtitle={subtitle}
         model={model}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
-      <main className="container">
+      <div className="app-layout">
+        {view !== 'landing' && (
+          <Sidebar activeView={view} onNavigate={(v) => navigate(v)} />
+        )}
+        <main className="container">
         <ErrorBoundary key={view}>
           {view === 'landing' && (
             <LandingScreen
@@ -137,6 +127,7 @@ export default function App() {
           )}
         </ErrorBoundary>
       </main>
+      </div>
     </div>
   );
 }
