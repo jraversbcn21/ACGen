@@ -1,128 +1,130 @@
-### Task 3.1.3: Wire ConfidentialToggle into all 8 LLM tools
+### Task 3: ExportBar
 
 **Files:**
-- Modify: `src/components/AcceptanceCriteriaTool.tsx`
-- Modify: `src/components/TestCaseTool.tsx`
-- Modify: `src/components/BugReportTool.tsx`
-- Modify: `src/components/TestDataTool.tsx`
-- Modify: `src/components/UserStoryTool.tsx`
-- Modify: `src/components/RefinerTool.tsx`
-- Modify: `src/components/EdgeCaseTool.tsx`
-- Modify: `src/components/ConverterTool.tsx`
+- Modify: `src/components/ExportBar.tsx` (whole file is 33 lines; shown below)
+- Create: `src/components/ExportBar.test.tsx`
+- Modify: `src/i18n/es.json`, `src/i18n/en.json` (4 new `export.*` keys)
 
-**Interfaces:**
-- Consumes: `anonymize()` from `src/services/anonymizer.ts`, `ConfidentialToggle` and `AnonymizerReview` from Task 3.1.2, `streamWithGroq` with `anonymizeMap` param
-- Produces: All 8 LLM tools have confidential mode toggle + review modal wired into generate flow
+**Interfaces:** none consumed/produced beyond the keys.
 
-**Context:** SprintTracker does NOT use the LLM — it is excluded.
+- [ ] **Step 1: Add keys**
 
-**Pattern to apply to EACH tool (use AcceptanceCriteriaTool as canonical example, adapt for each tool):**
+`es.json`:
 
-For each tool component:
-
-**A) Add imports** (at top of file, with other imports):
-```typescript
-import { anonymize } from '../services/anonymizer';
-import { ConfidentialToggle } from './ConfidentialToggle';
-import { AnonymizerReview } from './AnonymizerReview';
+```json
+  "export.copy": "Copiar",
+  "export.pdf": "Descargar PDF",
+  "export.csv": "Descargar CSV",
+  "export.tsv": "Copiar TSV",
 ```
 
-**B) Add state** (near other useState declarations):
-```typescript
-const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+`en.json`:
+
+```json
+  "export.copy": "Copy",
+  "export.pdf": "Download PDF",
+  "export.csv": "Download CSV",
+  "export.tsv": "Copy TSV",
 ```
 
-**C) Modify handleGenerate** — split into two parts:
-- `doGenerate` — the actual API call (extract from existing handleGenerate)
-- `handleGenerate` — checks confidential mode, opens review if needed
+- [ ] **Step 2: Write the failing test**
 
-The key pattern (adapt existing tool's actual field names — e.g., `requirements` in AcceptanceCriteriaTool, `input` in others):
-
-```typescript
-const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-  setLoading(true);
-  setResult('');
-  try {
-    const gen = streamWithGroq(apiKey, model, effectiveInput, prompt, <TOOL_TYPE>, profile, effectiveMap);
-    await stream(gen, (fullText) => { setResult(fullText); });
-    // If tool has onSaveArtifact prop, call it here
-    onSaveArtifact?.(<originalInput>, fullText);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
-    showToast(message);
-  } finally {
-    setLoading(false);
-    setConfMap(null);
-  }
-}, [apiKey, model, profile, stream, showToast, onSaveArtifact]);
-
-const handleGenerate = useCallback(async () => {
-  if (!canGenerate || loading || isStreaming) return;
-  const confKey = `acgen_confidential_<VIEW>`;
-  const confEnabled = localStorage.getItem(confKey) === 'true';
-  if (confEnabled) {
-    const { text, map } = anonymize(<inputValue>);
-    if (Object.keys(map).length > 0) {
-      setConfMap(map);
-      return; // opens review modal
-    }
-    await doGenerate(<inputValue>);
-  } else {
-    await doGenerate(<inputValue>);
-  }
-}, [canGenerate, loading, isStreaming, <inputValue>, doGenerate]);
-```
-
-Where `<VIEW>` is the tool's view name (acceptance, testcase, bugreport, testdata, userstory, refiner, edgecase, converter), `<TOOL_TYPE>` is `'criteria'` or `'testcase'`, `<inputValue>` is the tool's current input text.
-
-**D) Add ConfidentialToggle in JSX** — place in the actions bar, before the GenerateButton:
+`src/components/ExportBar.test.tsx`:
 
 ```tsx
-<ConfidentialToggle
-  view="<VIEW>"
-  substitutionCount={0}
-  onReview={() => {
-    const { map } = anonymize(<inputValue>);
-    setConfMap(map);
-  }}
-/>
+import { render, screen } from '@testing-library/react';
+import { I18nProvider } from '../i18n/I18nContext';
+import { ExportBar } from './ExportBar';
+
+function renderEn(ui: React.ReactElement) {
+  localStorage.setItem('acgen_lang', '"en"');
+  return render(<I18nProvider>{ui}</I18nProvider>);
+}
+
+describe('ExportBar i18n', () => {
+  afterEach(() => localStorage.clear());
+
+  it('renders English labels', () => {
+    renderEn(<ExportBar formats={['copy', 'pdf', 'csv', 'tsv']} onExport={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy TSV' })).toBeInTheDocument();
+  });
+
+  it('keeps proper nouns literal', () => {
+    renderEn(<ExportBar formats={['markdown', 'jirawiki']} onExport={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Markdown' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Jira Wiki' })).toBeInTheDocument();
+  });
+
+  it('shows the copied state translated', () => {
+    renderEn(<ExportBar formats={['copy']} onExport={() => {}} copied />);
+    expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
+  });
+});
 ```
 
-**E) Add AnonymizerReview modal** — place at the end of the component, before the final closing `</div>`:
+- [ ] **Step 3: Run to verify RED**
+
+Run: `npx vitest run src/components/ExportBar.test.tsx`
+Expected: FAIL — labels render in Spanish.
+
+- [ ] **Step 4: Implement**
+
+Replace `src/components/ExportBar.tsx` with:
 
 ```tsx
-{confMap && (
-  <AnonymizerReview
-    map={confMap}
-    onCancel={() => setConfMap(null)}
-    onConfirm={(editedMap) => {
-      doGenerate(<inputValue>, editedMap);
-      setConfMap(null);
-    }}
-  />
-)}
+import { useT } from '../i18n/I18nContext';
+
+interface ExportBarProps {
+  formats: string[];
+  onExport: (format: string) => void;
+  copied?: boolean;
+}
+
+// Values are i18n keys, except proper nouns, which t() passes through verbatim.
+const FORMAT_LABELS: Record<string, string> = {
+  copy: 'export.copy',
+  markdown: 'Markdown',
+  jirawiki: 'Jira Wiki',
+  pdf: 'export.pdf',
+  csv: 'export.csv',
+  tsv: 'export.tsv',
+};
+
+export function ExportBar({ formats, onExport, copied }: ExportBarProps) {
+  const t = useT();
+  if (formats.length === 0) return null;
+
+  return (
+    <div className="export-bar" style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+      {formats.map((fmt) => (
+        <button
+          key={fmt}
+          type="button"
+          className={`btn-ghost ${fmt === 'copy' && copied ? 'btn-copied' : ''}`}
+          onClick={() => onExport(fmt)}
+        >
+          {fmt === 'copy' && copied ? t('common.copied') : t(FORMAT_LABELS[fmt] || fmt)}
+        </button>
+      ))}
+    </div>
+  );
+}
 ```
 
-**Tool-specific mappings:**
-| Tool component | View name | Tool type |
-|---|---|---|
-| AcceptanceCriteriaTool | acceptance | criteria |
-| TestCaseTool | testcase | testcase |
-| BugReportTool | bugreport | criteria |
-| TestDataTool | testdata | testcase |
-| UserStoryTool | userstory | criteria |
-| RefinerTool | refiner | criteria |
-| EdgeCaseTool | edgecase | testcase |
-| ConverterTool | converter | criteria |
+- [ ] **Step 5: Run to verify GREEN, then check all ExportBar consumers still pass**
 
-- [ ] **Step 1: Wire AcceptanceCriteriaTool** (canonical example)
-- [ ] **Step 2: Wire TestCaseTool**
-- [ ] **Step 3: Wire BugReportTool**
-- [ ] **Step 4: Wire TestDataTool**
-- [ ] **Step 5: Wire UserStoryTool**
-- [ ] **Step 6: Wire RefinerTool**
-- [ ] **Step 7: Wire EdgeCaseTool**
-- [ ] **Step 8: Wire ConverterTool**
-- [ ] **Step 9: Type check** — `npx tsc -b --noEmit` — zero errors
-- [ ] **Step 10: Test suite** — `npm test` — all 78 passing
-- [ ] **Step 11: Commit** — `git add -A && git commit -m "feat(confidential): wire ConfidentialToggle + review modal into all 8 LLM tools"`
+Run: `npx vitest run src/components`
+Expected: ALL PASS.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/components/ExportBar.tsx src/components/ExportBar.test.tsx src/i18n/es.json src/i18n/en.json
+git commit -m "feat(i18n): translate ExportBar labels"
+```
+
+---
+

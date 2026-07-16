@@ -1,19 +1,23 @@
+import { useT } from '../i18n/I18nContext';
+
 interface ExportBarProps {
   formats: string[];
   onExport: (format: string) => void;
   copied?: boolean;
 }
 
+// Values are i18n keys, except proper nouns, which t() passes through verbatim.
 const FORMAT_LABELS: Record<string, string> = {
-  copy: 'Copiar',
+  copy: 'export.copy',
   markdown: 'Markdown',
   jirawiki: 'Jira Wiki',
-  pdf: 'Descargar PDF',
-  csv: 'Descargar CSV',
-  tsv: 'Copiar TSV',
+  pdf: 'export.pdf',
+  csv: 'export.csv',
+  tsv: 'export.tsv',
 };
 
 export function ExportBar({ formats, onExport, copied }: ExportBarProps) {
+  const t = useT();
   if (formats.length === 0) return null;
 
   return (
@@ -25,7 +29,7 @@ export function ExportBar({ formats, onExport, copied }: ExportBarProps) {
           className={`btn-ghost ${fmt === 'copy' && copied ? 'btn-copied' : ''}`}
           onClick={() => onExport(fmt)}
         >
-          {fmt === 'copy' && copied ? 'Copiado!' : FORMAT_LABELS[fmt] || fmt}
+          {fmt === 'copy' && copied ? t('common.copied') : t(FORMAT_LABELS[fmt] || fmt)}
         </button>
       ))}
     </div>

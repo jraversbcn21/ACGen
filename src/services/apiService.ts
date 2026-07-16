@@ -5,6 +5,13 @@ import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
 type ToolType = 'criteria' | 'testcase';
 
+/** Errors whose message is an i18n key; params feed t()'s interpolation. */
+export type I18nError = Error & { params?: Record<string, string | number> };
+
+function i18nError(key: string, params?: Record<string, string | number>): I18nError {
+  return params ? Object.assign(new Error(key), { params }) : new Error(key);
+}
+
 export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
   return prompt
     .replace(/\{dominio\}/g, profile.domain)
@@ -45,10 +52,10 @@ export function extractJsonArray(text: string): unknown[] {
       try {
         parsed = JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
       } catch {
-        throw new Error('La respuesta no es JSON válido. Intenta de nuevo.');
+        throw i18nError('error.invalidJson');
       }
     } else {
-      throw new Error('La respuesta no es JSON válido. Intenta de nuevo.');
+      throw i18nError('error.invalidJson');
     }
   }
 
@@ -59,10 +66,10 @@ export function extractJsonArray(text: string): unknown[] {
     const obj = parsed as Record<string, unknown>;
     items = (obj.testCases || obj.cases || obj.data || []) as unknown[];
     if (!Array.isArray(items)) {
-      throw new Error('La respuesta no contiene un array de casos de prueba.');
+      throw i18nError('error.noTestCaseArray');
     }
   } else {
-    throw new Error('La respuesta no tiene un formato reconocible.');
+    throw i18nError('error.invalidFormat');
   }
 
   return items;
@@ -76,7 +83,7 @@ export function validateTestCases(items: unknown[]): TestCaseData[] {
   for (let i = 0; i < items.length; i++) {
     const raw = items[i];
     if (!raw || typeof raw !== 'object') {
-      throw new Error(`El caso de prueba ${i + 1} no es un objeto válido.`);
+      throw i18nError('error.testCaseInvalid', { n: i + 1 });
     }
     const tc = raw as Record<string, unknown>;
     const missing = requiredFields.filter(f => {
@@ -84,7 +91,7 @@ export function validateTestCases(items: unknown[]): TestCaseData[] {
       return v === undefined || v === null || (Array.isArray(v) && v.length === 0) || (typeof v === 'string' && v.trim() === '');
     });
     if (missing.length > 0) {
-      throw new Error(`El caso de prueba ${i + 1} (${tc.key || `#${i + 1}`}) no tiene los campos requeridos: ${missing.join(', ')}`);
+      throw i18nError('error.testCaseMissingFields', { n: i + 1, key: String(tc.key || `#${i + 1}`), fields: missing.join(', ') });
     }
 
     const wrongType: string[] = STRING_FIELDS.filter(f => typeof tc[f] !== 'string');
@@ -92,7 +99,7 @@ export function validateTestCases(items: unknown[]): TestCaseData[] {
       wrongType.push('testSteps');
     }
     if (wrongType.length > 0) {
-      throw new Error(`El caso de prueba ${i + 1} (${tc.key || `#${i + 1}`}) tiene campos con tipo incorrecto: ${wrongType.join(', ')}`);
+      throw i18nError('error.testCaseWrongTypes', { n: i + 1, key: String(tc.key || `#${i + 1}`), fields: wrongType.join(', ') });
     }
 
     validated.push(tc as unknown as TestCaseData);
@@ -151,17 +158,16 @@ export async function* streamWithGroq(
       code: errorBody?.error?.type,
     };
 
+    const { message: upstreamMessage, ...meta } = apiError;
+
     if (response.status === 401) {
-      throw Object.assign(new Error('API Key invalida. Verifica tu clave e intenta de nuevo.'), apiError);
+      throw Object.assign(i18nError('error.apiKey'), { ...meta, cause: upstreamMessage });
     }
     if (response.status === 429) {
-      throw Object.assign(new Error('Limite de peticiones alcanzado. Espera unos segundos y vuelve a intentar.'), apiError);
+      throw Object.assign(i18nError('error.rateLimit'), { ...meta, cause: upstreamMessage });
     }
     if (isModelDecommissioned(apiError.message, response.status)) {
-      throw Object.assign(
-        new Error('El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo.'),
-        apiError,
-      );
+      throw Object.assign(i18nError('error.modelDecommissioned'), { ...meta, cause: upstreamMessage });
     }
     throw Object.assign(new Error(apiError.message), apiError);
   }
@@ -217,11 +223,11 @@ export async function* streamWithGroq(
 export function validateTestDataRows(items: unknown[]): Record<string, string>[] {
   return items.map((row, i) => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) {
-      throw new Error(`El registro ${i + 1} no es un objeto válido.`);
+      throw i18nError('error.recordInvalid', { n: i + 1 });
     }
     const entries = Object.entries(row as Record<string, unknown>).map(([field, value]) => {
       if (value !== null && typeof value === 'object') {
-        throw new Error(`El registro ${i + 1} tiene un valor anidado no soportado en el campo "${field}".`);
+        throw i18nError('error.recordNestedValue', { n: i + 1, field });
       }
       return [field, value === null || value === undefined ? '' : String(value)] as const;
     });

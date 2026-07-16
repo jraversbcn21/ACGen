@@ -3,6 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, extractJsonArray, validateTestCases, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
@@ -72,7 +73,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         setStatus('success');
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       setError(message);
       setStatus('error');
       setTestCases([]);

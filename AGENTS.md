@@ -18,7 +18,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `src/services/apiService.test.ts` | 22 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection), `streamWithGroq` deanonymization incl. placeholders split across SSE chunks |
+| `src/services/apiService.test.ts` | 31 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection), `streamWithGroq` deanonymization incl. placeholders split across SSE chunks, `streamWithGroq` HTTP-error `I18nError` shape (message = i18n key, params, cause = upstream text) |
 | `src/services/anonymizer.test.ts` | 24 — all 7 regex patterns, edge cases, round-trip identity, `applyPlaceholderEdits`, `splitPendingPlaceholder` |
 | `src/hooks/useSprints.test.ts` | 20 — init, add, archive, update, delete, moveRow, persistence, hydration, recovery |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, cross-tab sync, ignore unrelated keys, quota resilience |
@@ -26,7 +26,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/hooks/useWorkspace.test.ts` | 12 — CRUD, artifact cap at 50, export/import, validation |
 | `src/hooks/useStreamingResponse.test.ts` | 4 — token accumulation + `onComplete`, mid-stream error rethrown to the caller, partial text kept, `onComplete` not called on failure |
 | `src/config/providers.test.ts` | 12 — provider definitions, unknown-id fallback, `sanitizeModel` per-provider validation |
-| `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches crash, recovers on reset |
+| `src/components/ErrorBoundary.test.tsx` | 4 — renders children, catches crash, recovers on reset, renders the fallback/retry text in English via `contextType` when `lang` is `en` |
 | `src/components/TestCaseTool.confidential.test.tsx` | 5 — confidential mode end-to-end: anonymized text sent (not raw input), edited placeholders honored, raw text when disabled, modal skipped/cancelled |
 | `src/components/BugReportTool.confidential.test.tsx` | 2 — same, for the composite-message form (whole assembled message anonymized, not just one field) |
 | `src/components/TestDataTool.confidential.test.tsx` | 2 — same, composite message including free-text context |
@@ -35,10 +35,15 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/components/staleTranslation.test.tsx` | 3 — a handler's toast reflects the language active at click time, not memoization time |
 | `src/components/WorkspacePicker.test.tsx` | 5 — delete requires a second confirming click, cancel abandons it, only one row confirms at a time |
 | `src/components/speechSynthesis.test.tsx` | 3 — AcceptanceCriteriaTool/BugReportTool mount, unmount and clear without crashing when the Speech Synthesis API is absent |
+| `src/components/errorTranslation.test.tsx` | 1 — an API 401 renders the English `error.apiKey` text end-to-end (not the Spanish i18n key or raw upstream message) |
+| `src/components/ExportBar.test.tsx` | 3 — English labels, proper nouns (Markdown/Jira Wiki) stay literal, translated "Copied!" state |
+| `src/components/HistoryModal.test.tsx` | 3 — clear-all requires a second confirming click, renders in English, translated empty state |
+| `src/components/SearchableSelect.test.tsx` | 3 — search input placeholder defaults to translated `common.search`, translated empty state, trigger placeholder defaults to translated `common.select` |
 | `src/utils/download.test.ts` | 7 — `downloadJson` (Blob download, object-URL revoked, no anchor left behind), `toFilename` (slugify, path-separator stripping, fallback) |
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
+| `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
 
-**Total: 172 tests across 19 files.**
+**Total: 194 tests across 24 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -56,7 +61,7 @@ Run `npm test` before committing when modifying hooks or services.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
 - **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
 - **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
-- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (203 keys, exact parity). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (220 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
 - **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
 - **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, export bar in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `autoUpdate` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts.
@@ -243,13 +248,13 @@ Run `npm test` before committing when modifying hooks or services.
 | `src/config/constants.ts` | API_URL, all 8 prompts, `DEFAULT_PROMPTS` map, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
 | `src/config/providers.ts` | `PROVIDERS` registry, `ProviderDef` interface, `getProvider()` |
 | `src/config/demoData.ts` | `DEMO_DATA` pre-generated samples per tool |
-| `src/services/apiService.ts` | `streamWithGroq()` (streaming — the only generation path all tools use), `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()` |
+| `src/services/apiService.ts` | `streamWithGroq()` (streaming — the only generation path all tools use), `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`. Plain module with no React context, so it can't call `t()` — thrown errors are `I18nError` (`message` = i18n key, `params?` for interpolation, `cause` = the raw upstream error text on HTTP errors). Each of the 8 tools' catch block calls `t(err.message, err.params)` to render the translated string. |
 | `src/services/anonymizer.ts` | `anonymize()`, `deanonymize()`, `applyPlaceholderEdits()`, `splitPendingPlaceholder()` — 7 regex patterns |
 | `src/utils/download.ts` | `downloadJson()`, `toFilename()` — client-side file download used by workspace export |
 | `src/App.tsx` | Hash routing, provider state, workspace state, theme state, prefill/chaining state, I18nProvider wrapper, sidebar layout |
 | `src/i18n/I18nContext.tsx` | `I18nProvider`, `useT()` hook, `useLang()` hook, language detection |
-| `src/i18n/es.json` | 203 Spanish UI strings |
-| `src/i18n/en.json` | 203 English UI strings — key set kept in exact parity with `es.json` |
+| `src/i18n/es.json` | 220 Spanish UI strings |
+| `src/i18n/en.json` | 220 English UI strings — key set kept in exact parity with `es.json`, guarded by `src/i18n/keyParity.test.ts` |
 | `src/components/Header.tsx` | Brand, WorkspacePicker, ProviderConfig, Model badge, theme toggle, language toggle |
 | `src/components/Sidebar.tsx` | Collapsible tool nav grouped by category, workspace name, prompt editor link |
 | `src/components/LandingScreen.tsx` | Hero, config strip (ProviderConfig), 9-tool grid |
@@ -298,12 +303,11 @@ Run `npm test` before committing when modifying hooks or services.
 
 ## Known issues (as of 2026-07-16 audit)
 
-A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledger's "review clean" claims did not hold — the reviews checked each task in isolation, not the data flow end to end. Three stacked PRs fixed 10 of the findings (`fix/fase3-audit-bugs` → `fix/fase3-audit-cleanup` → `fix/stream-error-rethrow`; see their descriptions on GitHub for full detail per fix — the last one fixed the mid-stream-errors-silently-swallowed bug by having `useStreamingResponse.stream()` rethrow after recording its state, which also un-swallowed errors thrown from `onComplete` callbacks such as EdgeCaseTool's no-parseable-JSON error). What's left, in priority order:
+A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledger's "review clean" claims did not hold — the reviews checked each task in isolation, not the data flow end to end. Three stacked PRs fixed 10 of the findings (`fix/fase3-audit-bugs` → `fix/fase3-audit-cleanup` → `fix/stream-error-rethrow`; see their descriptions on GitHub for full detail per fix — the last one fixed the mid-stream-errors-silently-swallowed bug by having `useStreamingResponse.stream()` rethrow after recording its state, which also un-swallowed errors thrown from `onComplete` callbacks such as EdgeCaseTool's no-parseable-JSON error). Branch `fix/i18n-leftovers` then closed out the i18n leftovers those PRs deferred (see "Evolution history" below). What's left, in priority order:
 
-1. **i18n leftovers** — hardcoded Spanish outside the audited components: `ExportBar.tsx` (Copiar/Descargar PDF/CSV/TSV), ~12 error-message strings in `apiService.ts` (feeds `<ErrorBanner>` via `err.message` — English users see Spanish errors; 7 `error.*` keys in `es.json`/`en.json` exist for exactly this and sit unused), `ErrorBoundary.tsx` fallback text, `HistoryModal.tsx`, `SearchableSelect.tsx` placeholders. `apiService.ts` is the one non-trivial case: it's a plain module with no React context, so wiring `t()` into it needs a real decision (pass `t` as a parameter? read `lang` from localStorage directly? keep errors as i18n keys and translate at the render boundary?) — don't do it as a mechanical find-replace.
-2. **`saveArtifact` loses the artifact silently on a stale `activeId`.** `App.tsx`'s `saveArtifact` only guards `if (!targetId)`; if `acgen_active_workspace` holds an id absent from `acgen_workspaces` (storage corruption, manual clear, a quota-exceeded write that desynced the two keys), `useWorkspace.addArtifact` no-ops with no error and no toast. Low-probability, silent-data-loss failure mode. Fix: check `workspaces.some(w => w.id === targetId)` and fall through to auto-create if not.
-3. **Custom provider base URL isn't validated.** `App.tsx`: `currentBaseUrl = provider === 'custom' ? (customBaseUrl || undefined) : ...`. An empty custom URL becomes `undefined`, and `apiService.ts` falls back `baseUrl || API_URL` — so an empty Custom URL silently sends the custom API key to **Groq's** endpoint, producing a misleading 401 instead of a "set your base URL" message.
-4. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
+1. **`saveArtifact` loses the artifact silently on a stale `activeId`.** `App.tsx`'s `saveArtifact` only guards `if (!targetId)`; if `acgen_active_workspace` holds an id absent from `acgen_workspaces` (storage corruption, manual clear, a quota-exceeded write that desynced the two keys), `useWorkspace.addArtifact` no-ops with no error and no toast. Low-probability, silent-data-loss failure mode. Fix: check `workspaces.some(w => w.id === targetId)` and fall through to auto-create if not.
+2. **Custom provider base URL isn't validated.** `App.tsx`: `currentBaseUrl = provider === 'custom' ? (customBaseUrl || undefined) : ...`. An empty custom URL becomes `undefined`, and `apiService.ts` falls back `baseUrl || API_URL` — so an empty Custom URL silently sends the custom API key to **Groq's** endpoint, producing a misleading 401 instead of a "set your base URL" message.
+3. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
 
 ## Evolution history
 
@@ -315,5 +319,6 @@ A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledg
 | Fase 3 (v2) | 2026-07-16 | Confidential mode, workspaces, i18n ES/EN, customizable prompts, PWA, multi-provider LLM |
 | Fase 3 audit + fixes | 2026-07-16 | 6-agent parallel audit vs. spec/plan/ledger. Fixed: confidential mode never anonymized the outgoing request (critical), non-Groq model wiped on reload, workspace export didn't download, PWA icons were 1×1 placeholders, substitution-count badge always hidden, 8 stale-language toast handlers, workspace delete had no confirm, TTS crashed without the Speech Synthesis API, 5 lint errors, dead code (`ApiKeyConfig`, `ModelSelector`, `ResultPanel`†, the pre-streaming `generateWithGroq`/`generateCriteria`/`generateTestCases`/`generateBugReport`/`generateTestData`, unused `GroqResponse`/`TestCaseResponse` types, unused `STORAGE_KEYS.API_KEY`). 96 → 168 tests. See "Known issues" above for what's still open. |
 | Post-audit fix | 2026-07-16 | Mid-stream errors no longer silently swallowed: `useStreamingResponse.stream()` rethrows after recording its state, so every tool's existing `catch` (ErrorBanner or toast) finally fires; also un-swallows errors thrown from `onComplete` (EdgeCaseTool's no-parseable-JSON case). 168 → 172 tests. |
+| i18n completion | 2026-07-16 | apiService throws i18n keys + params (I18nError), translated at tool catch blocks; ExportBar, ErrorBoundary (contextType), HistoryModal (+ inline 2-step confirm replacing the last window.confirm), SearchableSelect. Key-parity guard test. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.

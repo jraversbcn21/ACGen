@@ -4,6 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
+import type { I18nError } from '../services/apiService';
 import { STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
@@ -70,7 +71,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
         setStatus('success');
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.unexpected');
+      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
       setError(message);
       setStatus('error');
     } finally {

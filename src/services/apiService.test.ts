@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq } from './apiService';
+import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq, extractJsonArray } from './apiService';
+import type { I18nError } from './apiService';
 
 /** Builds an SSE body that delivers `contentChunks` as separate delta events. */
 function sseResponse(contentChunks: string[]): Response {
@@ -25,6 +26,26 @@ async function collect(chunks: string[], anonymizeMap?: Record<string, string>):
     if (!done) out += token;
   }
   return out;
+}
+
+/** Builds a non-ok Groq error response with the given HTTP status and upstream error message. */
+function errorResponse(status: number, message: string): Response {
+  return {
+    ok: false,
+    status,
+    json: async () => ({ error: { message } }),
+  } as unknown as Response;
+}
+
+async function captureStreamError(status: number, message: string): Promise<I18nError & { status?: number; cause?: unknown }> {
+  vi.stubGlobal('fetch', vi.fn(async () => errorResponse(status, message)));
+  const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+  try {
+    await gen.next();
+  } catch (e) {
+    return e as I18nError & { status?: number; cause?: unknown };
+  }
+  throw new Error('expected streamWithGroq to throw');
 }
 
 describe('streamWithGroq deanonymization', () => {
@@ -56,6 +77,24 @@ describe('streamWithGroq deanonymization', () => {
   });
 });
 
+describe('streamWithGroq HTTP errors', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('throws error.apiKey on 401, preserving status and the upstream message as cause', async () => {
+    const caught = await captureStreamError(401, 'Invalid Authentication');
+    expect(caught.message).toBe('error.apiKey');
+    expect(caught.status).toBe(401);
+    expect(caught.cause).toBe('Invalid Authentication');
+  });
+
+  it('throws error.rateLimit on 429, preserving status and the upstream message as cause', async () => {
+    const caught = await captureStreamError(429, 'Rate limit exceeded, please try again later');
+    expect(caught.message).toBe('error.rateLimit');
+    expect(caught.status).toBe(429);
+    expect(caught.cause).toBe('Rate limit exceeded, please try again later');
+  });
+});
+
 function validCase(overrides: Record<string, unknown> = {}) {
   return {
     key: 'TC-1',
@@ -78,22 +117,34 @@ describe('validateTestCases', () => {
 
   it('throws when testSteps is a string instead of an array', () => {
     const items = [validCase({ testSteps: '1. Abrir la app\n2. Iniciar sesión' })];
-    expect(() => validateTestCases(items)).toThrow(/testSteps/);
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseWrongTypes');
+    expect(String(caught?.params?.fields)).toContain('testSteps');
   });
 
   it('throws when testSteps contains non-string elements', () => {
     const items = [validCase({ testSteps: ['Abrir la app', 42] })];
-    expect(() => validateTestCases(items)).toThrow(/testSteps/);
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseWrongTypes');
+    expect(String(caught?.params?.fields)).toContain('testSteps');
   });
 
   it('throws when a string field is a number', () => {
     const items = [validCase({ priority: 1 })];
-    expect(() => validateTestCases(items)).toThrow(/priority/);
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseWrongTypes');
+    expect(String(caught?.params?.fields)).toContain('priority');
   });
 
   it('throws a clear error when an item is null', () => {
     const items = [validCase(), null];
-    expect(() => validateTestCases(items)).toThrow(/caso de prueba 2/);
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseInvalid');
+    expect(caught?.params?.n).toBe(2);
   });
 });
 
@@ -110,16 +161,25 @@ describe('validateTestDataRows', () => {
 
   it('throws when a row contains a nested object', () => {
     const rows = [{ nombre: 'Maria', direccion: { calle: 'Mayor', numero: 1 } }];
-    expect(() => validateTestDataRows(rows)).toThrow(/direccion/);
+    let caught: I18nError | null = null;
+    try { validateTestDataRows(rows); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordNestedValue');
+    expect(caught?.params?.field).toBe('direccion');
   });
 
   it('throws when a row contains a nested array', () => {
     const rows = [{ nombre: 'Maria', tags: ['a', 'b'] }];
-    expect(() => validateTestDataRows(rows)).toThrow(/tags/);
+    let caught: I18nError | null = null;
+    try { validateTestDataRows(rows); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordNestedValue');
+    expect(caught?.params?.field).toBe('tags');
   });
 
   it('throws when a row is not an object', () => {
-    expect(() => validateTestDataRows(['not-an-object'])).toThrow(/registro 1/);
+    let caught: I18nError | null = null;
+    try { validateTestDataRows(['not-an-object']); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordInvalid');
+    expect(caught?.params?.n).toBe(1);
   });
 });
 
@@ -150,5 +210,57 @@ describe('isModelDecommissioned', () => {
 
   it('returns false for 404 without model keywords', () => {
     expect(isModelDecommissioned('Resource not found', 404)).toBe(false);
+  });
+});
+
+describe('i18n error keys', () => {
+  it('validateTestCases throws the missing-fields key with params', () => {
+    const items = [{ key: 'TC-1', summary: 's', priority: 'p', type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: '' }];
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseMissingFields');
+    expect(caught?.params).toEqual({ n: 1, key: 'TC-1', fields: 'expectedResult' });
+  });
+
+  it('validateTestCases throws the wrong-type key with params', () => {
+    const items = [{ key: 'TC-1', summary: 's', priority: 42, type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: 'r' }];
+    let caught: I18nError | null = null;
+    try { validateTestCases(items); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseWrongTypes');
+    expect(caught?.params).toEqual({ n: 1, key: 'TC-1', fields: 'priority' });
+  });
+
+  it('validateTestCases throws the invalid-object key with the index', () => {
+    let caught: I18nError | null = null;
+    try { validateTestCases([{ key: 'TC-1', summary: 's', priority: 'p', type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: 'r' }, 'nope']); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.testCaseInvalid');
+    expect(caught?.params).toEqual({ n: 2 });
+  });
+
+  it('validateTestDataRows throws the nested-value key with params', () => {
+    let caught: I18nError | null = null;
+    try { validateTestDataRows([{ nombre: 'x', direccion: { calle: 'y' } }]); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordNestedValue');
+    expect(caught?.params).toEqual({ n: 1, field: 'direccion' });
+  });
+
+  it('validateTestDataRows throws the invalid-record key with the index', () => {
+    let caught: I18nError | null = null;
+    try { validateTestDataRows(['not-an-object']); } catch (e) { caught = e as I18nError; }
+    expect(caught?.message).toBe('error.recordInvalid');
+    expect(caught?.params).toEqual({ n: 1 });
+  });
+
+  it('extractJsonArray throws error.invalidJson on garbage', () => {
+    expect(() => extractJsonArray('not json at all')).toThrow('error.invalidJson');
+  });
+
+  it('every thrown key exists in both dictionaries', async () => {
+    const es = (await import('../i18n/es.json')).default as Record<string, string>;
+    const en = (await import('../i18n/en.json')).default as Record<string, string>;
+    for (const key of ['error.invalidJson', 'error.noTestCaseArray', 'error.invalidFormat', 'error.testCaseInvalid', 'error.testCaseMissingFields', 'error.testCaseWrongTypes', 'error.apiKey', 'error.rateLimit', 'error.modelDecommissioned', 'error.recordInvalid', 'error.recordNestedValue']) {
+      expect(es[key], `missing in es: ${key}`).toBeTruthy();
+      expect(en[key], `missing in en: ${key}`).toBeTruthy();
+    }
   });
 });
