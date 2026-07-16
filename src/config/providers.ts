@@ -59,3 +59,18 @@ export function sanitizeModel(providerId: string, model: string): string {
   if (def.models.length === 0) return model;
   return def.models.includes(model) ? model : def.defaultModel;
 }
+
+/**
+ * A custom provider's base URL is free text; an empty one would silently fall
+ * back to the default (Groq) endpoint downstream, sending the wrong key to the
+ * wrong host. Callers branch on the status to block or explain instead.
+ */
+export function baseUrlStatus(url: string): 'missing' | 'invalid' | 'valid' {
+  if (!url.trim()) return 'missing';
+  try {
+    new URL(url);
+    return 'valid';
+  } catch {
+    return 'invalid';
+  }
+}

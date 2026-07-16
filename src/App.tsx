@@ -60,7 +60,10 @@ export default function App() {
   }, [provider, apiKey, openrouterKey, customKey]);
 
   const currentBaseUrl = useMemo(() => {
-    if (provider === 'custom') return customBaseUrl || undefined;
+    // Pass the custom URL through even when empty: streamWithGroq validates a
+    // DEFINED baseUrl and throws error.baseUrlMissing/Invalid, instead of the
+    // empty string silently falling back to Groq's endpoint downstream.
+    if (provider === 'custom') return customBaseUrl;
     return PROVIDERS[provider]?.baseUrl;
   }, [provider, customBaseUrl]);
 

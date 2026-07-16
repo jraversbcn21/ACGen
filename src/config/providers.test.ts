@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PROVIDERS, getProvider, DEFAULT_PROVIDER, sanitizeModel } from './providers';
+import { PROVIDERS, getProvider, DEFAULT_PROVIDER, sanitizeModel, baseUrlStatus } from './providers';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from './constants';
 
 describe('PROVIDERS', () => {
@@ -54,5 +54,27 @@ describe('sanitizeModel', () => {
 
   it('falls back to the groq default for an unknown provider with an invalid model', () => {
     expect(sanitizeModel('nonexistent', 'whatever')).toBe(DEFAULT_MODEL);
+  });
+});
+
+describe('baseUrlStatus', () => {
+  it('reports missing for an empty string', () => {
+    expect(baseUrlStatus('')).toBe('missing');
+  });
+
+  it('reports missing for whitespace only', () => {
+    expect(baseUrlStatus('   ')).toBe('missing');
+  });
+
+  it('reports invalid for a non-parseable URL', () => {
+    expect(baseUrlStatus('not a url')).toBe('invalid');
+  });
+
+  it('reports valid for a well-formed https URL', () => {
+    expect(baseUrlStatus('https://api.example.com/v1/chat/completions')).toBe('valid');
+  });
+
+  it('reports valid for a localhost URL with port', () => {
+    expect(baseUrlStatus('http://localhost:11434/v1/chat/completions')).toBe('valid');
   });
 });
