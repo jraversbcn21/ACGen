@@ -37,12 +37,12 @@ describe('useLocalStorage', () => {
     expect(result.current[0]).toBe('fallback');
   });
 
-  it('discards stale acgen_model and returns DEFAULT_MODEL', () => {
-    localStorage.setItem('acgen_model', JSON.stringify('old-deprecated-model'));
+  it('returns a stored non-Groq acgen_model unchanged (model validation is provider-aware, not the hook job)', () => {
+    localStorage.setItem('acgen_model', JSON.stringify('anthropic/claude-sonnet-4'));
     const { result } = renderHook(() => useLocalStorage('acgen_model', DEFAULT_MODEL));
 
-    expect(result.current[0]).toBe(DEFAULT_MODEL);
-    expect(localStorage.getItem('acgen_model')).toBeNull();
+    expect(result.current[0]).toBe('anthropic/claude-sonnet-4');
+    expect(localStorage.getItem('acgen_model')).toBe(JSON.stringify('anthropic/claude-sonnet-4'));
   });
 
   it('keeps valid acgen_model that exists in AVAILABLE_MODELS', () => {

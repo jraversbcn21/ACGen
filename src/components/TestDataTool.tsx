@@ -7,7 +7,7 @@ import { streamWithGroq, extractJsonArray, validateTestDataRows, getPrompt } fro
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize } from '../services/anonymizer';
+import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -120,7 +120,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
-  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
   const t = useT();
@@ -159,25 +159,21 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
-      setConfMap(null);
+      setConf(null);
     }
   }, [apiKey, model, profile, stream, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
     const userMessage = buildTestDataMessage(formData);
-    const confKey = `acgen_confidential_testdata`;
-    const confEnabled = localStorage.getItem(confKey) === 'true';
-    if (confEnabled) {
-      const { map } = anonymize(userMessage);
+    if (localStorage.getItem('acgen_confidential_testdata') === 'true') {
+      const { text, map } = anonymize(userMessage);
       if (Object.keys(map).length > 0) {
-        setConfMap(map);
+        setConf({ text, map });
         return;
       }
-      await doGenerate(userMessage);
-    } else {
-      await doGenerate(userMessage);
     }
+    await doGenerate(userMessage);
   }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
 
   useEffect(() => {
@@ -327,10 +323,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         <ConfidentialToggle
           view="testdata"
           substitutionCount={0}
-          onReview={() => {
-            const { map } = anonymize(buildTestDataMessage(formData));
-            setConfMap(map);
-          }}
+          onReview={() => setConf(anonymize(buildTestDataMessage(formData)))}
         />
         <GenerateButton
           onClick={handleGenerate}
@@ -411,13 +404,14 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
-      {confMap && (
+      {conf && (
         <AnonymizerReview
-          map={confMap}
-          onCancel={() => setConfMap(null)}
-          onConfirm={(editedMap) => {
-            doGenerate(buildTestDataMessage(formData), editedMap);
-            setConfMap(null);
+          map={conf.map}
+          onCancel={() => setConf(null)}
+          onConfirm={(edits) => {
+            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
+            doGenerate(text, map);
+            setConf(null);
           }}
         />
       )}

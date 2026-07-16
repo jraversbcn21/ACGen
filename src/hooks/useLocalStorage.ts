@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../config/constants';
 
 const LOCAL_SYNC_EVENT = 'acgen-local-storage';
 
@@ -13,12 +12,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     try {
       const item = localStorage.getItem(key);
       if (item) {
-        const parsed = JSON.parse(item) as T;
-        if (key === 'acgen_model' && typeof parsed === 'string' && !AVAILABLE_MODELS.includes(parsed)) {
-          localStorage.removeItem(key);
-          return DEFAULT_MODEL as T;
-        }
-        return parsed;
+        return JSON.parse(item) as T;
       }
       return initialValue;
     } catch {

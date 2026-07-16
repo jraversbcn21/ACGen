@@ -5,7 +5,7 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq, extractJsonArray, validateTestCases, getPrompt } from '../services/apiService';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize } from '../services/anonymizer';
+import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -41,7 +41,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const [error, setError] = useState<string | null>(null);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
-  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
   const t = useT();
@@ -77,24 +77,20 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setStatus('error');
       setTestCases([]);
     } finally {
-      setConfMap(null);
+      setConf(null);
     }
   }, [apiKey, model, profile, stream, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || status === 'loading' || isStreaming) return;
-    const confKey = `acgen_confidential_testcase`;
-    const confEnabled = localStorage.getItem(confKey) === 'true';
-    if (confEnabled) {
-      const { map } = anonymize(input);
+    if (localStorage.getItem('acgen_confidential_testcase') === 'true') {
+      const { text, map } = anonymize(input);
       if (Object.keys(map).length > 0) {
-        setConfMap(map);
+        setConf({ text, map });
         return;
       }
-      await doGenerate(input);
-    } else {
-      await doGenerate(input);
     }
+    await doGenerate(input);
   }, [canGenerate, status, isStreaming, input, doGenerate]);
 
   useEffect(() => {
@@ -207,10 +203,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         <ConfidentialToggle
           view="testcase"
           substitutionCount={0}
-          onReview={() => {
-            const { map } = anonymize(input);
-            setConfMap(map);
-          }}
+          onReview={() => setConf(anonymize(input))}
         />
         <GenerateButton
           onClick={handleGenerate}
@@ -293,13 +286,14 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
-      {confMap && (
+      {conf && (
         <AnonymizerReview
-          map={confMap}
-          onCancel={() => setConfMap(null)}
-          onConfirm={(editedMap) => {
-            doGenerate(input, editedMap);
-            setConfMap(null);
+          map={conf.map}
+          onCancel={() => setConf(null)}
+          onConfirm={(edits) => {
+            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
+            doGenerate(text, map);
+            setConf(null);
           }}
         />
       )}

@@ -37,3 +37,42 @@ export function deanonymize(text: string, map: SubMap): string {
   }
   return result;
 }
+
+/**
+ * Rewrites the placeholders the user renamed in the review modal, keeping the
+ * outgoing text and the restore map in sync. A blank rename is ignored — without
+ * a placeholder in the text the original value could not be restored.
+ */
+export function applyPlaceholderEdits(
+  text: string,
+  map: SubMap,
+  edits: Record<string, string>,
+): { text: string; map: SubMap } {
+  let result = text;
+  const nextMap: SubMap = {};
+
+  for (const [placeholder, original] of Object.entries(map)) {
+    const edited = edits[placeholder]?.trim();
+    const replacement = edited || placeholder;
+    if (replacement !== placeholder) {
+      result = result.split(placeholder).join(replacement);
+    }
+    nextMap[replacement] = original;
+  }
+
+  return { text: result, map: nextMap };
+}
+
+/** A placeholder mid-stream: `[`, then the prefix, then `_`, then the counter. */
+const PARTIAL_PLACEHOLDER = /\[[A-Z]*(?:_\d*)?$/;
+
+/**
+ * Splits streamed text into the part safe to emit and a tail that may still grow
+ * into a placeholder. Without this, a placeholder split across two SSE chunks
+ * (`[EMA` + `IL_1]`) would never match the restore map and would reach the user raw.
+ */
+export function splitPendingPlaceholder(text: string): [emit: string, pending: string] {
+  const match = PARTIAL_PLACEHOLDER.exec(text);
+  if (!match) return [text, ''];
+  return [text.slice(0, match.index), text.slice(match.index)];
+}
