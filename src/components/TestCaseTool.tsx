@@ -202,7 +202,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       <div className="actions-bar">
         <ConfidentialToggle
           view="testcase"
-          substitutionCount={0}
+          text={input}
           onReview={() => setConf(anonymize(input))}
         />
         <GenerateButton

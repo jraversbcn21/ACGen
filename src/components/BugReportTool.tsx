@@ -461,7 +461,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       <div className="actions-bar">
         <ConfidentialToggle
           view="bugreport"
-          substitutionCount={0}
+          text={buildBugReportMessage(formData)}
           onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
         />
         <GenerateButton

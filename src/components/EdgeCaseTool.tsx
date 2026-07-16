@@ -107,10 +107,8 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         <div className="actions-bar">
           <ConfidentialToggle
             view="edgecase"
-            substitutionCount={0}
-            onReview={() => {
-              setConf(anonymize(requirement));
-            }}
+            text={requirement}
+            onReview={() => setConf(anonymize(requirement))}
           />
           <GenerateButton
             onClick={handleGenerate}

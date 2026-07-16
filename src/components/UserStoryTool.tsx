@@ -102,10 +102,8 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
         <div className="actions-bar">
           <ConfidentialToggle
             view="userstory"
-            substitutionCount={0}
-            onReview={() => {
-              setConf(anonymize(idea));
-            }}
+            text={idea}
+            onReview={() => setConf(anonymize(idea))}
           />
           <GenerateButton
             onClick={handleGenerate}

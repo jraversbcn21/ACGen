@@ -137,7 +137,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         <div className="actions-bar">
           <ConfidentialToggle
             view="converter"
-            substitutionCount={0}
+            text={buildEffectiveInput()}
             onReview={() => setConf(anonymize(buildEffectiveInput()))}
           />
           <GenerateButton

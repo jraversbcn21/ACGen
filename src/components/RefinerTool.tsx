@@ -102,10 +102,8 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
         <div className="actions-bar">
           <ConfidentialToggle
             view="refiner"
-            substitutionCount={0}
-            onReview={() => {
-              setConf(anonymize(requirement));
-            }}
+            text={requirement}
+            onReview={() => setConf(anonymize(requirement))}
           />
           <GenerateButton
             onClick={handleGenerate}

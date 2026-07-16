@@ -305,7 +305,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       <div className="actions-bar">
         <ConfidentialToggle
           view="acceptance"
-          substitutionCount={0}
+          text={buildEffectiveInput()}
           onReview={() => setConf(anonymize(buildEffectiveInput()))}
         />
         <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
