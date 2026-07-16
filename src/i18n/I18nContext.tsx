@@ -5,7 +5,7 @@ import en from './en.json';
 
 type Lang = 'es' | 'en';
 
-interface I18nContextValue {
+export interface I18nContextValue {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -13,7 +13,7 @@ interface I18nContextValue {
 
 const translations: Record<Lang, Record<string, string>> = { es, en };
 
-const I18nContext = createContext<I18nContextValue | null>(null);
+export const I18nContext = createContext<I18nContextValue | null>(null);
 
 function detectLang(): Lang {
   try {
