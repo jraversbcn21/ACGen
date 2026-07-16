@@ -333,8 +333,6 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
           loading={isLoading}
-          label="Generar datos de prueba"
-          loadingLabel="Generando..."
         />
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>

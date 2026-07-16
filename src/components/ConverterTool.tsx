@@ -145,8 +145,6 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
             loading={loading || isStreaming}
-            label="Convertir"
-            loadingLabel="Convirtiendo..."
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!input && !result}>
             Limpiar

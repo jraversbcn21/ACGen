@@ -120,8 +120,6 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
             loading={loading || isStreaming}
-            label="Generar casos limite"
-            loadingLabel="Generando..."
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && edgeCases.length === 0}>
             Limpiar

@@ -1,12 +1,14 @@
+import { useT } from '../i18n/I18nContext';
+
 interface GenerateButtonProps {
   onClick: () => void;
   disabled: boolean;
   loading: boolean;
-  label?: string;
-  loadingLabel?: string;
 }
 
-export function GenerateButton({ onClick, disabled, loading, label, loadingLabel }: GenerateButtonProps) {
+export function GenerateButton({ onClick, disabled, loading }: GenerateButtonProps) {
+  const t = useT();
+
   return (
     <button
       type="button"
@@ -17,10 +19,10 @@ export function GenerateButton({ onClick, disabled, loading, label, loadingLabel
       {loading ? (
         <>
           <span className="spinner-new" />
-          {loadingLabel || 'Generando...'}
+          {t('common.generating')}
         </>
       ) : (
-        label || 'Generar criterios de aceptación'
+        t('common.generate')
       )}
     </button>
   );

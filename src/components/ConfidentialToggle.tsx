@@ -1,5 +1,6 @@
 // src/components/ConfidentialToggle.tsx
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useT } from '../i18n/I18nContext';
 import type { ViewType } from '../config/constants';
 
 interface ConfidentialToggleProps {
@@ -10,6 +11,7 @@ interface ConfidentialToggleProps {
 
 export function ConfidentialToggle({ view, substitutionCount, onReview }: ConfidentialToggleProps) {
   const [enabled, setEnabled] = useLocalStorage(`acgen_confidential_${view}`, false);
+  const t = useT();
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -20,7 +22,7 @@ export function ConfidentialToggle({ view, substitutionCount, onReview }: Confid
           onChange={(e) => setEnabled(e.target.checked)}
           style={{ accentColor: 'var(--accent)' }}
         />
-        Modo confidencial
+        {t('confidential.toggle')}
       </label>
       {enabled && substitutionCount > 0 && (
         <button
@@ -29,7 +31,7 @@ export function ConfidentialToggle({ view, substitutionCount, onReview }: Confid
           onClick={onReview}
           style={{ fontSize: 12, padding: '2px 8px' }}
         >
-          {substitutionCount} sustituciones — Revisar
+          {substitutionCount} {t('confidential.review')}
         </button>
       )}
     </div>

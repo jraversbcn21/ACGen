@@ -1,6 +1,7 @@
 import { ApiKeyConfig } from './ApiKeyConfig';
 import { ModelSelector } from './ModelSelector';
 import { Icon } from './Icons';
+import { useT } from '../i18n/I18nContext';
 
 interface LandingScreenProps {
   onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker') => void;
@@ -14,76 +15,78 @@ const tools = [
   {
     id: 'acceptance' as const,
     icon: Icon.criterios,
-    title: 'Criterios de aceptación',
-    desc: 'Genera criterios desde requerimientos funcionales',
+    titleKey: 'landing.tool.acceptance',
+    descKey: 'landing.tool.acceptanceDesc',
     tag: 'QA',
   },
   {
     id: 'testcase' as const,
     icon: Icon.testcase,
-    title: 'Test Case Generator',
-    desc: 'Genera casos de prueba QA para ecommerce',
+    titleKey: 'landing.tool.testcase',
+    descKey: 'landing.tool.testcaseDesc',
     tag: 'QA',
   },
   {
     id: 'bugreport' as const,
     icon: Icon.bug,
-    title: 'Bug Report Generator',
-    desc: 'Genera reportes de bugs estructurados para Jira',
+    titleKey: 'landing.tool.bugreport',
+    descKey: 'landing.tool.bugreportDesc',
     tag: 'QA',
   },
   {
     id: 'testdata' as const,
     icon: Icon.datos,
-    title: 'Datos de Prueba',
-    desc: 'Genera datos de prueba realistas por mercado',
+    titleKey: 'landing.tool.testdata',
+    descKey: 'landing.tool.testdataDesc',
     tag: 'Datos',
   },
   {
     id: 'userstory' as const,
     icon: Icon.userstory,
-    title: 'Historias de Usuario',
-    desc: 'Genera historias en formato Como/Quiero/Para + INVEST',
+    titleKey: 'landing.tool.userstory',
+    descKey: 'landing.tool.userstoryDesc',
     tag: 'PO',
   },
   {
     id: 'refiner' as const,
     icon: Icon.refiner,
-    title: 'Refinador de Requisitos',
-    desc: 'Detecta ambiguedades, contradicciones e info faltante',
+    titleKey: 'landing.tool.refiner',
+    descKey: 'landing.tool.refinerDesc',
     tag: 'Analisis',
   },
   {
     id: 'edgecase' as const,
     icon: Icon.edgecase,
-    title: 'Casos Limite',
-    desc: 'Genera edge cases: frontera, vacios, concurrencia, i18n',
+    titleKey: 'landing.tool.edgecase',
+    descKey: 'landing.tool.edgecaseDesc',
     tag: 'QA',
   },
   {
     id: 'converter' as const,
     icon: Icon.converter,
-    title: 'Conversor de Formatos',
-    desc: 'Convierte entre Gherkin, Markdown, Jira wiki, Azure DevOps',
+    titleKey: 'landing.tool.converter',
+    descKey: 'landing.tool.converterDesc',
     tag: 'Util',
   },
   {
     id: 'sprinttracker' as const,
     icon: Icon.sprint,
-    title: 'Sprint Tracker',
-    desc: 'Dashboard de tracking de tickets por sprint',
+    titleKey: 'landing.tool.sprinttracker',
+    descKey: 'landing.tool.sprinttrackerDesc',
     tag: 'Tracking',
   },
 ];
 
 export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModelChange }: LandingScreenProps) {
+  const t = useT();
+
   return (
     <>
       <div className="hero">
-        <p className="eyebrow">Sesión de QA · Quality Assurance</p>
+        <p className="eyebrow">{t('landing.qaSession')} · {t('landing.eyebrow')}</p>
         <h1 className="hero-title">
           <span className="b">AC</span>Gen{' '}
-          <span className="greet-serif">¿En qué quieres trabajar hoy?</span>
+          <span className="greet-serif">{t('landing.greeting')}</span>
         </h1>
       </div>
 
@@ -93,22 +96,22 @@ export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModel
       </div>
 
       <div className="sec-head">
-        <h2 className="sec-title">Generadores</h2>
+        <h2 className="sec-title">{t('landing.generators')}</h2>
         <span className="sec-count">05</span>
       </div>
 
       <div className="tool-list">
-        {tools.map((t, i) => {
+        {tools.map((tool, i) => {
           const num = String(i + 1).padStart(2, '0');
           return (
-            <button key={t.id} type="button" className="tool-row" onClick={() => onSelect(t.id)}>
+            <button key={tool.id} type="button" className="tool-row" onClick={() => onSelect(tool.id)}>
               <span className="row-num">{num}</span>
-              <span className="tool-ico"><t.icon size={22} /></span>
+              <span className="tool-ico"><tool.icon size={22} /></span>
               <div className="row-body">
-                <span className="row-title">{t.title}</span>
-                <span className="row-desc">{t.desc}</span>
+                <span className="row-title">{t(tool.titleKey)}</span>
+                <span className="row-desc">{t(tool.descKey)}</span>
               </div>
-              <span className="row-tag">{t.tag}</span>
+              <span className="row-tag">{tool.tag}</span>
               <span className="row-arrow"><Icon.arrow size={20} /></span>
             </button>
           );
@@ -117,7 +120,7 @@ export function LandingScreen({ onSelect, apiKey, onApiKeyChange, model, onModel
 
       <div className="add-slot">
         <span className="add-plus">+</span>
-        Más generadores próximamente
+        {t('landing.moreComing')}
       </div>
     </>
   );

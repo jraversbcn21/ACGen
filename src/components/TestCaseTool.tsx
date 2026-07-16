@@ -217,8 +217,6 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
           loading={status === 'loading'}
-          label="Generar casos de prueba"
-          loadingLabel="Generando..."
         />
         <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
         <button

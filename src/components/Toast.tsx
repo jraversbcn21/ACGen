@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useT } from '../i18n/I18nContext';
 
 interface ToastData {
   message: string;
@@ -22,12 +23,13 @@ export function useToast() {
 }
 
 export function Toast({ toast }: { toast: ToastData | null }) {
+  const t = useT();
   if (!toast) return null;
   return (
     <div className="toast">
       <span>{toast.message}</span>
       {toast.undo && (
-        <button type="button" className="toast-undo" onClick={toast.undo}>Deshacer</button>
+        <button type="button" className="toast-undo" onClick={toast.undo}>{t('common.undo')}</button>
       )}
     </div>
   );

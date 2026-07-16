@@ -114,8 +114,6 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
             loading={loading || isStreaming}
-            label="Analizar requisito"
-            loadingLabel="Analizando..."
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !result}>
             Limpiar

@@ -114,8 +114,6 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
             loading={loading || isStreaming}
-            label="Generar historia"
-            loadingLabel="Generando..."
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!idea && !result}>
             Limpiar

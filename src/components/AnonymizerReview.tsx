@@ -1,5 +1,6 @@
 // src/components/AnonymizerReview.tsx
 import { useEffect, useState } from 'react';
+import { useT } from '../i18n/I18nContext';
 
 interface AnonymizerReviewProps {
   map: Record<string, string>;
@@ -10,6 +11,7 @@ interface AnonymizerReviewProps {
 export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewProps) {
   const entries = Object.entries(map);
   const [edited, setEdited] = useState<Record<string, string>>({ ...map });
+  const t = useT();
 
   useEffect(() => {
     if (entries.length === 0) {
@@ -20,16 +22,16 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
-        <h2 style={{ margin: '0 0 4px' }}>Revision de datos — Modo Confidencial</h2>
+        <h2 style={{ margin: '0 0 4px' }}>{t('confidential.title')}</h2>
         <p style={{ margin: '0 0 16px', color: 'var(--text-2)', fontSize: 14 }}>
-          Se detectaron {entries.length} datos sensibles. Revisa los reemplazos antes de enviar.
+          {t('confidential.subtitle', { count: entries.length })}
         </p>
         <div style={{ maxHeight: 360, overflowY: 'auto', marginBottom: 16 }}>
           <table className="data-table" style={{ width: '100%' }}>
             <thead>
               <tr>
-                <th style={{ width: '40%' }}>Original</th>
-                <th style={{ width: '60%' }}>Se enviara como</th>
+                <th style={{ width: '40%' }}>{t('confidential.original')}</th>
+                <th style={{ width: '60%' }}>{t('confidential.sentAs')}</th>
               </tr>
             </thead>
             <tbody>
@@ -51,9 +53,9 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
           </table>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button type="button" className="btn-ghost" onClick={onCancel}>Cancelar</button>
+          <button type="button" className="btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
           <button type="button" className="btn-primary" onClick={() => onConfirm(edited)}>
-            Confirmar y enviar
+            {t('confidential.confirmSend')}
           </button>
         </div>
       </div>

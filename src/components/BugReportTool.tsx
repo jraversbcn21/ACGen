@@ -472,8 +472,6 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
           onClick={handleGenerate}
           disabled={!canGenerate || isStreaming}
           loading={isLoading || isStreaming}
-          label="Generar bug report"
-          loadingLabel="Generando..."
         />
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
