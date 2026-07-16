@@ -14,81 +14,201 @@
 
 ## Testing
 
-Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are tested, plus service-layer validation and the global `ErrorBoundary` (the only component test, justified by its class-lifecycle logic).
+Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are tested, plus service-layer validation and the global `ErrorBoundary`.
 
 | Test file | Tests |
 |---|---|
 | `src/services/apiService.test.ts` | 17 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection) |
-| `src/hooks/useSprints.test.ts` | 20 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint (removes column-widths key), moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration (with and without JSD tab), quota-exceeded resilience |
-| `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience |
-| `src/hooks/useHistory.test.ts` | 11 — add, max entries, load from history, clear, quota-exceeded resilience |
-| `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches render crash, recovers on reset |
+| `src/services/anonymizer.test.ts` | 13 — all 7 regex patterns, edge cases, round-trip identity |
+| `src/hooks/useSprints.test.ts` | 20 — init, add, archive, update, delete, moveRow, persistence, hydration, recovery |
+| `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, cross-tab sync, ignore unrelated keys, quota resilience |
+| `src/hooks/useHistory.test.ts` | 11 — add, max entries, load, clear, quota resilience |
+| `src/hooks/useWorkspace.test.ts` | 12 — CRUD, artifact cap at 50, export/import, validation |
+| `src/config/providers.test.ts` | 6 — provider definitions, unknown-id fallback |
+| `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches crash, recovers on reset |
 
-**Total: 65 tests across 5 files.**
+**Total: 96 tests across 8 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
 ## Architecture
 
-- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser.
-- **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library. The view router is wrapped in `<ErrorBoundary key={view}>`: a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recoverable fallback (message + "Reintentar" button). Keyed by `view` so switching tools remounts it and clears any stuck error state.
-- **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
-- **`useLocalStorage` cross-instance/cross-tab sync**: on write, dispatches a custom `acgen-local-storage` window event (same-tab instances sharing a key stay in sync) and listens for the native `storage` event (cross-tab sync; `newValue: null` resets to `initialValue`). All `localStorage.setItem` calls are wrapped in try/catch so `QuotaExceededError` degrades to a console error instead of crashing the render.
-- **GROQ API** (`api.groq.com/openai/v1/chat/completions`) called via `fetch`. Temperature fixed at `0.2`.
-- **Design tokens** in `:root` (invariants) and `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`, `--danger/--success/--warning` with `-bg` variants. Fonts: Manrope (`--font-ui`), Newsreader italic (`--font-serif`), JetBrains Mono (`--font-mono`).
-- **Theme**: light/dark via `[data-theme]` attribute on `<html>`. Applied synchronously from localStorage before first paint to avoid flash, then kept in sync via `useEffect`. Toggle button in Header topbar. Defaults to `'light'`.
-- **SVG Icons**: `src/components/Icons.tsx` exports an `Icon` object with named components (criterios, testcase, bug, datos, sprint, eye, eyeOff, sun, moon, spark, arrow, chevron, back). All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
-- **Shared CSS primitives** in `App.css`: form fields, buttons, tables, badges, reasoning + TTS sections, Jira config, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback.
+- **React 18 SPA**, Vite 5, TypeScript. 100% static deploy. All core logic in-browser.
+- **Hash-based routing** (`#/landing`, `#/acceptance`, `#/testcase`, etc.) via `getViewFromHash()` + `hashchange` listener. `navigate(view, { prefill? })` callback. Browser back/forward and F5 work.
+- **ViewType**: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter'`
+- **App shell**: `<I18nProvider>` > `<div className="page">` > `<Header>` + `<div className="app-layout">` > `<Sidebar>` + `<main className="container">`. Sidebar hidden on landing.
+- **Sidebar**: collapsible icon-nav grouped by category (Generar/Refinar/Convertir/Seguimiento) + active workspace name + prompt editor link. Active highlight via hash.
+- **View router** wrapped in `<ErrorBoundary key={view}>`: class component with `getDerivedStateFromError`/`componentDidCatch`, renders recoverable fallback. Keyed by `view` so switching tools remounts it.
+- **Settings persistence**: API keys stored per provider (`acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`). Model stored as `acgen_model`. Provider stored as `acgen_provider`. Theme as `acgen_theme`. Language as `acgen_lang`. Workspaces as `acgen_workspaces`. Project profile as `acgen_project_profile`. History, sprints, and sprint configs in their own keys.
+- **`useLocalStorage` cross-instance/cross-tab sync**: dispatches custom `acgen-local-storage` window event + listens for native `storage` event. All writes wrapped in try/catch for `QuotaExceededError`.
+- **LLM API**: provider-agnostic via `baseUrl` parameter. Supports Groq (default), OpenRouter, and Custom (any OpenAI-compatible endpoint). Called via `fetch` with SSE streaming. Temperature fixed at `0.2`.
+- **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
+- **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
+- **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (~200 keys). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
+- **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, export bar in `App.css`.
+- **PWA**: `vite-plugin-pwa` with `autoUpdate` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts.
+
+## Tools (9 total)
+
+### Generar (Generate)
+
+| Tool | View | Key files | LLM? |
+|---|---|---|---|
+| Criterios de Aceptacion | `acceptance` | `AcceptanceCriteriaTool.tsx` | Yes — `criteria` |
+| Casos de Prueba | `testcase` | `TestCaseTool.tsx` | Yes — `testcase` |
+| Bug Report | `bugreport` | `BugReportTool.tsx` | Yes — `criteria` |
+| Datos de Prueba | `testdata` | `TestDataTool.tsx` | Yes — `testcase` |
+| Historias de Usuario | `userstory` | `UserStoryTool.tsx` | Yes — `criteria` |
+
+### Refinar (Refine)
+
+| Tool | View | Key files | LLM? |
+|---|---|---|---|
+| Refinador de Requisitos | `refiner` | `RefinerTool.tsx` | Yes — `criteria` |
+| Casos Limite | `edgecase` | `EdgeCaseTool.tsx` | Yes — `testcase` |
+
+### Convertir (Convert)
+
+| Tool | View | Key files | LLM? |
+|---|---|---|---|
+| Conversor de Formatos | `converter` | `ConverterTool.tsx` | Yes — `criteria` |
+
+### Seguimiento (Track)
+
+| Tool | View | Key files | LLM? |
+|---|---|---|---|
+| Sprint Tracker | `sprinttracker` | `SprintTracker.tsx`, `SprintList.tsx`, `SprintDashboard.tsx` | No (offline) |
+
+## Cross-cutting features
+
+### Confidential mode (Modo confidencial)
+
+- `src/services/anonymizer.ts` — `anonymize(text)` / `deanonymize(text, map)` with 7 regex patterns in order: EMAIL, URL, IP, TICKET, PHONE, DOMAIN, NAME
+- `<ConfidentialToggle>` — per-tool checkbox, persisted as `acgen_confidential_{view}` in localStorage
+- `<AnonymizerReview>` — modal showing substitution table before API call, allows editing replacements
+- `streamWithGroq()` accepts `anonymizeMap` parameter — deanonymizes streaming tokens in real time
+- Opt-in (off by default). Review modal shown before every API call when enabled
+
+### Workspaces
+
+- `src/types/workspace.ts` — `Workspace { id, name, createdAt, artifacts[] }`, `Artifact { id, tool, input, output, timestamp }`
+- `useWorkspace()` hook — CRUD, export/import JSON, artifact cap at 50
+- `<WorkspacePicker>` in Header — dropdown with create/rename/delete/select/export/import
+- Auto-save: each successful generation saves artifact to active workspace. Auto-creates default "Sin nombre" workspace on first use.
+- Sidebar shows active workspace name
+
+### Project profile
+
+- `src/types/context.ts` — `ProjectProfile { domain, productType, markets, terminology, tone }`
+- `DEFAULT_PROFILE` with ecommerce defaults
+- `useProfile()` hook — persisted in localStorage
+- `interpolateProfile(prompt, profile)` — replaces `{dominio}`, `{tipoProducto}`, `{mercados}`, `{terminologia}`, `{tono}` placeholders
+- All prompts in `constants.ts` use these placeholders
+
+### Customizable prompts
+
+- `getPrompt(tool)` — reads override from `acgen_prompt_{tool}` in localStorage, falls back to `DEFAULT_PROMPTS[tool]`
+- `<PromptEditor>` — modal with per-tool selection, textarea, save/reset. Accessible from Sidebar gear icon
+- All 8 LLM tools use `getPrompt()` instead of importing prompt constants directly
+
+### Demo mode
+
+- `src/config/demoData.ts` — `DEMO_DATA` object with pre-generated input/output for each tool
+- "Ver ejemplo" button fills input + shows output without requiring API key
+
+### Artifact chaining
+
+- `<ChainMenu>` — dropdown on each tool's output showing valid destination tools
+- `CHAIN_RULES` maps source view to available destinations
+- `navigate()` supports `{ prefill: text }` to pre-fill destination tool input
+- Tools: AcceptanceCriteria, UserStory, Refiner accept `prefill` prop
+
+### Multi-provider LLM
+
+- `src/config/providers.ts` — `PROVIDERS` registry with Groq (5 models), OpenRouter (8 models), Custom (free-text)
+- `<ProviderConfig>` — unified component replacing old ApiKeyConfig + ModelSelector. Provider dropdown dynamically changes model list. Custom provider shows base URL input.
+- Per-provider API keys: `acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`
+- Auto-migration: old `acgen_api_key` → `acgen_key_groq` on first load
+- `streamWithGroq()` + all helper functions accept `baseUrl` parameter
+
+### UX
+
+- **Ctrl+Enter** shortcut on all LLM tools triggers generate
+- `<Toast>` with `useToast()` — 4s auto-dismiss, undo support for clear actions. Replaces `window.confirm`
+- `<GenerateButton>` — loading-aware button with spinning state
+
+## Per-tool details
 
 ### Acceptance Criteria
 
-- System prompt (`HARDCODED_PROMPT` in `constants.ts`) — instructions + Confluence wiki format template with `{panel}`, `{quote}`, `*Dado*`, `*Cuando*`, `*Entonces*` markers.
-- `generateCriteria()` calls `generateWithGroq()` with `REQUIRED_MARKERS`. Missing markers -> error with list of missing elements.
-- Returns `GroqResponse` (`{ content, model, reasoning? }`). Reasoning captured from API and displayed with TTS controls.
-- **History**: saves last 10 successful generations to localStorage (`acgen_criteria_history`) via `useHistory()`.
-- **Jira integration**: If a Jira ticket URL or bare key appears in the requirements input, the ticket context is appended to the user's text (not replaced). If Jira is not configured, a warning is shown but generation proceeds with the typed text only.
+- System prompt (`HARDCODED_PROMPT`) — Confluence wiki format with `{panel}`, `{quote}`, `*Dado*`, `*Cuando*`, `*Entonces*`
+- `REQUIRED_MARKERS` validate response format. Missing markers → error listing missing elements.
+- Streaming output in editable textarea. ChainMenu for sending to Refiner, TestCase, BugReport.
 
 ### Test Cases
 
-- System prompt (`TESTCASE_PROMPT` in `constants.ts`) — JSON array (`key`, `summary`, `priority`, `type`, `preconditions`, `testSteps`, `expectedResult`).
-- `generateTestCases()` calls `generateWithGroq()` (empty markers), then `extractJsonArray()` + `validateTestCases()`. Rejects empty arrays. `validateTestCases()` checks both presence **and type** of every field.
-- Returns `TestCaseResponse` (`{ testCases: TestCaseData[], model }`).
-- Rendered as HTML table with priority badges (`.badge-high/medium/low`) and type badges (`.badge-positive/negative`), numbered step lists.
-- Actions: "Copiar como tabla Jira" (Confluence wiki table — `|` escaped as `&#124;`), "Descargar PDF" (jsPDF + jspdf-autotable).
+- System prompt (`TESTCASE_PROMPT`) — JSON array with `key`, `summary`, `priority`, `type`, `preconditions`, `testSteps`, `expectedResult`
+- `extractJsonArray()` handles fence-marked JSON and bare arrays. `validateTestCases()` checks presence AND type of every field.
+- HTML table with priority badges (`.badge-high/medium/low`) and type badges (`.badge-positive/negative`).
+- Actions: "Copiar como tabla Jira" (Confluence wiki table), "Descargar PDF" (jsPDF).
 
-### Bug Report Generator
+### Bug Report
 
-- System prompt (`BUG_REPORT_PROMPT` in `constants.ts`) — generates Jira wiki formatted bug reports with 6 `{panel}` blocks.
-- `generateBugReport()` in `apiService.ts` — builds user message from `BugReportFormData`, injects current date in `DD-MM-YYYY` format, calls `generateWithGroq()` with empty markers and `tool='criteria'`.
-- Four platform types: Web Desktop, Web Mobile, App Android, App iOS. Dynamic form fields per platform.
-- **Form layout**: compact flex row (`.br-compact-row`). Selects/inputs at 130-170px (`.br-compact-field`), URL at 230px (`.br-compact-field-wide`), Jira ticket at 500px (`.br-compact-field-jira`).
-- **Bug**: URL field preserved when switching between web-desktop and web-mobile; only reset on app->web transition or if previously empty/default.
-- Output: Jira wiki format bug report, copyable to clipboard. Reasoning captured and displayed when available.
-- **History**: saves last 10 successful bug reports (`acgen_bug_history`) via `useHistory()`.
+- System prompt (`BUG_REPORT_PROMPT`) — 6 `{panel}` blocks in Jira wiki format
+- Four platform types (Web Desktop/Mobile, App Android/iOS). Dynamic form fields per platform.
+- Additional context textarea for ticket descriptions/notes.
 
-### Test Data Generator
+### Test Data
 
-- System prompt (`TEST_DATA_PROMPT` in `constants.ts`) — generates realistic test data per market for a fashion ecommerce. 5 data types: shipping address, billing data, user registration, payment cards, promo codes.
-- `generateTestData()` calls `generateWithGroq()` (empty markers, `tool='testcase'`), parses via `extractJsonArray()`, then validates row shape via `validateTestDataRows()` — rejects nested objects/arrays from the LLM.
-- **CSV export**: BOM for Excel. Values starting with `=+-@` prefixed with `'` to neutralize formula injection.
-- **TSV export**: tabs and newlines in cell values replaced with spaces.
+- System prompt (`TEST_DATA_PROMPT`) — 5 data types: shipping address, billing, user registration, payment cards, promo codes
+- `validateTestDataRows()` rejects nested objects/arrays from LLM
+- CSV export with BOM for Excel + formula injection guard. TSV export with tab/newline sanitization.
 
 ### Sprint Tracker
 
-- **5th tool** — `src/components/SprintTracker.tsx` (router), `SprintList.tsx`, `SprintDashboard.tsx`. Fully offline — no Groq or Jira API dependency.
-- **Data model**: sprints stored in `acgen_sprints`. Each sprint has `tabGrid: Record<TabId, string[][]>`, JQL strings per tab, and metadata. Column widths stored in `acgen_sprint_col_widths_{sprintId}`. **`deleteSprint` removes orphaned width keys.**
-- **5 tabs**: Resueltos, Creados, ReOpen, Prioridad Alta, JSD. Each tab has its own spreadsheet grid. JSD only has 3 named columns (JSD, Fecha, Motivo) — same pattern as ReOpen/Prioridad Alta having fewer named columns than the 6-column grid.
-- **Grid**: editable 2D array (20 rows x 6 columns). Resizable columns via drag handle. "+ Fila" to expand rows.
-- **Row drag-and-drop**: via drag handle on row number cells. `moveRow()` correctly handles downward moves (off-by-one fixed). Disabled on archived sprints. Drop target indicator only shown for internal row drags.
-- **Search bar**: debounced at 250ms. Shows "N de M filas" counter. Escape clears. "+ Fila" hidden during search.
-- **Ticket column (A)**: values matching `^[A-Z]+-\d+` display as clickable hyperlinks. **Ctrl+click** opens Jira; normal click edits the cell. SnapLink paste uppercases captured key. Paste handler recognizes SnapLink `Title - URL` format and bare Jira URLs.
-- **Keyboard navigation**: arrow keys respect caret position — only jump cells when at text start/end. Focused ticket cells get accent highlight. `Tab`/`Shift+Tab` in DOM order.
-- **Archiving**: "Archivar Sprint" sets `archived: true` + `endDate` (local date, not UTC). Archived sprints remain viewable.
-- **Migration**: old sprints without `tabGrid` initialized with empty grid on load.
+- Fully offline — no LLM dependencies
+- 5 tabs: Resueltos, Creados, ReOpen, Prioridad Alta, JSD
+- Editable spreadsheet grid (20x6), resizable columns, drag-and-drop rows
+- Search bar (debounced 250ms), SnapLink support, Ctrl+click ticket links, keyboard navigation
+
+### User Stories
+
+- System prompt (`USER_STORY_PROMPT`) — Como/Quiero/Para format + INVEST checklist evaluation
+- Optionally chains output to Refiner or Acceptance Criteria
+
+### Requirement Refiner
+
+- System prompt (`REFINER_PROMPT`) — detects ambiguities, contradictions, missing info, dependencies, suggests refinement questions
+- Accepts `prefill` from chaining
+
+### Edge Cases
+
+- System prompt (`EDGE_CASE_PROMPT`) — JSON array grouped by category (boundary, empty states, concurrency, i18n, permissions, network)
+- Reuses `extractJsonArray()` + table rendering pattern from TestCaseTool
+
+### Format Converter
+
+- System prompt (`CONVERTER_PROMPT`) — converts between Gherkin, Markdown, Jira wiki, Azure DevOps, plain text
+- Side-by-side layout: source format select + input | output + target format select
+
+## Models & Providers
+
+**Groq** (default):
+```
+"openai/gpt-oss-120b"        <- DEFAULT_MODEL
+"openai/gpt-oss-20b"
+"llama-3.3-70b-versatile"
+"llama-3.1-8b-instant"
+"qwen/qwen3-32b"
+```
+
+**OpenRouter**: `openai/gpt-4o` (default), `anthropic/claude-sonnet-4`, `google/gemini-2.5-flash`, `meta-llama/llama-4-maverick`, `deepseek/deepseek-chat-v3`, `qwen/qwen3-235b`, `mistralai/mistral-large`, `cohere/command-r-plus`
+
+**Custom**: free-text model + base URL (OpenAI-compatible)
 
 ### Model-aware reasoning params
-
-In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body params per model:
 
 | Model | `tool='testcase'` | `tool='criteria'` |
 |---|---|---|
@@ -98,101 +218,73 @@ In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body param
 
 ### Decommissioned-model error handling
 
-Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 for keywords `model_decommissioned`, `model_not_found`, `invalid model`, `model not found`. Used in `generateWithGroq()` to surface: *"El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo."* Also handles HTTP 401 (invalid API key) and HTTP 429 (rate limit) with specific Spanish messages.
-
-### Jira ticket integration
-
-- `src/types/` contiene los tipos para integracion con trackers externos.
-
-## Layout
-
-### App shell
-
-`<div className="page">` > `<header className="topbar">` + `<main className="container">`. `.page` is full viewport with `--bg-grad`. `.container` has `max-width: 1260px` with responsive padding.
-
-### Landing screen
-
-Hero section with eyebrow "Sesion de QA . Quality Assurance", config strip (ApiKeyConfig + ModelSelector in 1.5fr 1fr grid), "Generadores" header with **"05"** badge, 5-tool list with SVG icons and descriptions, extensibility slot.
-
-### Acceptance Criteria Tool
-
-Asymmetric two-column grid (`.criteria-grid`, 3fr 2fr). Left: input + editable output + copy button. Right: reasoning collapsible with TTS controls. Actions: GenerateButton, Historial, Limpiar.
-
-### Test Case Generator
-
-Single-column: input -> generate/clear -> HTML table with priority badges + Jira copy + PDF download.
-
-### Bug Report Tool
-
-Compact flex row with all fields side by side. Description and output textareas full-width. Copy + reasoning with TTS. History modal. Jira config collapsible.
-
-### Test Data Tool
-
-Structured form (dataType/market/quantity). Jira config collapsible. Output: HTML table with row copy + TSV copy + CSV download. Limpiar button disabled when form is in default state with no output.
-
-### Sprint Tracker
-
-**SprintList**: active sprint card (accent border) + archived list. "Nuevo Sprint" form. Delete with confirm. **SprintDashboard**: tabbed interface with search bar (debounced 250ms), resizable spreadsheet grid, drag-and-drop rows, SnapLink support, keyboard navigation, archiving.
-
-## Models
-
-```
-AVAILABLE_MODELS = [
-  "openai/gpt-oss-120b",        <- DEFAULT_MODEL
-  "openai/gpt-oss-20b",
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "qwen/qwen3-32b",
-]
-```
+`isModelDecommissioned(message, status)` checks HTTP 400/404 for `model_decommissioned`, `model_not_found`, `invalid model`. Also handles 401 (invalid API key) and 429 (rate limit).
 
 ## Key files
 
 | File | Purpose |
 |---|---|
-| `src/config/constants.ts` | API_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
-| `src/services/apiService.ts` | `generateWithGroq()`, `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `extractJsonArray()` |
-| `src/services/apiService.test.ts` | 17 unit tests — validation type checks, model decommission detection |
-| `src/App.tsx` | View state routing (5 tools + landing) wrapped in `ErrorBoundary`. Theme state (applied before paint). Jira token/URL state |
-| `src/components/ErrorBoundary.tsx` | Class component error boundary with recoverable fallback UI |
-| `src/components/Icons.tsx` | SVG icons — `Icon` object with 12 named components |
-| `src/components/LandingScreen.tsx` | Editorial landing with hero, config strip, 5-tool list |
-| `src/components/SearchableSelect.tsx` | Reusable searchable dropdown (filters at 1+ chars) |
-| `src/components/SprintTracker.tsx` | Sprint Tracker router: list -> detail navigation |
-| `src/components/SprintList.tsx` | Sprint cards (active + archived), new sprint form, delete |
-| `src/components/SprintDashboard.tsx` | Tabbed spreadsheet: drag-and-drop, search (debounced), SnapLink (uppercases), Ctrl+click tickets, keyboard nav (caret-aware), resizable columns |
-| `src/hooks/useSprints.ts` | Sprint CRUD: `moveRow()` (off-by-one fixed), `deleteSprint()` (cleans width keys), `archiveSprint()` (local date) |
-| `src/hooks/useSprints.test.ts` | 20 unit tests for useSprints |
+| `src/config/constants.ts` | API_URL, all 8 prompts, `DEFAULT_PROMPTS` map, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
+| `src/config/providers.ts` | `PROVIDERS` registry, `ProviderDef` interface, `getProvider()` |
+| `src/config/demoData.ts` | `DEMO_DATA` pre-generated samples per tool |
+| `src/services/apiService.ts` | `streamWithGroq()`, `generateWithGroq()`, `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()` |
+| `src/services/anonymizer.ts` | `anonymize()`, `deanonymize()` — 7 regex patterns |
+| `src/App.tsx` | Hash routing, provider state, workspace state, theme state, prefill/chaining state, I18nProvider wrapper, sidebar layout |
+| `src/i18n/I18nContext.tsx` | `I18nProvider`, `useT()` hook, `useLang()` hook, language detection |
+| `src/i18n/es.json` | ~200 Spanish UI strings |
+| `src/i18n/en.json` | ~200 English UI strings |
+| `src/components/Header.tsx` | Brand, WorkspacePicker, ProviderConfig, Model badge, theme toggle, language toggle |
+| `src/components/Sidebar.tsx` | Collapsible tool nav grouped by category, workspace name, prompt editor link |
+| `src/components/LandingScreen.tsx` | Hero, config strip (ProviderConfig), 9-tool grid |
+| `src/components/ErrorBoundary.tsx` | Class component with recoverable fallback |
+| `src/components/Icons.tsx` | SVG icon components |
 | `src/hooks/useLocalStorage.ts` | Generic localStorage hook with cross-instance/-tab sync |
-| `src/hooks/useHistory.ts` | Last-N history ring for criteria and bug reports |
+| `src/hooks/useStreamingResponse.ts` | `useStreamingResponse()` hook — `{ text, isStreaming, stream, reset }` |
+| `src/hooks/useWorkspace.ts` | Workspace CRUD, export/import, artifact management |
+| `src/hooks/useSprints.ts` | Sprint CRUD, moveRow, archive, delete |
+| `src/hooks/useHistory.ts` | Last-N history ring |
+| `src/components/Toast.tsx` | `useToast()` hook + `<Toast>` component with undo |
+| `src/components/GenerateButton.tsx` | Loading-aware generate button (uses useT() for labels) |
+| `src/components/ChainMenu.tsx` | "Send to..." dropdown for artifact chaining |
+| `src/components/ContextProfile.tsx` | `useProfile()` hook, profile editor |
+| `src/components/ConfidentialToggle.tsx` | Per-tool confidential mode toggle |
+| `src/components/AnonymizerReview.tsx` | Substitution review modal |
+| `src/components/PromptEditor.tsx` | Per-tool prompt override editor |
+| `src/components/ProviderConfig.tsx` | Provider + model + API key selector |
+| `src/components/WorkspacePicker.tsx` | Workspace dropdown with CRUD + export/import |
+| `src/components/ResultPanel.tsx` | Unified output panel wrapper |
+| `src/components/ExportBar.tsx` | Format export buttons (copy, markdown, Jira, CSV, TSV) |
+| `src/types/context.ts` | `ProjectProfile` interface, `DEFAULT_PROFILE` |
+| `src/types/workspace.ts` | `Workspace`, `Artifact` interfaces |
 
 ## Changing output format
 
 | Tool | Edit file | Additional steps |
 |---|---|---|
-| Acceptance Criteria | `HARDCODED_PROMPT` in `constants.ts` | Update `REQUIRED_MARKERS` if markers change |
-| Test Cases | `TESTCASE_PROMPT` in `constants.ts` | Update `extractJsonArray` / `validateTestCases` in `apiService.ts` if schema changes; update rendering in `TestCaseTool.tsx` |
-| Bug Report | `BUG_REPORT_PROMPT` in `constants.ts` | Date injected in `generateBugReport()` via `padStart` |
-| Test Data | `TEST_DATA_PROMPT` in `constants.ts` | Add entries to `DATA_TYPES` and `LABEL_MAP` for new data types |
+| Acceptance Criteria | `HARDCODED_PROMPT` in `constants.ts` | Update `REQUIRED_MARKERS` if markers change. Or override via PromptEditor. |
+| Test Cases | `TESTCASE_PROMPT` in `constants.ts` | Update `extractJsonArray` / `validateTestCases` in `apiService.ts` if schema changes. |
+| Bug Report | `BUG_REPORT_PROMPT` in `constants.ts` | Date injected in `generateBugReport()` via `padStart`. |
+| Test Data | `TEST_DATA_PROMPT` in `constants.ts` | Add entries to `DATA_TYPES` and update schema. |
+| User Story | `USER_STORY_PROMPT` in `constants.ts` | Update INVEST checklist format in rendering. |
+| Refiner | `REFINER_PROMPT` in `constants.ts` | Update category parsing in component. |
+| Edge Case | `EDGE_CASE_PROMPT` in `constants.ts` | JSON schema matches TestCaseTool validation. |
+| Converter | `CONVERTER_PROMPT` in `constants.ts` | Update FORMATS list in component if adding formats. |
 
 ## Notable
 
-- Entrypoint: `src/main.tsx` -> `App.tsx`.
-- `jspdf` + `jspdf-autotable` are production dependencies (PDF generation).
-- Jira proxying runs as Vercel serverless functions under `api/` (no Express/CORS). `vercel dev` serves frontend + functions together locally.
-- ViewType: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`.
-- Sprint Tracker operates fully offline — no Groq or Jira API calls.
-- Test files co-located with source (`src/hooks/`, `src/services/`, `src/components/`, `api/_lib/`).
-- `tsconfig.app.json` excludes `*.test.ts` and `*.test.tsx` from production typecheck/build.
+- Entrypoint: `src/main.tsx` → `App.tsx`
+- `jspdf` + `jspdf-autotable` are production dependencies (PDF generation for Test Cases)
+- No Jira integration (removed in v2). 100% static — no `api/` directory, no `vercel.json`
+- Sprint Tracker operates fully offline — no LLM API calls
+- Test files co-located with source (`src/hooks/`, `src/services/`, `src/config/`, `src/components/`)
+- `tsconfig.app.json` excludes `*.test.ts` and `*.test.tsx` from production typecheck/build
+- All prompts are in Spanish. UI strings are i18n ES/EN. Prompts interpolate project profile via `{dominio}`, `{tipoProducto}`, `{mercados}`, `{terminologia}`, `{tono}`
 
-## Bug-fix history (2026-07-10)
+## Evolution history
 
-All ~40 bugs from the multi-agent review are now fixed across 5 phases:
-
-| Phase | Commit | Scope |
+| Phase | Date | Scope |
 |---|---|---|
-| Fase 1 | `1631862` | Crashes + data loss: quota-exceeded resilience, invalid JSON recovery, testSteps type validation, ErrorBoundary |
-| Fase 2 | `2adc2c2` | Proxy security: `validateAndEncodeIssueKey`, `validateBaseUrl`, 30s fetch timeouts, +16 tests |
-| Fase 3 | `f163f7f` | Sprint Tracker UX: moveRow off-by-one, drag state persistence, caret-aware arrows, Ctrl+click tickets, search debounce, +4 tests |
-| Fase 4 | `0e2dc11` | Generation & exports: `isModelDecommissioned` (400+404), Jira table escape, CSV injection, TSV newlines, Jira context append, URL preservation, +7 tests |
-| Fase 5 | `764a920` | Polish: bare keys, orphaned widths, local dates, dark-theme flash, filter threshold, empty array guard, fence regex, SnapLink case, Limpiar disable |
+| Bug fixes (pre-v2) | 2026-07-10 | Crash fixes, data loss prevention, Sprint UX, security, exports |
+| Fase 1 (v2) | 2026-07-16 | Remove Jira, hash routing, demo mode, project profile, Ctrl+Enter, Toast |
+| Fase 2 (v2) | 2026-07-16 | Streaming, 4 new tools (UserStory/Refiner/EdgeCase/Converter), artifact chaining, sidebar, ResultPanel + ExportBar |
+| Fase 3 (v2) | 2026-07-16 | Confidential mode, workspaces, i18n ES/EN, customizable prompts, PWA, multi-provider LLM |
