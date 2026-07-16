@@ -73,6 +73,8 @@ export const STORAGE_KEYS = {
   BUG_HISTORY: 'acgen_bug_history',
   SPRINT_COL_WIDTHS: 'acgen_sprint_col_widths',
   TRACKER_BASE_URL: 'acgen_tracker_base_url',
+  WORKSPACES: 'acgen_workspaces',
+  ACTIVE_WORKSPACE: 'acgen_active_workspace',
 } as const;
 
 export const TEMPERATURE = 0.2;
