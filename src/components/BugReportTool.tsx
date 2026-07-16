@@ -283,7 +283,8 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
             options={marketOptions}
             value={formData.market}
             onChange={(v) => updateForm('market', v)}
-            placeholder="Buscar..."
+            placeholder={t('common.search')}
+            searchPlaceholder={t('common.searchMarket')}
           />
         </div>
         {isWeb ? (

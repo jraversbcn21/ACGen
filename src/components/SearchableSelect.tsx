@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useT } from '../i18n/I18nContext';
 
 export interface SelectOption {
   value: string;
@@ -10,9 +11,11 @@ interface SearchableSelectProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  searchPlaceholder?: string;
 }
 
-export function SearchableSelect({ options, value, onChange, placeholder }: SearchableSelectProps) {
+export function SearchableSelect({ options, value, onChange, placeholder, searchPlaceholder }: SearchableSelectProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -101,7 +104,7 @@ export function SearchableSelect({ options, value, onChange, placeholder }: Sear
         aria-expanded={open}
       >
         <span className={selectedOption ? 'sselect-selected' : 'sselect-placeholder'}>
-          {selectedOption ? selectedOption.label : (placeholder || 'Seleccionar...')}
+          {selectedOption ? selectedOption.label : (placeholder || t('common.select'))}
         </span>
         <span className="select-chev">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -116,7 +119,7 @@ export function SearchableSelect({ options, value, onChange, placeholder }: Sear
               ref={inputRef}
               type="text"
               className="field-input"
-              placeholder="Buscar mercado..."
+              placeholder={searchPlaceholder || t('common.search')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -127,7 +130,7 @@ export function SearchableSelect({ options, value, onChange, placeholder }: Sear
           </div>
           <ul ref={listRef} className="sselect-list" role="listbox">
             {filtered.length === 0 ? (
-              <li className="sselect-empty">Sin resultados</li>
+              <li className="sselect-empty">{t('common.noResults')}</li>
             ) : (
               filtered.map((opt, idx) => (
                 <li

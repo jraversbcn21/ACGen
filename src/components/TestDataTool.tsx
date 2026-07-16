@@ -282,7 +282,8 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
               options={marketOptions}
               value={formData.market}
               onChange={(v) => updateForm('market', v)}
-              placeholder="Buscar mercado..."
+              placeholder={t('common.searchMarket')}
+              searchPlaceholder={t('common.searchMarket')}
             />
           </div>
           <div className="td-form-field">

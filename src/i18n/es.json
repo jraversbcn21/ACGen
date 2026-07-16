@@ -22,6 +22,8 @@
   "common.required": "Requerido",
   "common.noResults": "Sin resultados",
   "common.search": "Buscar...",
+  "common.select": "Seleccionar...",
+  "common.searchMarket": "Buscar mercado...",
   "common.rows": "filas",
   "header.model": "Modelo",
   "header.language": "Idioma",
