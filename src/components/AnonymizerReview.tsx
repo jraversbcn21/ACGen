@@ -3,19 +3,21 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n/I18nContext';
 
 interface AnonymizerReviewProps {
+  /** placeholder -> original value detected in the input. */
   map: Record<string, string>;
-  onConfirm: (editedMap: Record<string, string>) => void;
+  /** Receives only the placeholders the user renamed: placeholder -> new placeholder. */
+  onConfirm: (edits: Record<string, string>) => void;
   onCancel: () => void;
 }
 
 export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewProps) {
   const entries = Object.entries(map);
-  const [edited, setEdited] = useState<Record<string, string>>({ ...map });
+  const [edits, setEdits] = useState<Record<string, string>>({});
   const t = useT();
 
   useEffect(() => {
     if (entries.length === 0) {
-      onConfirm(map);
+      onConfirm({});
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -41,8 +43,8 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
                   <td>
                     <input
                       type="text"
-                      value={edited[placeholder] ?? placeholder}
-                      onChange={(e) => setEdited(prev => ({ ...prev, [placeholder]: e.target.value }))}
+                      value={edits[placeholder] ?? placeholder}
+                      onChange={(e) => setEdits(prev => ({ ...prev, [placeholder]: e.target.value }))}
                       className="field-input"
                       style={{ fontFamily: 'var(--font-mono)', fontSize: 13, width: '100%' }}
                     />
@@ -54,7 +56,7 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button type="button" className="btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
-          <button type="button" className="btn-primary" onClick={() => onConfirm(edited)}>
+          <button type="button" className="btn-primary" onClick={() => onConfirm(edits)}>
             {t('confidential.confirmSend')}
           </button>
         </div>

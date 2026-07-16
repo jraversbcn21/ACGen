@@ -1,7 +1,7 @@
 import { API_URL, TEMPERATURE, REQUIRED_MARKERS, BUG_REPORT_PROMPT, TEST_DATA_PROMPT, DEFAULT_PROMPTS } from '../config/constants';
 import type { GroqResponse, GroqApiError, TestCaseData, TestCaseResponse, BugReportFormData, TestDataFormData } from '../types';
 import type { ProjectProfile } from '../types/context';
-import { deanonymize } from './anonymizer';
+import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
 type ToolType = 'criteria' | 'testcase';
 
@@ -179,6 +179,9 @@ export async function* streamWithGroq(
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  // Text held back because it may still grow into a placeholder split across chunks.
+  let pending = '';
+  let lastModel: string | undefined;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -189,17 +192,34 @@ export async function* streamWithGroq(
     for (const line of lines) {
       if (line.startsWith('data: ')) {
         const data = line.slice(6);
-        if (data === '[DONE]') return;
+        if (data === '[DONE]') {
+          if (pending && anonymizeMap) {
+            yield { token: deanonymize(pending, anonymizeMap), done: false, model: lastModel };
+          }
+          return;
+        }
         try {
           const parsed = JSON.parse(data);
           const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
           if (rawToken) {
-            const token = anonymizeMap ? deanonymize(rawToken, anonymizeMap) : rawToken;
-            yield { token, done: false, model: parsed.model };
+            lastModel = parsed.model ?? lastModel;
+            if (!anonymizeMap) {
+              yield { token: rawToken, done: false, model: parsed.model };
+            } else {
+              pending += rawToken;
+              const [emit, rest] = splitPendingPlaceholder(pending);
+              pending = rest;
+              if (emit) {
+                yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
+              }
+            }
           }
         } catch { /* skip malformed chunks */ }
       }
     }
+  }
+  if (pending && anonymizeMap) {
+    yield { token: deanonymize(pending, anonymizeMap), done: false, model: lastModel };
   }
   yield { token: '', done: true };
 }

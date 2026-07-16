@@ -1,6 +1,6 @@
 // src/services/anonymizer.test.ts
 import { describe, it, expect } from 'vitest';
-import { anonymize, deanonymize } from './anonymizer';
+import { anonymize, deanonymize, applyPlaceholderEdits, splitPendingPlaceholder } from './anonymizer';
 
 describe('anonymize', () => {
   it('replaces emails with [EMAIL_N] placeholders', () => {
@@ -96,5 +96,74 @@ describe('deanonymize', () => {
     const { text, map } = anonymize(input);
     const restored = deanonymize(text, map);
     expect(restored).toBe(input);
+  });
+});
+
+describe('applyPlaceholderEdits', () => {
+  it('renames a placeholder in both the outgoing text and the restore map', () => {
+    const { text, map } = anonymize('Avisa a jorge@example.com');
+    const result = applyPlaceholderEdits(text, map, { '[EMAIL_1]': '[PERSONA]' });
+
+    expect(result.text).toBe('Avisa a [PERSONA]');
+    expect(result.map).toEqual({ '[PERSONA]': 'jorge@example.com' });
+  });
+
+  it('leaves untouched placeholders as they are', () => {
+    const { text, map } = anonymize('De jorge@example.com a maria@test.org');
+    const result = applyPlaceholderEdits(text, map, { '[EMAIL_2]': '[DESTINO]' });
+
+    expect(result.text).toBe('De [EMAIL_1] a [DESTINO]');
+    expect(result.map).toEqual({ '[EMAIL_1]': 'jorge@example.com', '[DESTINO]': 'maria@test.org' });
+  });
+
+  it('returns text and map unchanged when there are no edits', () => {
+    const { text, map } = anonymize('Contacto: jorge@example.com');
+    const result = applyPlaceholderEdits(text, map, {});
+
+    expect(result.text).toBe(text);
+    expect(result.map).toEqual(map);
+  });
+
+  it('ignores a blank edit so the value stays restorable', () => {
+    const { text, map } = anonymize('Contacto: jorge@example.com');
+    const result = applyPlaceholderEdits(text, map, { '[EMAIL_1]': '   ' });
+
+    expect(result.text).toBe('Contacto: [EMAIL_1]');
+    expect(result.map).toEqual({ '[EMAIL_1]': 'jorge@example.com' });
+  });
+
+  it('edited text still round-trips back to the original', () => {
+    const input = 'Escribe a jorge@example.com sobre PROJ-1234';
+    const { text, map } = anonymize(input);
+    const edited = applyPlaceholderEdits(text, map, { '[EMAIL_1]': '[CORREO]', '[TICKET_1]': '[ISSUE]' });
+
+    expect(edited.text).toBe('Escribe a [CORREO] sobre [ISSUE]');
+    expect(deanonymize(edited.text, edited.map)).toBe(input);
+  });
+});
+
+describe('splitPendingPlaceholder', () => {
+  it('holds back a placeholder that is still being streamed', () => {
+    expect(splitPendingPlaceholder('Contacta a [EMA')).toEqual(['Contacta a ', '[EMA']);
+  });
+
+  it('emits everything once the placeholder is complete', () => {
+    expect(splitPendingPlaceholder('Contacta a [EMAIL_1] hoy')).toEqual(['Contacta a [EMAIL_1] hoy', '']);
+  });
+
+  it('emits plain text untouched', () => {
+    expect(splitPendingPlaceholder('texto normal sin corchetes')).toEqual(['texto normal sin corchetes', '']);
+  });
+
+  it('does not hold back a bracket that cannot become a placeholder', () => {
+    expect(splitPendingPlaceholder('ver [nota al pie')).toEqual(['ver [nota al pie', '']);
+  });
+
+  it('holds back only the trailing partial after a complete placeholder', () => {
+    expect(splitPendingPlaceholder('a [EMAIL_1] y [UR')).toEqual(['a [EMAIL_1] y ', '[UR']);
+  });
+
+  it('holds back a lone opening bracket', () => {
+    expect(splitPendingPlaceholder('final [')).toEqual(['final ', '[']);
   });
 });

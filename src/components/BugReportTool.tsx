@@ -9,7 +9,7 @@ import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICE
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize } from '../services/anonymizer';
+import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -78,7 +78,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
-  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const t = useT();
@@ -124,25 +124,21 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
-      setConfMap(null);
+      setConf(null);
     }
   }, [apiKey, model, formData.description, profile, stream, addEntry, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
     const userMessage = buildBugReportMessage(formData);
-    const confKey = `acgen_confidential_bugreport`;
-    const confEnabled = localStorage.getItem(confKey) === 'true';
-    if (confEnabled) {
-      const { map } = anonymize(userMessage);
+    if (localStorage.getItem('acgen_confidential_bugreport') === 'true') {
+      const { text, map } = anonymize(userMessage);
       if (Object.keys(map).length > 0) {
-        setConfMap(map);
+        setConf({ text, map });
         return;
       }
-      await doGenerate(userMessage);
-    } else {
-      await doGenerate(userMessage);
     }
+    await doGenerate(userMessage);
   }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
 
   useEffect(() => {
@@ -466,10 +462,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         <ConfidentialToggle
           view="bugreport"
           substitutionCount={0}
-          onReview={() => {
-            const { map } = anonymize(buildBugReportMessage(formData));
-            setConfMap(map);
-          }}
+          onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
         />
         <GenerateButton
           onClick={handleGenerate}
@@ -507,13 +500,14 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
           onClose={() => setShowHistory(false)}
         />
       )}
-      {confMap && (
+      {conf && (
         <AnonymizerReview
-          map={confMap}
-          onCancel={() => setConfMap(null)}
-          onConfirm={(editedMap) => {
-            doGenerate(buildBugReportMessage(formData), editedMap);
-            setConfMap(null);
+          map={conf.map}
+          onCancel={() => setConf(null)}
+          onConfirm={(edits) => {
+            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
+            doGenerate(text, map);
+            setConf(null);
           }}
         />
       )}

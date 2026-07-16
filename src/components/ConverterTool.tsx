@@ -4,7 +4,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize } from '../services/anonymizer';
+import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -32,7 +32,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const [outputFormat, setOutputFormat] = useState('markdown');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
@@ -50,26 +50,27 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       showToast(message);
     } finally {
       setLoading(false);
-      setConfMap(null);
+      setConf(null);
     }
   }, [apiKey, model, profile, stream, showToast, t]);
 
+  const buildEffectiveInput = useCallback(
+    () => `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`,
+    [input, inputFormat, outputFormat],
+  );
+
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
-    const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
-    const confKey = `acgen_confidential_converter`;
-    const confEnabled = localStorage.getItem(confKey) === 'true';
-    if (confEnabled) {
-      const { map } = anonymize(effectiveInput);
+    const effectiveInput = buildEffectiveInput();
+    if (localStorage.getItem('acgen_confidential_converter') === 'true') {
+      const { text, map } = anonymize(effectiveInput);
       if (Object.keys(map).length > 0) {
-        setConfMap(map);
+        setConf({ text, map });
         return;
       }
-      await doGenerate(effectiveInput);
-    } else {
-      await doGenerate(effectiveInput);
     }
-  }, [canGenerate, loading, isStreaming, input, inputFormat, outputFormat, doGenerate]);
+    await doGenerate(effectiveInput);
+  }, [canGenerate, loading, isStreaming, buildEffectiveInput, doGenerate]);
 
   const handleClear = useCallback(() => {
     setInput('');
@@ -137,11 +138,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
           <ConfidentialToggle
             view="converter"
             substitutionCount={0}
-            onReview={() => {
-              const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
-              const { map } = anonymize(effectiveInput);
-              setConfMap(map);
-            }}
+            onReview={() => setConf(anonymize(buildEffectiveInput()))}
           />
           <GenerateButton
             onClick={handleGenerate}
@@ -155,14 +152,14 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
-      {confMap && (
+      {conf && (
         <AnonymizerReview
-          map={confMap}
-          onCancel={() => setConfMap(null)}
-          onConfirm={(editedMap) => {
-            const effectiveInput = `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`;
-            doGenerate(effectiveInput, editedMap);
-            setConfMap(null);
+          map={conf.map}
+          onCancel={() => setConf(null)}
+          onConfirm={(edits) => {
+            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
+            doGenerate(text, map);
+            setConf(null);
           }}
         />
       )}

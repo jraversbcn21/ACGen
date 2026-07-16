@@ -1,5 +1,60 @@
-import { describe, it, expect } from 'vitest';
-import { validateTestCases, validateTestDataRows, isModelDecommissioned } from './apiService';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq } from './apiService';
+
+/** Builds an SSE body that delivers `contentChunks` as separate delta events. */
+function sseResponse(contentChunks: string[]): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const content of contentChunks) {
+        const payload = JSON.stringify({ model: 'test-model', choices: [{ delta: { content } }] });
+        controller.enqueue(encoder.encode(`data: ${payload}\n`));
+      }
+      controller.enqueue(encoder.encode('data: [DONE]\n'));
+      controller.close();
+    },
+  });
+  return { ok: true, body } as unknown as Response;
+}
+
+async function collect(chunks: string[], anonymizeMap?: Record<string, string>): Promise<string> {
+  vi.stubGlobal('fetch', vi.fn(async () => sseResponse(chunks)));
+  const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria', undefined, anonymizeMap);
+  let out = '';
+  for await (const { token, done } of gen) {
+    if (!done) out += token;
+  }
+  return out;
+}
+
+describe('streamWithGroq deanonymization', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('restores a placeholder delivered in a single chunk', async () => {
+    const out = await collect(['Escribe a [EMAIL_1] hoy'], { '[EMAIL_1]': 'jorge@example.com' });
+    expect(out).toBe('Escribe a jorge@example.com hoy');
+  });
+
+  it('restores a placeholder split across two streaming chunks', async () => {
+    const out = await collect(['Escribe a [EMA', 'IL_1] hoy'], { '[EMAIL_1]': 'jorge@example.com' });
+    expect(out).toBe('Escribe a jorge@example.com hoy');
+  });
+
+  it('restores a placeholder split character by character', async () => {
+    const out = await collect([...'Ver [TICKET_1] ya'], { '[TICKET_1]': 'PROJ-1234' });
+    expect(out).toBe('Ver PROJ-1234 ya');
+  });
+
+  it('flushes a trailing partial placeholder when the stream ends', async () => {
+    const out = await collect(['texto colgando [EMA'], { '[EMAIL_1]': 'jorge@example.com' });
+    expect(out).toBe('texto colgando [EMA');
+  });
+
+  it('passes text through untouched when no map is given', async () => {
+    const out = await collect(['texto [EMAIL_1] normal']);
+    expect(out).toBe('texto [EMAIL_1] normal');
+  });
+});
 
 function validCase(overrides: Record<string, unknown> = {}) {
   return {

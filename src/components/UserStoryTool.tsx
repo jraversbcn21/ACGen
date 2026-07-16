@@ -5,7 +5,7 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { ChainMenu } from './ChainMenu';
-import { anonymize } from '../services/anonymizer';
+import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -26,7 +26,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
   const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
+  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
@@ -51,24 +51,20 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       showToast(message);
     } finally {
       setLoading(false);
-      setConfMap(null);
+      setConf(null);
     }
   }, [apiKey, model, profile, stream, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
-    const confKey = `acgen_confidential_userstory`;
-    const confEnabled = localStorage.getItem(confKey) === 'true';
-    if (confEnabled) {
-      const { map } = anonymize(idea);
+    if (localStorage.getItem('acgen_confidential_userstory') === 'true') {
+      const { text, map } = anonymize(idea);
       if (Object.keys(map).length > 0) {
-        setConfMap(map);
+        setConf({ text, map });
         return;
       }
-      await doGenerate(idea);
-    } else {
-      await doGenerate(idea);
     }
+    await doGenerate(idea);
   }, [canGenerate, loading, isStreaming, idea, doGenerate]);
 
   const handleClear = useCallback(() => {
@@ -108,8 +104,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
             view="userstory"
             substitutionCount={0}
             onReview={() => {
-              const { map } = anonymize(idea);
-              setConfMap(map);
+              setConf(anonymize(idea));
             }}
           />
           <GenerateButton
@@ -133,13 +128,14 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
-      {confMap && (
+      {conf && (
         <AnonymizerReview
-          map={confMap}
-          onCancel={() => setConfMap(null)}
-          onConfirm={(editedMap) => {
-            doGenerate(idea, editedMap);
-            setConfMap(null);
+          map={conf.map}
+          onCancel={() => setConf(null)}
+          onConfirm={(edits) => {
+            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
+            doGenerate(text, map);
+            setConf(null);
           }}
         />
       )}
