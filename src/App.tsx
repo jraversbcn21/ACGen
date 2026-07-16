@@ -72,11 +72,7 @@ export default function App() {
   }, [workspace]);
 
   const saveArtifact = useCallback((artifact: { tool: ViewType; input: string; output: string }) => {
-    let targetId = workspace.activeId;
-    if (!targetId) {
-      targetId = workspace.createWorkspace('Sin nombre').id;
-    }
-    workspace.addArtifact(targetId, artifact);
+    workspace.saveArtifact(artifact, 'Sin nombre');
   }, [workspace]);
 
   useEffect(() => {

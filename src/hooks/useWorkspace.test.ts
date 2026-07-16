@@ -167,4 +167,46 @@ describe('useWorkspace', () => {
       });
     }).toThrow();
   });
+
+  describe('saveArtifact', () => {
+    it('saves into the active workspace when activeId is valid', () => {
+      const { result } = renderHook(() => useWorkspace());
+      act(() => {
+        result.current.createWorkspace('Mi proyecto');
+      });
+      act(() => {
+        result.current.saveArtifact({ tool: 'acceptance', input: 'in', output: 'out' }, 'Sin nombre');
+      });
+      expect(result.current.workspaces).toHaveLength(1);
+      expect(result.current.workspaces[0].name).toBe('Mi proyecto');
+      expect(result.current.workspaces[0].artifacts).toHaveLength(1);
+      expect(result.current.workspaces[0].artifacts[0].output).toBe('out');
+    });
+
+    it('creates a fallback workspace when activeId is null', () => {
+      const { result } = renderHook(() => useWorkspace());
+      act(() => {
+        result.current.saveArtifact({ tool: 'acceptance', input: 'in', output: 'out' }, 'Sin nombre');
+      });
+      expect(result.current.workspaces).toHaveLength(1);
+      expect(result.current.workspaces[0].name).toBe('Sin nombre');
+      expect(result.current.workspaces[0].artifacts).toHaveLength(1);
+      expect(result.current.activeId).toBe(result.current.workspaces[0].id);
+    });
+
+    it('does not lose the artifact when activeId points at a workspace that no longer exists', () => {
+      localStorage.setItem('acgen_workspaces', JSON.stringify([]));
+      localStorage.setItem('acgen_active_workspace', JSON.stringify('ghost-id'));
+      const { result } = renderHook(() => useWorkspace());
+      expect(result.current.activeId).toBe('ghost-id');
+      act(() => {
+        result.current.saveArtifact({ tool: 'testcase', input: 'in', output: 'out' }, 'Sin nombre');
+      });
+      expect(result.current.workspaces).toHaveLength(1);
+      expect(result.current.workspaces[0].name).toBe('Sin nombre');
+      expect(result.current.workspaces[0].artifacts).toHaveLength(1);
+      expect(result.current.workspaces[0].artifacts[0].output).toBe('out');
+      expect(result.current.activeId).toBe(result.current.workspaces[0].id);
+    });
+  });
 });

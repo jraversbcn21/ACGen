@@ -23,7 +23,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/hooks/useSprints.test.ts` | 20 — init, add, archive, update, delete, moveRow, persistence, hydration, recovery |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, cross-tab sync, ignore unrelated keys, quota resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load, clear, quota resilience |
-| `src/hooks/useWorkspace.test.ts` | 12 — CRUD, artifact cap at 50, export/import, validation |
+| `src/hooks/useWorkspace.test.ts` | 15 — CRUD, artifact cap at 50, export/import, validation, `saveArtifact` fallback (valid/null/stale `activeId`) |
 | `src/hooks/useStreamingResponse.test.ts` | 4 — token accumulation + `onComplete`, mid-stream error rethrown to the caller, partial text kept, `onComplete` not called on failure |
 | `src/config/providers.test.ts` | 12 — provider definitions, unknown-id fallback, `sanitizeModel` per-provider validation |
 | `src/components/ErrorBoundary.test.tsx` | 4 — renders children, catches crash, recovers on reset, renders the fallback/retry text in English via `contextType` when `lang` is `en` |
@@ -43,7 +43,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
 
-**Total: 194 tests across 24 files.**
+**Total: 197 tests across 24 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -117,7 +117,7 @@ Run `npm test` before committing when modifying hooks or services.
 - `useWorkspace()` hook — CRUD, `exportWorkspace(id)` returns the JSON string (does not download it), `importWorkspace(json)` validates and throws on malformed input
 - `src/utils/download.ts` — `downloadJson(filename, content)` (Blob → anchor click → revoke) and `toFilename(name, ext)` (slugifies; strips path separators so a workspace named `../../etc/passwd` can't escape the downloads folder). `App.tsx`'s `exportWorkspaceToFile` wires the two together — `useWorkspace().exportWorkspace` alone does not trigger a download.
 - `<WorkspacePicker>` in Header — dropdown with create/rename/select/export/import, fully i18n'd. Delete is a 2-step inline confirm (`¿Eliminar "<name>"?` / confirm / cancel) naming the workspace, not a single click and not `window.confirm`.
-- Auto-save: each successful generation saves artifact to active workspace via `onSaveArtifact`. Auto-creates default "Sin nombre" workspace on first use. **Known gap:** if `activeId` points at a workspace that no longer exists (corrupted/cleared storage), `addArtifact` no-ops silently and the artifact is lost — see "Known issues" below.
+- Auto-save: each successful generation saves artifact to active workspace via `onSaveArtifact` → `useWorkspace.saveArtifact(artifact, fallbackName)`, which owns target resolution: uses `activeId` when it points at an existing workspace, otherwise (null OR stale id from corrupted/cleared storage) auto-creates a "Sin nombre" workspace and saves there — no silent data loss.
 - Sidebar shows active workspace name
 
 ### Project profile
@@ -305,9 +305,8 @@ Run `npm test` before committing when modifying hooks or services.
 
 A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledger's "review clean" claims did not hold — the reviews checked each task in isolation, not the data flow end to end. Three stacked PRs fixed 10 of the findings (`fix/fase3-audit-bugs` → `fix/fase3-audit-cleanup` → `fix/stream-error-rethrow`; see their descriptions on GitHub for full detail per fix — the last one fixed the mid-stream-errors-silently-swallowed bug by having `useStreamingResponse.stream()` rethrow after recording its state, which also un-swallowed errors thrown from `onComplete` callbacks such as EdgeCaseTool's no-parseable-JSON error). Branch `fix/i18n-leftovers` then closed out the i18n leftovers those PRs deferred (see "Evolution history" below). What's left, in priority order:
 
-1. **`saveArtifact` loses the artifact silently on a stale `activeId`.** `App.tsx`'s `saveArtifact` only guards `if (!targetId)`; if `acgen_active_workspace` holds an id absent from `acgen_workspaces` (storage corruption, manual clear, a quota-exceeded write that desynced the two keys), `useWorkspace.addArtifact` no-ops with no error and no toast. Low-probability, silent-data-loss failure mode. Fix: check `workspaces.some(w => w.id === targetId)` and fall through to auto-create if not.
-2. **Custom provider base URL isn't validated.** `App.tsx`: `currentBaseUrl = provider === 'custom' ? (customBaseUrl || undefined) : ...`. An empty custom URL becomes `undefined`, and `apiService.ts` falls back `baseUrl || API_URL` — so an empty Custom URL silently sends the custom API key to **Groq's** endpoint, producing a misleading 401 instead of a "set your base URL" message.
-3. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
+1. **Custom provider base URL isn't validated.** `App.tsx`: `currentBaseUrl = provider === 'custom' ? (customBaseUrl || undefined) : ...`. An empty custom URL becomes `undefined`, and `apiService.ts` falls back `baseUrl || API_URL` — so an empty Custom URL silently sends the custom API key to **Groq's** endpoint, producing a misleading 401 instead of a "set your base URL" message.
+2. **PHONE regex is over-broad.** `src/services/anonymizer.ts`: `/\+?[\d\s()-]{7,}/g` has no digit-count floor, so it also matches indented Markdown/Gherkin list runs (`"\n    - "`) and any bare number ≥7 digits, producing false `[PHONE_N]` rows in the confidential-mode review table. Round-trip still restores correctly; it's a UX/trust issue, not a correctness bug.
 
 ## Evolution history
 
@@ -320,5 +319,6 @@ A 6-agent parallel audit of Fase 3 against its design/plan/ledger found the ledg
 | Fase 3 audit + fixes | 2026-07-16 | 6-agent parallel audit vs. spec/plan/ledger. Fixed: confidential mode never anonymized the outgoing request (critical), non-Groq model wiped on reload, workspace export didn't download, PWA icons were 1×1 placeholders, substitution-count badge always hidden, 8 stale-language toast handlers, workspace delete had no confirm, TTS crashed without the Speech Synthesis API, 5 lint errors, dead code (`ApiKeyConfig`, `ModelSelector`, `ResultPanel`†, the pre-streaming `generateWithGroq`/`generateCriteria`/`generateTestCases`/`generateBugReport`/`generateTestData`, unused `GroqResponse`/`TestCaseResponse` types, unused `STORAGE_KEYS.API_KEY`). 96 → 168 tests. See "Known issues" above for what's still open. |
 | Post-audit fix | 2026-07-16 | Mid-stream errors no longer silently swallowed: `useStreamingResponse.stream()` rethrows after recording its state, so every tool's existing `catch` (ErrorBanner or toast) finally fires; also un-swallows errors thrown from `onComplete` (EdgeCaseTool's no-parseable-JSON case). 168 → 172 tests. |
 | i18n completion | 2026-07-16 | apiService throws i18n keys + params (I18nError), translated at tool catch blocks; ExportBar, ErrorBoundary (contextType), HistoryModal (+ inline 2-step confirm replacing the last window.confirm), SearchableSelect. Key-parity guard test. |
+| saveArtifact hardening | 2026-07-16 | Workspace target resolution moved from App.tsx into `useWorkspace.saveArtifact(artifact, fallbackName)`: a stale `activeId` (workspace deleted from storage but still active) now falls back to auto-creating "Sin nombre" instead of silently dropping the artifact. 194 → 197 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.

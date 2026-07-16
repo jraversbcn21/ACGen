@@ -53,6 +53,14 @@ export function useWorkspace() {
     );
   }, [setWorkspaces]);
 
+  const saveArtifact = useCallback((artifact: Omit<Artifact, 'id' | 'timestamp'>, fallbackName: string) => {
+    // activeId can point at a workspace that no longer exists (cleared/corrupt
+    // storage); addArtifact would silently no-op, so fall back to a fresh one.
+    const targetIsValid = activeId !== null && workspaces.some((w) => w.id === activeId);
+    const targetId = targetIsValid ? activeId : createWorkspace(fallbackName).id;
+    addArtifact(targetId, artifact);
+  }, [activeId, workspaces, createWorkspace, addArtifact]);
+
   const exportWorkspace = useCallback((id: string): string | null => {
     const ws = workspaces.find((w) => w.id === id);
     if (!ws) return null;
@@ -84,6 +92,7 @@ export function useWorkspace() {
     renameWorkspace,
     deleteWorkspace,
     addArtifact,
+    saveArtifact,
     exportWorkspace,
     importWorkspace,
   };
