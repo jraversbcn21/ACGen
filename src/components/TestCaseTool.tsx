@@ -9,12 +9,11 @@ import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-const INPUT_PLACEHOLDER = 'Describe el área o flujo que quieres cubrir (ej: Home, Búsqueda, PDP, Carrito, Checkout...)';
 
 function priorityClass(p: string): string {
   if (p === 'Alta' || p === 'High') return 'badge-high';
@@ -26,9 +25,9 @@ function typeClass(t: string): string {
   return (t === 'Positivo' || t === 'Positive') ? 'badge-positive' : 'badge-negative';
 }
 
-function generateJiraTable(testCases: TestCaseData[]): string {
+function generateJiraTable(testCases: TestCaseData[], t: (key: string) => string): string {
   const escapeCell = (val: string) => val.replace(/\|/g, '&#124;').replace(/\n/g, '\\\\');
-  const header = '||Clave||Resumen||Prioridad||Tipo||Precondiciones||Pasos||Resultado Esperado||';
+  const header = `||${t('testcase.key')}||${t('testcase.summary')}||${t('testcase.priority')}||${t('testcase.type')}||${t('testcase.preconditions')}||${t('testcase.testSteps')}||${t('testcase.expectedResult')}||`;
   const rows = testCases.map(tc => {
     const steps = tc.testSteps.map(escapeCell).join('\\\\');
     return `|${escapeCell(tc.key)}|${escapeCell(tc.summary)}|${escapeCell(tc.priority)}|${escapeCell(tc.type)}|${escapeCell(tc.preconditions)}|${steps}|${escapeCell(tc.expectedResult)}|`;
@@ -46,6 +45,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
+  const t = useT();
 
   useEffect(() => {
     if (prefill) setInput(prefill);
@@ -64,7 +64,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (items.length === 0) {
-          throw new Error('No se generaron casos de prueba. Intenta con una descripcion mas detallada.');
+          throw new Error(t('error.noTestCases'));
         }
         const validated = validateTestCases(items);
         setTestCases(validated);
@@ -73,14 +73,14 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
         setStatus('success');
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       setError(message);
       setStatus('error');
       setTestCases([]);
     } finally {
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream]);
+  }, [apiKey, model, profile, stream, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || status === 'loading' || isStreaming) return;
@@ -119,7 +119,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setStatus('idle');
     setGeneratedModel(undefined);
     setCopied(false);
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setInput(prevInput);
       setTestCases(prevTestCases);
       setGeneratedModel(prevModel);
@@ -134,7 +134,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
   }, []);
 
   const handleCopyJira = useCallback(async () => {
-    const table = generateJiraTable(testCases);
+    const table = generateJiraTable(testCases, t);
     try {
       await navigator.clipboard.writeText(table);
       setCopied(true);
@@ -151,12 +151,12 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [testCases]);
+  }, [testCases, t]);
 
   const handleDownloadPdf = useCallback(() => {
     const doc = new jsPDF('landscape');
     doc.setFontSize(16);
-    doc.text('Casos de prueba', 14, 15);
+    doc.text(t('testcase.title'), 14, 15);
 
     const rows = testCases.map(tc => [
       tc.key,
@@ -169,7 +169,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     ]);
 
     autoTable(doc, {
-      head: [['Clave', 'Resumen', 'Prioridad', 'Tipo', 'Precondiciones', 'Pasos', 'Resultado Esperado']],
+      head: [[t('testcase.key'), t('testcase.summary'), t('testcase.priority'), t('testcase.type'), t('testcase.preconditions'), t('testcase.testSteps'), t('testcase.expectedResult')]],
       body: rows,
       startY: 25,
       styles: { fontSize: 7, cellPadding: 2 },
@@ -186,19 +186,19 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     });
 
     doc.save('casos-de-prueba.pdf');
-  }, [testCases]);
+  }, [testCases, t]);
 
   return (
     <div>
       <div>
         <label htmlFor="testcase-input" className="field-label">
-          Instrucciones para casos de prueba
+          {t('testcase.instructions')}
         </label>
         <textarea
           id="testcase-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={INPUT_PLACEHOLDER}
+          placeholder={t('testcase.inputPlaceholder')}
           className="field-textarea"
           style={{ minHeight: 200 }}
         />
@@ -218,23 +218,23 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
           disabled={!canGenerate || isStreaming}
           loading={status === 'loading'}
         />
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
         <button
           type="button"
           className="btn-ghost"
           onClick={handleClear}
           disabled={!input && !hasOutput}
         >
-          Limpiar
+          {t('common.clear')}
         </button>
       </div>
 
       {hasOutput && (
         <div className="output-section">
           <div className="output-header">
-            <span className="field-label">Casos de prueba generados</span>
+            <span className="field-label">{t('testcase.generatedCases')}</span>
             {generatedModel && (
-              <span className="model-badge-new">Modelo: {generatedModel}</span>
+              <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
             )}
           </div>
 
@@ -244,14 +244,14 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
               className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyJira}
             >
-              {copied ? '¡Copiado!' : 'Copiar como tabla Jira'}
+              {copied ? t('common.copied') : t('testcase.exportJira')}
             </button>
             <button
               type="button"
               className="btn-ghost"
               onClick={handleDownloadPdf}
             >
-              Descargar PDF
+              {t('testcase.exportPdf')}
             </button>
           </div>
 
@@ -259,13 +259,13 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Key</th>
-                  <th>Summary</th>
-                  <th>Priority</th>
-                  <th>Type</th>
-                  <th>Preconditions</th>
-                  <th>Test Steps</th>
-                  <th>Expected Result</th>
+                  <th>{t('testcase.key')}</th>
+                  <th>{t('testcase.summary')}</th>
+                  <th>{t('testcase.priority')}</th>
+                  <th>{t('testcase.type')}</th>
+                  <th>{t('testcase.preconditions')}</th>
+                  <th>{t('testcase.testSteps')}</th>
+                  <th>{t('testcase.expectedResult')}</th>
                 </tr>
               </thead>
               <tbody>

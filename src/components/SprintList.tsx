@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Sprint } from '../hooks/useSprints';
+import { useT } from '../i18n/I18nContext';
 
 interface SprintListProps {
   sprints: Sprint[];
@@ -12,6 +13,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const t = useT();
 
   const handleAdd = () => {
     if (!name.trim()) return;
@@ -28,7 +30,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
     <div>
       <div className="actions-bar" style={{ justifyContent: 'flex-start' }}>
         <button type="button" className="btn-primary" onClick={() => setShowForm(true)} style={{ minWidth: 180 }}>
-          Nuevo Sprint
+          {t('sprint.newSprint')}
         </button>
       </div>
 
@@ -39,18 +41,18 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
           background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12,
         }}>
           <div>
-            <label htmlFor="sprint-name" className="field-label">Nombre del sprint</label>
+            <label htmlFor="sprint-name" className="field-label">{t('sprint.name')}</label>
             <input
               id="sprint-name"
               type="text"
               className="field-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Sprint 25"
+              placeholder={t('sprint.namePlaceholder')}
             />
           </div>
           <div>
-            <label htmlFor="sprint-start" className="field-label">Fecha de inicio</label>
+            <label htmlFor="sprint-start" className="field-label">{t('sprint.startDate')}</label>
             <input
               id="sprint-start"
               type="date"
@@ -61,10 +63,10 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn-primary" onClick={handleAdd} style={{ minWidth: 120 }}>
-              Crear
+              {t('sprint.create')}
             </button>
             <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>
-              Cancelar
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -73,7 +75,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
       {active.length > 0 && (
         <>
           <h3 style={{ marginTop: 28, marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>
-            Sprint Activo
+            {t('sprint.active')}
           </h3>
           {active.map((s) => (
             <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} />
@@ -84,7 +86,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
       {archived.length > 0 && (
         <>
           <h3 style={{ marginTop: 28, marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--text-3)' }}>
-            Archivados
+            {t('sprint.archived')}
           </h3>
           {archived.map((s) => (
             <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} />
@@ -94,7 +96,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
 
       {sprints.length === 0 && (
         <p style={{ marginTop: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-          No hay sprints. Crea tu primer sprint para empezar.
+          {t('sprint.noSprints')}
         </p>
       )}
     </div>
@@ -106,6 +108,7 @@ function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: 
     if (!d) return '\u2014';
     return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
+  const t = useT();
 
   return (
     <div
@@ -129,21 +132,21 @@ function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: 
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{sprint.name}</div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-            {formatDate(sprint.startDate)} &mdash; {sprint.archived ? formatDate(sprint.endDate) : 'En curso'}
+            {formatDate(sprint.startDate)} &mdash; {sprint.archived ? formatDate(sprint.endDate) : t('sprint.enCurso')}
           </div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        {sprint.archived && (
-          <span className="badge badge-info" style={{ fontSize: 11 }}>Archivado</span>
-        )}
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={(e) => { e.stopPropagation(); if (confirm('\u00BFEliminar este sprint?')) onDelete(sprint.id); }}
-          style={{ padding: '4px 10px', fontSize: 12 }}
-        >
-          Eliminar
+          {sprint.archived && (
+            <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archived')}</span>
+          )}
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={(e) => { e.stopPropagation(); if (confirm(t('sprint.deleteConfirm'))) onDelete(sprint.id); }}
+            style={{ padding: '4px 10px', fontSize: 12 }}
+          >
+            {t('common.delete')}
         </button>
       </div>
     </div>

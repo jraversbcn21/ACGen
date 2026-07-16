@@ -8,6 +8,7 @@ import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 
 const CATEGORY_BADGES: Record<string, string> = {
@@ -28,6 +29,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+  const t = useT();
 
   useEffect(() => {
     if (prefill) setRequirement(prefill);
@@ -44,19 +46,19 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (!items || items.length === 0) {
-          throw new Error('No se generaron casos limite. Intenta con una descripcion mas detallada.');
+          throw new Error(t('error.noEdgeCases'));
         }
         setEdgeCases(items as Array<{ categoria: string; escenario: string; resultadoEsperado: string }>);
         onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       setError(message);
     } finally {
       setLoading(false);
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream]);
+  }, [apiKey, model, profile, stream, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -80,7 +82,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setRequirement('');
     setEdgeCases([]);
     setError(null);
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setRequirement(prev);
       setEdgeCases(prevCases);
     });
@@ -103,7 +105,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
         <textarea
           value={requirement}
           onChange={(e) => setRequirement(e.target.value)}
-          placeholder="Describe el requisito o funcionalidad para detectar casos limite..."
+          placeholder={t('edgecase.inputPlaceholder')}
           className="field-textarea"
           style={{ minHeight: 200 }}
         />
@@ -122,7 +124,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
             loading={loading || isStreaming}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && edgeCases.length === 0}>
-            Limpiar
+            {t('common.clear')}
           </button>
         </div>
 
@@ -132,9 +134,9 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Categoria</th>
-                    <th>Escenario</th>
-                    <th>Resultado esperado</th>
+                    <th>{t('edgecase.category')}</th>
+                    <th>{t('edgecase.scenario')}</th>
+                    <th>{t('edgecase.expectedResult')}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -11,6 +11,7 @@ import type { ViewType } from '../config/constants';
 import { useHistory } from '../hooks/useHistory';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
+import { useT } from '../i18n/I18nContext';
 
 import { ChainMenu } from './ChainMenu';
 import { anonymize } from '../services/anonymizer';
@@ -43,6 +44,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
   const { toast, showToast } = useToast();
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
+  const t = useT();
 
   useEffect(() => {
     if (prefill) {
@@ -67,14 +69,14 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
         setStatus('success');
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       setError(message);
       setStatus('error');
     } finally {
       setLoadingStatus('');
       setConfMap(null);
     }
-  }, [apiKey, model, requirements, profile, stream, addEntry]);
+  }, [apiKey, model, requirements, profile, stream, addEntry, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || status === 'loading' || isStreaming) return;
@@ -113,7 +115,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
     setStatus('idle');
     setCopied(false);
     setAdditionalContext('');
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setRequirements(prevRequirements);
       setCriteria(prevCriteria);
       setReasoning(prevReasoning);
@@ -216,14 +218,14 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
             id="requirements"
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
-            placeholder="Escribe los requisitos o pega la descripcion del ticket..."
+            placeholder={t('acceptance.inputPlaceholder')}
             className="field-textarea criteria-input-ta"
           />
           <textarea
             id="additional-context"
             value={additionalContext}
             onChange={(e) => setAdditionalContext(e.target.value)}
-            placeholder="Contexto adicional (opcional — pega aqui la descripcion del ticket, notas, etc.)"
+            placeholder={t('acceptance.additionalContextPlaceholder')}
             className="field-textarea"
             style={{ minHeight: 60, marginTop: 8 }}
           />
@@ -233,7 +235,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
             onChange={(e) => setCriteria(e.target.value)}
             className="field-textarea criteria-output-ta"
             readOnly={isStreaming}
-            placeholder={!criteria ? 'Los criterios generados apareceran aqui...' : ''}
+            placeholder={!criteria ? t('acceptance.outputPlaceholder') : ''}
           />
           {criteria && (
             <div className="copy-row">
@@ -242,7 +244,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
                 className="btn-ghost btn-copy"
                 onClick={handleCopy}
               >
-                {copied ? 'Copiado!' : 'Copiar Criterio'}
+                {copied ? t('common.copied') : t('acceptance.copyCriteria')}
               </button>
             </div>
           )}
@@ -320,13 +322,13 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
         <button
           type="button"
           className="btn-ghost"
           onClick={() => setShowHistory(true)}
         >
-          Historial {history.length > 0 && <span className="history-count">{history.length}</span>}
+          {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
         </button>
         <button
           type="button"
@@ -334,7 +336,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
           onClick={handleClear}
           disabled={!requirements && !criteria}
         >
-          Limpiar
+          {t('common.clear')}
         </button>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />

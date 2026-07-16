@@ -8,6 +8,7 @@ import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 
 const FORMATS = [
@@ -34,6 +35,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+  const t = useT();
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
 
@@ -44,13 +46,13 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
       const gen = streamWithGroq(apiKey, model, effectiveInput, CONVERTER_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       showToast(message);
     } finally {
       setLoading(false);
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream, showToast]);
+  }, [apiKey, model, profile, stream, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -72,7 +74,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
   const handleClear = useCallback(() => {
     setInput('');
     setResult('');
-    showToast('Campos limpiados');
+    showToast(t('common.cleared'));
   }, [showToast]);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
           <div>
             <div className="br-compact-row" style={{ marginBottom: 8 }}>
               <div className="br-compact-field">
-                <label className="field-label">Formato origen</label>
+                <label className="field-label">{t('converter.inputFormat')}</label>
                 <div className="input-wrap">
                   <select value={inputFormat} onChange={(e) => setInputFormat(e.target.value)} className="field-select">
                     {FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -105,7 +107,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Pega el texto a convertir..."
+              placeholder={t('converter.inputPlaceholder')}
               className="field-textarea"
               style={{ minHeight: 300 }}
             />
@@ -113,7 +115,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
           <div>
             <div className="br-compact-row" style={{ marginBottom: 8 }}>
               <div className="br-compact-field">
-                <label className="field-label">Formato destino</label>
+                <label className="field-label">{t('converter.outputFormat')}</label>
                 <div className="input-wrap">
                   <select value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)} className="field-select">
                     {FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -127,7 +129,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
               readOnly
               className="field-textarea"
               style={{ minHeight: 300 }}
-              placeholder="El resultado aparecera aqui..."
+              placeholder={t('converter.outputPlaceholder')}
             />
           </div>
         </div>
@@ -147,7 +149,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
             loading={loading || isStreaming}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!input && !result}>
-            Limpiar
+            {t('common.clear')}
           </button>
         </div>
       </div>

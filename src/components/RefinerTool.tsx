@@ -9,6 +9,7 @@ import { ChainMenu } from './ChainMenu';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
@@ -28,6 +29,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+  const t = useT();
 
   useEffect(() => {
     if (prefill) setRequirement(prefill);
@@ -45,13 +47,13 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
         onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       showToast(message);
     } finally {
       setLoading(false);
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream, showToast]);
+  }, [apiKey, model, profile, stream, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -74,7 +76,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
     const prevResult = result;
     setRequirement('');
     setResult('');
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setRequirement(prev);
       setResult(prevResult);
     });
@@ -97,7 +99,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
         <textarea
           value={requirement}
           onChange={(e) => setRequirement(e.target.value)}
-          placeholder="Pega el requisito o historia de usuario a analizar..."
+          placeholder={t('refiner.inputPlaceholder')}
           className="field-textarea"
           style={{ minHeight: 200 }}
         />
@@ -116,7 +118,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
             loading={loading || isStreaming}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !result}>
-            Limpiar
+            {t('common.clear')}
           </button>
         </div>
         {result && (

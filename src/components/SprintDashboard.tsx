@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Sprint, TabId } from '../hooks/useSprints';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
+import { useT } from '../i18n/I18nContext';
 
 const TAB_LABELS: Record<TabId, string> = {
   resolved: 'Resueltos',
@@ -50,6 +51,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const t = useT();
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -192,12 +194,12 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
         {searchQuery.trim() && (
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-            {displayRowCount} de {grid.length} filas
+            {displayRowCount} {t('sprint.rowsOf')} {grid.length} {t('common.rows')}
           </span>
         )}
         <input
           type="text"
-          placeholder="Buscar por ticket, fecha, squad..."
+          placeholder={t('sprint.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => handleSearchChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Escape') clearSearch(); }}
@@ -305,7 +307,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
                           window.open(`${baseUrl}/browse/${ticketKey}`, '_blank');
                         }
                       }}
-                          title={ticketKey ? `Abrir ${ticketKey} en el tracker` : undefined}
+                          title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : undefined}
                       style={{
                         border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                         cursor: ticketKey ? 'pointer' : undefined,
@@ -387,7 +389,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
       {!searchQuery.trim() && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
-            + Fila
+            {t('sprint.addRow')}
           </button>
         </div>
       )}
@@ -395,7 +397,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
       {!sprint.archived && (
         <div className="actions-bar">
           <button type="button" className="btn-ghost" onClick={onArchive}>
-            Archivar Sprint
+            {t('sprint.archive')}
           </button>
         </div>
       )}

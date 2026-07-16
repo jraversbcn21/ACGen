@@ -9,6 +9,7 @@ import { ChainMenu } from './ChainMenu';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
@@ -28,6 +29,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+  const t = useT();
 
   useEffect(() => {
     if (prefill) setIdea(prefill);
@@ -45,13 +47,13 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
         onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       showToast(message);
     } finally {
       setLoading(false);
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream, showToast]);
+  }, [apiKey, model, profile, stream, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -74,7 +76,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
     const prevResult = result;
     setIdea('');
     setResult('');
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setIdea(prev);
       setResult(prevResult);
     });
@@ -97,7 +99,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
         <textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
-          placeholder="Describe la necesidad o idea de funcionalidad..."
+          placeholder={t('userstory.inputPlaceholder')}
           className="field-textarea"
           style={{ minHeight: 200 }}
         />
@@ -116,7 +118,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
             loading={loading || isStreaming}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!idea && !result}>
-            Limpiar
+            {t('common.clear')}
           </button>
         </div>
         {result && (

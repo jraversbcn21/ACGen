@@ -12,6 +12,7 @@ import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
 
@@ -79,6 +80,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
+  const t = useT();
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
@@ -116,14 +118,14 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
         addEntry(formData.description, fullText);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       setError(message);
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
       setConfMap(null);
     }
-  }, [apiKey, model, formData.description, profile, stream, addEntry]);
+  }, [apiKey, model, formData.description, profile, stream, addEntry, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
@@ -161,7 +163,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
     setReasoning(undefined);
     setError(null);
     setCopied(false);
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setOutput(prevOutput);
       setReasoning(prevReasoning);
     });
@@ -259,7 +261,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
       {/* Compact fields row */}
       <div className="br-compact-row">
         <div className="br-compact-field">
-          <label htmlFor="br-platform" className="field-label">Plataforma</label>
+          <label htmlFor="br-platform" className="field-label">{t('bugreport.platform')}</label>
           <div className="input-wrap">
             <select
               id="br-platform"
@@ -275,7 +277,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
           </div>
         </div>
         <div className="br-compact-field">
-          <label htmlFor="br-market" className="field-label">Mercado</label>
+          <label htmlFor="br-market" className="field-label">{t('bugreport.market')}</label>
           <SearchableSelect
             options={marketOptions}
             value={formData.market}
@@ -286,7 +288,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
         {isWeb ? (
           <>
             <div className="br-compact-field">
-              <label htmlFor="br-browser" className="field-label">Navegador</label>
+              <label htmlFor="br-browser" className="field-label">{t('bugreport.browser')}</label>
               <div className="input-wrap">
                 <select
                   id="br-browser"
@@ -302,7 +304,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
               </div>
             </div>
             <div className="br-compact-field br-compact-field-wide">
-              <label htmlFor="br-url" className="field-label">URL</label>
+              <label htmlFor="br-url" className="field-label">{t('bugreport.url')}</label>
               <input
                 id="br-url"
                 type="text"
@@ -317,19 +319,19 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
           <>
             <div className="br-compact-field">
               <label htmlFor="br-app-version" className="field-label">
-                {formData.platform === 'app-android' ? 'Versión APK' : 'Versión Build'}
+                {formData.platform === 'app-android' ? t('bugreport.apkVersion') : t('bugreport.buildVersion')}
               </label>
               <input
                 id="br-app-version"
                 type="text"
                 value={formData.appVersion || ''}
                 onChange={(e) => updateForm('appVersion', e.target.value)}
-                placeholder={formData.platform === 'app-android' ? 'ej: v2024.12.1' : 'ej: v2024.12.1'}
+                placeholder={formData.platform === 'app-android' ? t('bugreport.apkPlaceholder') : t('bugreport.apkPlaceholder')}
                 className="field-input"
               />
             </div>
             <div className="br-compact-field">
-              <label htmlFor="br-device" className="field-label">Dispositivo</label>
+              <label htmlFor="br-device" className="field-label">{t('bugreport.device')}</label>
               <div className="input-wrap">
                 <select
                   id="br-device"
@@ -351,27 +353,27 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
             </div>
             <div className="br-compact-field">
               <label htmlFor="br-os-version" className="field-label">
-                {formData.platform === 'app-android' ? 'Versión Android' : 'Versión iOS'}
+                {formData.platform === 'app-android' ? t('bugreport.androidVersion') : t('bugreport.iosVersion')}
               </label>
               <input
                 id="br-os-version"
                 type="text"
                 value={formData.osVersion || ''}
                 onChange={(e) => updateForm('osVersion', e.target.value)}
-                placeholder={formData.platform === 'app-android' ? 'ej: Android 14' : 'ej: iOS 18'}
+                placeholder={formData.platform === 'app-android' ? t('bugreport.androidPlaceholder') : t('bugreport.iosPlaceholder')}
                 className="field-input"
               />
             </div>
           </>
         )}
         <div className="br-compact-field br-compact-field-wide">
-          <label htmlFor="br-context" className="field-label">Contexto adicional</label>
+          <label htmlFor="br-context" className="field-label">{t('bugreport.additionalContext')}</label>
           <input
             id="br-context"
             type="text"
             value={formData.additionalContext || ''}
             onChange={(e) => updateForm('additionalContext', e.target.value)}
-            placeholder="Notas, contexto, etc."
+            placeholder={t('bugreport.notesPlaceholder')}
             className="field-input"
           />
         </div>
@@ -379,12 +381,12 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
 
       {/* Bug description */}
       <div style={{ marginTop: 16 }}>
-        <label htmlFor="br-description" className="field-label">Descripcion del bug</label>
+        <label htmlFor="br-description" className="field-label">{t('bugreport.description')}</label>
         <textarea
           id="br-description"
           value={formData.description}
           onChange={(e) => updateForm('description', e.target.value)}
-          placeholder='Describe el bug de forma informal, ej: "Al anadir talla M al carrito desde mobile, el precio se muestra como 0C en la minicesta"'
+          placeholder={t('bugreport.descriptionPlaceholder')}
           className="field-textarea"
           style={{ minHeight: 120 }}
         />
@@ -397,7 +399,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
           value={isStreaming ? streamText : output}
           readOnly
           className="field-textarea br-output-ta"
-          placeholder="El bug report generado aparecerá aquí..."
+          placeholder={t('bugreport.outputPlaceholder')}
         />
         {output && (
           <div className="copy-row">
@@ -406,7 +408,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
               className="btn-ghost btn-copy"
               onClick={handleCopy}
             >
-              {copied ? '¡Copiado!' : 'Copiar bug report'}
+              {copied ? t('common.copied') : t('bugreport.copy')}
             </button>
           </div>
         )}
@@ -476,13 +478,13 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
         <button
           type="button"
           className="btn-ghost"
           onClick={() => setShowHistory(true)}
         >
-          Historial {history.length > 0 && <span className="history-count">{history.length}</span>}
+          {t('bugreport.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
         </button>
         <button
           type="button"
@@ -490,7 +492,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
           onClick={handleClear}
           disabled={!formData.description && !output}
         >
-          Limpiar
+          {t('common.clear')}
         </button>
       </div>
 

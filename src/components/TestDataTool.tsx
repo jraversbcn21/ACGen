@@ -10,6 +10,7 @@ import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
+import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import type { TestDataFormData } from '../types';
 
@@ -121,6 +122,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
   const [confMap, setConfMap] = useState<Record<string, string> | null>(null);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
+  const t = useT();
 
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
@@ -144,21 +146,21 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
       await stream(gen, (fullText) => {
         const jsonArray = extractJsonArray(fullText);
         if (!jsonArray || jsonArray.length === 0) {
-          throw new Error('No se pudieron generar los datos de prueba. Intenta de nuevo.');
+          throw new Error(t('error.noTestData'));
         }
         setGeneratedData(validateTestDataRows(jsonArray));
         onSaveArtifact?.(effectiveInput, fullText);
         setGeneratedModel(model);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
+      const message = err instanceof Error ? err.message : t('error.unexpected');
       setError(message);
     } finally {
       setIsLoading(false);
       setLoadingStatus('');
       setConfMap(null);
     }
-  }, [apiKey, model, profile, stream]);
+  }, [apiKey, model, profile, stream, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
@@ -197,7 +199,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
     setError(null);
     setCopied(false);
     setCopiedRowIndex(null);
-    showToast('Campos limpiados', () => {
+    showToast(t('common.cleared'), () => {
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
@@ -261,7 +263,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
         {/* Row 1: Data type + Market + Quantity */}
         <div className="td-form-row">
           <div className="td-form-field">
-            <label htmlFor="td-data-type" className="field-label">Tipo de dato</label>
+            <label htmlFor="td-data-type" className="field-label">{t('testdata.dataType')}</label>
             <div className="input-wrap">
               <select
                 id="td-data-type"
@@ -277,7 +279,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
             </div>
           </div>
           <div className="td-form-field">
-            <label htmlFor="td-market" className="field-label">Mercado</label>
+            <label htmlFor="td-market" className="field-label">{t('testdata.market')}</label>
             <SearchableSelect
               options={marketOptions}
               value={formData.market}
@@ -286,7 +288,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
             />
           </div>
           <div className="td-form-field">
-            <label htmlFor="td-quantity" className="field-label">Cantidad</label>
+            <label htmlFor="td-quantity" className="field-label">{t('testdata.quantity')}</label>
             <div className="input-wrap">
               <select
                 id="td-quantity"
@@ -306,13 +308,13 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
         {/* Row 2: Contexto adicional */}
         <div className="td-form-row-single">
           <div className="td-form-field">
-            <label htmlFor="td-context" className="field-label">Contexto adicional (opcional)</label>
+            <label htmlFor="td-context" className="field-label">{t('testdata.additionalContext')} ({t('common.optional')})</label>
             <input
               id="td-context"
               type="text"
               value={formData.additionalContext || ''}
               onChange={(e) => updateForm('additionalContext', e.target.value)}
-              placeholder="Descripcion del ticket, notas o contexto para generar datos mas relevantes (opcional)"
+              placeholder={t('testdata.additionalContextPlaceholder')}
               className="field-input"
             />
           </div>
@@ -337,14 +339,14 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
         {loadingStatus && (
           <span className="loading-status">{loadingStatus}</span>
         )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>Ver ejemplo</button>
+        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
         <button
           type="button"
           className="btn-ghost"
           onClick={handleClear}
           disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput}
         >
-          Limpiar
+          {t('common.clear')}
         </button>
       </div>
 
@@ -353,8 +355,8 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
         <div className="td-output-section">
           {generatedModel && (
             <div className="output-header" style={{ marginBottom: '12px' }}>
-              <span className="field-label">Datos generados</span>
-              <span className="model-badge-new">Modelo: {generatedModel}</span>
+              <span className="field-label">{t('testdata.generatedData')}</span>
+              <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
             </div>
           )}
           <div className="td-actions-bar">
@@ -363,14 +365,14 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
               className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyTable}
             >
-              {copied ? '¡Copiado!' : 'Copiar todo como tabla'}
+              {copied ? t('common.copied') : t('testdata.copyAllTable')}
             </button>
             <button
               type="button"
               className="btn-ghost"
               onClick={handleDownloadCsv}
             >
-              Descargar CSV
+              {t('testdata.exportCsv')}
             </button>
           </div>
           <div className="data-table-wrap">
@@ -395,7 +397,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
                         className="td-copy-row-btn"
                         onClick={() => handleCopyRow(row, idx)}
                       >
-                        {copiedRowIndex === idx ? '✓' : 'Copiar'}
+                        {copiedRowIndex === idx ? '\u2713' : t('common.copy')}
                       </button>
                     </td>
                   </tr>

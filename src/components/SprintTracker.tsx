@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { SprintList } from './SprintList';
 import { SprintDashboard } from './SprintDashboard';
 import { useSprints } from '../hooks/useSprints';
+import { useT } from '../i18n/I18nContext';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
 interface SprintTrackerProps {}
@@ -10,6 +11,7 @@ export function SprintTracker(_props: SprintTrackerProps) {
   const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
+  const t = useT();
 
   const handleSelectSprint = useCallback((sprint: Sprint) => {
     setSelectedSprintId(sprint.id);
@@ -21,7 +23,7 @@ export function SprintTracker(_props: SprintTrackerProps) {
 
   const handleArchive = useCallback(() => {
     if (!selectedSprint) return;
-    if (!confirm('¿Archivar este sprint? El sprint archivado se moverá al historial.')) return;
+    if (!confirm(t('sprint.archiveConfirm'))) return;
     archiveSprint(selectedSprint.id);
     setSelectedSprintId(null);
   }, [selectedSprint, archiveSprint]);
@@ -46,11 +48,11 @@ export function SprintTracker(_props: SprintTrackerProps) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button type="button" className="btn-ghost" onClick={handleBack} style={{ padding: '6px 14px' }}>
-            ← Volver
+            ← {t('common.back')}
           </button>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{selectedSprint.name}</h2>
           {selectedSprint.archived && (
-            <span className="badge badge-info" style={{ fontSize: 11 }}>Archivado</span>
+            <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archived')}</span>
           )}
         </div>
 
@@ -68,7 +70,7 @@ export function SprintTracker(_props: SprintTrackerProps) {
   return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>
-        Sprint Tracker
+        {t('sprint.title')}
       </h2>
       <SprintList
         sprints={sprints}
