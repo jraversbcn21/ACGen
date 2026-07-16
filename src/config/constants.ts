@@ -487,3 +487,14 @@ Formatos soportados:
 
 Devuelve SOLO el texto convertido, sin explicaciones adicionales. Preserva todas las etiquetas, campos, valores y formato original lo mejor posible.
 {tono}`;
+
+export const DEFAULT_PROMPTS: Record<string, string> = {
+  acceptance: HARDCODED_PROMPT,
+  testcase: TESTCASE_PROMPT,
+  bugreport: BUG_REPORT_PROMPT,
+  testdata: TEST_DATA_PROMPT,
+  userstory: USER_STORY_PROMPT,
+  refiner: REFINER_PROMPT,
+  edgecase: EDGE_CASE_PROMPT,
+  converter: CONVERTER_PROMPT,
+};

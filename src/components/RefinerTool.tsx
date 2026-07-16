@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq } from '../services/apiService';
-import { REFINER_PROMPT } from '../config/constants';
+import { streamWithGroq, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { ChainMenu } from './ChainMenu';
 import { anonymize } from '../services/anonymizer';
@@ -41,7 +40,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveAr
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, REFINER_PROMPT, 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('refiner'), 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setResult(fullText);
         onSaveArtifact?.(effectiveInput, fullText);

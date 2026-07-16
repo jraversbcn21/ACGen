@@ -1,4 +1,4 @@
-import { API_URL, TEMPERATURE, REQUIRED_MARKERS, BUG_REPORT_PROMPT, TEST_DATA_PROMPT } from '../config/constants';
+import { API_URL, TEMPERATURE, REQUIRED_MARKERS, BUG_REPORT_PROMPT, TEST_DATA_PROMPT, DEFAULT_PROMPTS } from '../config/constants';
 import type { GroqResponse, GroqApiError, TestCaseData, TestCaseResponse, BugReportFormData, TestDataFormData } from '../types';
 import type { ProjectProfile } from '../types/context';
 import { deanonymize } from './anonymizer';
@@ -388,4 +388,13 @@ export async function generateTestData(
   }
 
   return { data: validateTestDataRows(jsonArray), model: response.model };
+}
+
+export function getPrompt(tool: string): string {
+  try {
+    const key = `acgen_prompt_${tool}`;
+    const override = localStorage.getItem(key);
+    if (override && override.trim()) return override;
+  } catch { /* localStorage unavailable */ }
+  return DEFAULT_PROMPTS[tool] ?? '';
 }

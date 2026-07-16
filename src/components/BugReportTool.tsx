@@ -4,8 +4,8 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq } from '../services/apiService';
-import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES, BUG_REPORT_PROMPT } from '../config/constants';
+import { streamWithGroq, getPrompt } from '../services/apiService';
+import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
@@ -111,7 +111,7 @@ export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugRep
     setOutput('');
     setReasoning(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, BUG_REPORT_PROMPT, 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('bugreport'), 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setOutput(fullText);
         onSaveArtifact?.(effectiveInput, fullText);

@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq } from '../services/apiService';
-import { USER_STORY_PROMPT } from '../config/constants';
+import { streamWithGroq, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { ChainMenu } from './ChainMenu';
 import { anonymize } from '../services/anonymizer';
@@ -41,7 +40,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSave
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, USER_STORY_PROMPT, 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('userstory'), 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setResult(fullText);
         onSaveArtifact?.(effectiveInput, fullText);

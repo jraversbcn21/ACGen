@@ -3,8 +3,8 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq } from '../services/apiService';
-import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
+import { streamWithGroq, getPrompt } from '../services/apiService';
+import { STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import type { ViewType } from '../config/constants';
@@ -60,7 +60,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
     setCriteria('');
     setReasoning(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, HARDCODED_PROMPT, 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('acceptance'), 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setCriteria(fullText);
         setReasoning(undefined);

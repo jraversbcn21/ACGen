@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from './Icons';
 import { useT } from '../i18n/I18nContext';
+import { PromptEditor } from './PromptEditor';
 import type { ViewType } from '../config/constants';
 
 const TOOLS = [
@@ -31,6 +32,7 @@ interface SidebarProps {
 
 export function Sidebar({ activeView, onNavigate, activeWorkspaceName }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const t = useT();
   const grouped = groupBy(TOOLS, 'categoryKey');
 
@@ -67,12 +69,19 @@ export function Sidebar({ activeView, onNavigate, activeWorkspaceName }: Sidebar
       </nav>
       <div className="sidebar-footer">
         {!collapsed && (
-          <button type="button" className="sidebar-item" onClick={() => onNavigate('landing')}>
-            <Icon.back size={18} />
-            <span>{t('sidebar.inicio')}</span>
-          </button>
+          <>
+            <button type="button" className="sidebar-item" onClick={() => onNavigate('landing')}>
+              <Icon.back size={18} />
+              <span>{t('sidebar.inicio')}</span>
+            </button>
+            <button type="button" className="sidebar-item" onClick={() => setShowPromptEditor(true)}>
+              <Icon.spark size={18} />
+              <span>{t('sidebar.prompts')}</span>
+            </button>
+          </>
         )}
       </div>
+      {showPromptEditor && <PromptEditor onClose={() => setShowPromptEditor(false)} />}
     </aside>
   );
 }

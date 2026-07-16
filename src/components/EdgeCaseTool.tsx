@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray } from '../services/apiService';
-import { EDGE_CASE_PROMPT } from '../config/constants';
+import { streamWithGroq, extractJsonArray, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -42,7 +41,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setError(null);
     setEdgeCases([]);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, EDGE_CASE_PROMPT, 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('edgecase'), 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (!items || items.length === 0) {

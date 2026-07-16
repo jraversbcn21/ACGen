@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, validateTestCases } from '../services/apiService';
-import { TESTCASE_PROMPT } from '../config/constants';
+import { streamWithGroq, extractJsonArray, validateTestCases, getPrompt } from '../services/apiService';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
@@ -60,7 +59,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }
     setTestCases([]);
     setGeneratedModel(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, TESTCASE_PROMPT, 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testcase'), 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const items = extractJsonArray(fullText);
         if (items.length === 0) {

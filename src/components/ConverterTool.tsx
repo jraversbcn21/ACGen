@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq } from '../services/apiService';
-import { CONVERTER_PROMPT } from '../config/constants';
+import { streamWithGroq, getPrompt } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -43,7 +42,7 @@ export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: Conver
     setLoading(true);
     setResult('');
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, CONVERTER_PROMPT, 'criteria', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('converter'), 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
     } catch (err) {
       const message = err instanceof Error ? err.message : t('error.unexpected');

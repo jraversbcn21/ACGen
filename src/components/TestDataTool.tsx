@@ -3,8 +3,8 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, validateTestDataRows } from '../services/apiService';
-import { SUPPORTED_MARKETS, DATA_TYPES, TEST_DATA_PROMPT } from '../config/constants';
+import { streamWithGroq, extractJsonArray, validateTestDataRows, getPrompt } from '../services/apiService';
+import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize } from '../services/anonymizer';
@@ -142,7 +142,7 @@ export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDat
     setGeneratedData([]);
     setGeneratedModel(undefined);
     try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, TEST_DATA_PROMPT, 'testcase', profile, effectiveMap);
+      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testdata'), 'testcase', profile, effectiveMap);
       await stream(gen, (fullText) => {
         const jsonArray = extractJsonArray(fullText);
         if (!jsonArray || jsonArray.length === 0) {
