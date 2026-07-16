@@ -88,4 +88,29 @@ export const Icon = {
       <circle cx="17" cy="20" r="1.2" />
     </Svg>
   ),
+  userstory: (p: SvgProps) => (
+    <Svg {...p}>
+      <circle cx="12" cy="7" r="3.5" />
+      <path d="M5.5 20v-2a4.5 4.5 0 0 1 4.5-4.5h4a4.5 4.5 0 0 1 4.5 4.5v2" />
+      <path d="M16 5.5 17 3M8 5.5 7 3" />
+      <path d="M12 3v2" />
+    </Svg>
+  ),
+  refiner: (p: SvgProps) => (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+      <circle cx="12" cy="4.5" r=".8" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19.5" r=".8" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  edgecase: (p: SvgProps) => (
+    <Svg {...p}>
+      <path d="M2 6h4l2-3h8l2 3h4v13a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z" />
+      <circle cx="12" cy="13" r="3" />
+      <path d="M4 6V4a2 2 0 0 1 2-2h.5M17.5 2h.5a2 2 0 0 1 2 2v2" />
+      <path d="M12 7v1M10 11l-1.5 1.5M14 11l1.5 1.5" />
+    </Svg>
+  ),
 };

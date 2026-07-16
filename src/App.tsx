@@ -8,12 +8,15 @@ import { TestCaseTool } from './components/TestCaseTool';
 import { BugReportTool } from './components/BugReportTool';
 import { TestDataTool } from './components/TestDataTool';
 import { SprintTracker } from './components/SprintTracker';
+import { UserStoryTool } from './components/UserStoryTool';
+import { RefinerTool } from './components/RefinerTool';
+import { EdgeCaseTool } from './components/EdgeCaseTool';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import { useProfile } from './components/ContextProfile';
 import type { ViewType } from './config/constants';
 
-const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker'];
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'userstory', 'refiner', 'edgecase'];
 
 function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
@@ -26,6 +29,9 @@ const toolNames: Record<string, string> = {
   bugreport: 'Bug Report',
   testdata: 'Datos de Prueba',
   sprinttracker: 'Sprint Tracker',
+  userstory: 'Historias de Usuario',
+  refiner: 'Refinador de Requisitos',
+  edgecase: 'Casos Limite',
 };
 
 export default function App() {
@@ -103,6 +109,18 @@ export default function App() {
 
           {view === 'sprinttracker' && (
             <SprintTracker />
+          )}
+
+          {view === 'userstory' && (
+            <UserStoryTool apiKey={apiKey} model={model} profile={profile} />
+          )}
+
+          {view === 'refiner' && (
+            <RefinerTool apiKey={apiKey} model={model} profile={profile} />
+          )}
+
+          {view === 'edgecase' && (
+            <EdgeCaseTool apiKey={apiKey} model={model} profile={profile} />
           )}
         </ErrorBoundary>
       </main>

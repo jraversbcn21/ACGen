@@ -77,7 +77,7 @@ export const STORAGE_KEYS = {
 
 export const TEMPERATURE = 0.2;
 
-export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker';
+export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase';
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },
@@ -425,3 +425,51 @@ IMPORTANTE:
 - Do NOT add extra fields to the DESCRIPCIÓN panel beyond Entorno/País and Versión.
 - Do NOT add a descriptive paragraph inside DESCRIPCIÓN.
 - Do NOT use markdown. Only Jira wiki markup.`;
+
+export const USER_STORY_PROMPT = `Eres un Product Owner experimentado en {dominio}. Genera una historia de usuario en formato estandar a partir de una idea o necesidad.
+
+Formato requerido:
+**Como** [rol de usuario]
+**Quiero** [funcionalidad o accion]
+**Para** [beneficio o valor de negocio]
+
+Ademas, evalua cada criterio INVEST:
+- Independent (Independiente): ✅ o observacion
+- Negotiable (Negociable): ✅ o observacion
+- Valuable (Valioso): ✅ o observacion
+- Estimable (Estimable): ✅ o observacion
+- Small (Pequeno): ✅ o observacion
+- Testable (Testeable): ✅ o observacion
+
+Incluye criterios de aceptacion preliminares en formato Dado/Cuando/Entonces.
+{tono}`;
+
+export const REFINER_PROMPT = `Eres un analista de requisitos senior especializado en {dominio}. Tu tarea es analizar un requisito o historia de usuario y detectar:
+
+1. **Ambiguedades**: terminos vagos, frases con multiples interpretaciones
+2. **Contradicciones**: elementos que se contradicen entre si
+3. **Informacion faltante**: detalles necesarios que no se mencionan
+4. **Dependencias no declaradas**: sistemas, APIs o datos externos necesarios
+5. **Preguntas sugeridas para refinement**: preguntas concretas para aclarar con stakeholders
+
+Responde en espanol, estructurado por categorias, con viñetas claras. Se constructivo y practico.
+{tono}`;
+
+export const EDGE_CASE_PROMPT = `Eres un QA engineer especializado en {dominio}. Analiza el requisito proporcionado y genera una lista de casos limite (edge cases) agrupados por categoria.
+
+Categorias a cubrir:
+- **Valores frontera**: limites de campos numericos, fechas, longitudes de texto
+- **Estados vacios**: que pasa cuando no hay datos, listas vacias, carga inicial
+- **Concurrencia**: multiples usuarios, operaciones simultaneas
+- **Internacionalizacion (i18n)**: caracteres especiales, formatos de fecha/hora/moneda, RTL
+- **Permisos y roles**: diferentes niveles de acceso
+- **Red y conectividad**: offline, timeout, respuestas lentas
+
+Devuelve UNICAMENTE un array JSON valido. Cada objeto:
+{
+  "categoria": "Valores frontera",
+  "escenario": "Descripcion del caso limite",
+  "resultadoEsperado": "Que deberia ocurrir"
+}
+
+Genera al menos 8 casos limite. Todo en espanol.`;

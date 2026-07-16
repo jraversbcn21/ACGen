@@ -3,7 +3,7 @@ import { ModelSelector } from './ModelSelector';
 import { Icon } from './Icons';
 
 interface LandingScreenProps {
-  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker') => void;
+  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'sprinttracker') => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   model: string;
@@ -40,10 +40,31 @@ const tools = [
     tag: 'Datos',
   },
   {
+    id: 'userstory' as const,
+    icon: Icon.userstory,
+    title: 'Historias de Usuario',
+    desc: 'Genera historias en formato Como/Quiero/Para + INVEST',
+    tag: 'PO',
+  },
+  {
+    id: 'refiner' as const,
+    icon: Icon.refiner,
+    title: 'Refinador de Requisitos',
+    desc: 'Detecta ambiguedades, contradicciones e info faltante',
+    tag: 'Analisis',
+  },
+  {
+    id: 'edgecase' as const,
+    icon: Icon.edgecase,
+    title: 'Casos Limite',
+    desc: 'Genera edge cases: frontera, vacios, concurrencia, i18n',
+    tag: 'QA',
+  },
+  {
     id: 'sprinttracker' as const,
     icon: Icon.sprint,
     title: 'Sprint Tracker',
-    desc: 'Dashboard de tracking de tickets Jira por sprint',
+    desc: 'Dashboard de tracking de tickets por sprint',
     tag: 'Tracking',
   },
 ];
