@@ -12,12 +12,13 @@ import { Sidebar } from './components/Sidebar';
 import { UserStoryTool } from './components/UserStoryTool';
 import { RefinerTool } from './components/RefinerTool';
 import { EdgeCaseTool } from './components/EdgeCaseTool';
+import { ConverterTool } from './components/ConverterTool';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import { useProfile } from './components/ContextProfile';
 import type { ViewType } from './config/constants';
 
-const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'userstory', 'refiner', 'edgecase'];
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'userstory', 'refiner', 'edgecase', 'converter'];
 
 function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
@@ -124,6 +125,10 @@ export default function App() {
           {view === 'edgecase' && (
             <EdgeCaseTool apiKey={apiKey} model={model} profile={profile}
               prefill={prefill?.view === 'edgecase' ? prefill.text : undefined} />
+          )}
+
+          {view === 'converter' && (
+            <ConverterTool apiKey={apiKey} model={model} profile={profile} />
           )}
         </ErrorBoundary>
       </main>

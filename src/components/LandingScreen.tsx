@@ -3,7 +3,7 @@ import { ModelSelector } from './ModelSelector';
 import { Icon } from './Icons';
 
 interface LandingScreenProps {
-  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'sprinttracker') => void;
+  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker') => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   model: string;
@@ -59,6 +59,13 @@ const tools = [
     title: 'Casos Limite',
     desc: 'Genera edge cases: frontera, vacios, concurrencia, i18n',
     tag: 'QA',
+  },
+  {
+    id: 'converter' as const,
+    icon: Icon.converter,
+    title: 'Conversor de Formatos',
+    desc: 'Convierte entre Gherkin, Markdown, Jira wiki, Azure DevOps',
+    tag: 'Util',
   },
   {
     id: 'sprinttracker' as const,

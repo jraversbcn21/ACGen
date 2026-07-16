@@ -113,4 +113,10 @@ export const Icon = {
       <path d="M12 7v1M10 11l-1.5 1.5M14 11l1.5 1.5" />
     </Svg>
   ),
+  converter: (p: SvgProps) => (
+    <Svg {...p}>
+      <path d="M4 6h16M4 12h10M4 18h14" />
+      <path d="M16 9.5 18 12l-2 2.5M12 15l-1.5 1.5M12 8l1.5 1.5" />
+    </Svg>
+  ),
 };

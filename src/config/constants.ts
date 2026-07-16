@@ -77,7 +77,7 @@ export const STORAGE_KEYS = {
 
 export const TEMPERATURE = 0.2;
 
-export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase';
+export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter';
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },
@@ -473,3 +473,15 @@ Devuelve UNICAMENTE un array JSON valido. Cada objeto:
 }
 
 Genera al menos 8 casos limite. Todo en espanol.`;
+
+export const CONVERTER_PROMPT = `Eres un experto en conversion de formatos de documentacion agil. Convierte el texto proporcionado al formato de salida solicitado, preservando el significado pero adaptando la estructura.
+
+Formatos soportados:
+- **gerkin**: formato Given/When/Then para BDD
+- **markdown**: texto estructurado con headers, listas, tablas
+- **jirawiki**: formato de marcado de Jira/Confluence con {panel}, {quote}, # listas
+- **azdo**: formato de Azure DevOps (markdown extendido)
+- **text**: texto plano estructurado
+
+Devuelve SOLO el texto convertido, sin explicaciones adicionales. Preserva todas las etiquetas, campos, valores y formato original lo mejor posible.
+{tono}`;

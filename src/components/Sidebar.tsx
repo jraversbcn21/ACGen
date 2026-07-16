@@ -10,6 +10,7 @@ const TOOLS = [
   { view: 'userstory' as ViewType, icon: Icon.userstory, label: 'Historias', category: 'Generar' },
   { view: 'refiner' as ViewType, icon: Icon.refiner, label: 'Refinador', category: 'Refinar' },
   { view: 'edgecase' as ViewType, icon: Icon.edgecase, label: 'Casos Limite', category: 'Refinar' },
+  { view: 'converter' as ViewType, icon: Icon.converter, label: 'Conversor', category: 'Convertir' },
   { view: 'sprinttracker' as ViewType, icon: Icon.sprint, label: 'Sprint', category: 'Seguimiento' },
 ];
 
