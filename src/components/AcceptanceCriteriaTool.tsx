@@ -23,9 +23,10 @@ interface AcceptanceCriteriaToolProps {
   profile?: ProjectProfile;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefill }: AcceptanceCriteriaToolProps) {
+export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: AcceptanceCriteriaToolProps) {
   const [requirements, setRequirements] = useState('');
   const [criteria, setCriteria] = useState('');
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -61,6 +62,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefil
       await stream(gen, (fullText) => {
         setCriteria(fullText);
         setReasoning(undefined);
+        onSaveArtifact?.(effectiveInput, fullText);
         addEntry(requirements, fullText);
         setStatus('success');
       });

@@ -17,6 +17,7 @@ interface TestDataToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
 const LABEL_MAP: Record<string, string> = {
@@ -108,7 +109,7 @@ const DEFAULT_FORM: TestDataFormData = {
   quantity: 3,
 };
 
-export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
+export function TestDataTool({ apiKey, model, profile, onSaveArtifact }: TestDataToolProps) {
   const [formData, setFormData] = useState<TestDataFormData>(DEFAULT_FORM);
   const [generatedData, setGeneratedData] = useState<Record<string, string>[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
@@ -146,6 +147,7 @@ export function TestDataTool({ apiKey, model, profile }: TestDataToolProps) {
           throw new Error('No se pudieron generar los datos de prueba. Intenta de nuevo.');
         }
         setGeneratedData(validateTestDataRows(jsonArray));
+        onSaveArtifact?.(effectiveInput, fullText);
         setGeneratedModel(model);
       });
     } catch (err) {

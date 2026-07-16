@@ -18,9 +18,10 @@ interface RefinerToolProps {
   profile?: ProjectProfile;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function RefinerTool({ apiKey, model, profile, onChain, prefill }: RefinerToolProps) {
+export function RefinerTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: RefinerToolProps) {
   const [requirement, setRequirement] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ export function RefinerTool({ apiKey, model, profile, onChain, prefill }: Refine
       const gen = streamWithGroq(apiKey, model, effectiveInput, REFINER_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setResult(fullText);
+        onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';

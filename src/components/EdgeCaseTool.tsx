@@ -20,7 +20,7 @@ const CATEGORY_BADGES: Record<string, string> = {
   'Internacionalizacion': 'badge-info',
 };
 
-export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string }) {
+export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void }) {
   const [requirement, setRequirement] = useState('');
   const [edgeCases, setEdgeCases] = useState<Array<{ categoria: string; escenario: string; resultadoEsperado: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
           throw new Error('No se generaron casos limite. Intenta con una descripcion mas detallada.');
         }
         setEdgeCases(items as Array<{ categoria: string; escenario: string; resultadoEsperado: string }>);
+        onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';

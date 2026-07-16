@@ -1,12 +1,34 @@
 import { Icon } from './Icons';
+import { WorkspacePicker } from './WorkspacePicker';
+import type { Workspace } from '../types/workspace';
 
 interface HeaderProps {
   model: string;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  onSelectWorkspace: (id: string) => void;
+  onCreateWorkspace: (name: string) => void;
+  onRenameWorkspace: (id: string, name: string) => void;
+  onDeleteWorkspace: (id: string) => void;
+  onExportWorkspace: (id: string) => void;
+  onImportWorkspace: (json: string) => void;
 }
 
-export function Header({ model, theme, onToggleTheme }: HeaderProps) {
+export function Header({
+  model,
+  theme,
+  onToggleTheme,
+  workspaces,
+  activeWorkspaceId,
+  onSelectWorkspace,
+  onCreateWorkspace,
+  onRenameWorkspace,
+  onDeleteWorkspace,
+  onExportWorkspace,
+  onImportWorkspace,
+}: HeaderProps) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -15,6 +37,16 @@ export function Header({ model, theme, onToggleTheme }: HeaderProps) {
         <span className="brand-sub">Workbench de artefactos QA</span>
       </div>
       <div className="topbar-right">
+        <WorkspacePicker
+          workspaces={workspaces}
+          activeId={activeWorkspaceId}
+          onSelect={onSelectWorkspace}
+          onCreate={onCreateWorkspace}
+          onRename={onRenameWorkspace}
+          onDelete={onDeleteWorkspace}
+          onExport={onExportWorkspace}
+          onImport={onImportWorkspace}
+        />
         <span className="model-chip">
           <Icon.spark size={14} />
           {model}

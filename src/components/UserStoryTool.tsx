@@ -18,9 +18,10 @@ interface UserStoryToolProps {
   profile?: ProjectProfile;
   onChain?: (view: ViewType, text: string) => void;
   prefill?: string;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function UserStoryTool({ apiKey, model, profile, onChain, prefill }: UserStoryToolProps) {
+export function UserStoryTool({ apiKey, model, profile, onChain, prefill, onSaveArtifact }: UserStoryToolProps) {
   const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ export function UserStoryTool({ apiKey, model, profile, onChain, prefill }: User
       const gen = streamWithGroq(apiKey, model, effectiveInput, USER_STORY_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setResult(fullText);
+        onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';

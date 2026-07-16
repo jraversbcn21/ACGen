@@ -22,9 +22,10 @@ interface ConverterToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
-export function ConverterTool({ apiKey, model, profile }: ConverterToolProps) {
+export function ConverterTool({ apiKey, model, profile, onSaveArtifact }: ConverterToolProps) {
   const [input, setInput] = useState('');
   const [inputFormat, setInputFormat] = useState('text');
   const [outputFormat, setOutputFormat] = useState('markdown');
@@ -41,7 +42,7 @@ export function ConverterTool({ apiKey, model, profile }: ConverterToolProps) {
     setResult('');
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, CONVERTER_PROMPT, 'criteria', profile, effectiveMap);
-      await stream(gen, (fullText) => { setResult(fullText); });
+      await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.';
       showToast(message);

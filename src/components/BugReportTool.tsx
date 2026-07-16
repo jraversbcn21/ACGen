@@ -19,6 +19,7 @@ interface BugReportToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onSaveArtifact?: (input: string, output: string) => void;
 }
 
 const DESKTOP_BROWSERS = ['Chrome', 'Firefox', 'Safari', 'Edge'];
@@ -62,7 +63,7 @@ const DEFAULT_FORM: BugReportFormData = {
   additionalContext: '',
 };
 
-export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
+export function BugReportTool({ apiKey, model, profile, onSaveArtifact }: BugReportToolProps) {
   const [formData, setFormData] = useState<BugReportFormData>(DEFAULT_FORM);
   const [output, setOutput] = useState('');
   const [reasoning, setReasoning] = useState<string | undefined>();
@@ -111,6 +112,7 @@ export function BugReportTool({ apiKey, model, profile }: BugReportToolProps) {
       const gen = streamWithGroq(apiKey, model, effectiveInput, BUG_REPORT_PROMPT, 'criteria', profile, effectiveMap);
       await stream(gen, (fullText) => {
         setOutput(fullText);
+        onSaveArtifact?.(effectiveInput, fullText);
         addEntry(formData.description, fullText);
       });
     } catch (err) {

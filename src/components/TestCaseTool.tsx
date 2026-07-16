@@ -36,7 +36,7 @@ function generateJiraTable(testCases: TestCaseData[]): string {
   return [header, ...rows].join('\n');
 }
 
-export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string }) {
+export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void }) {
   const [input, setInput] = useState('');
   const [testCases, setTestCases] = useState<TestCaseData[]>([]);
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -68,6 +68,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: stri
         }
         const validated = validateTestCases(items);
         setTestCases(validated);
+        onSaveArtifact?.(effectiveInput, fullText);
         setGeneratedModel(model);
         setStatus('success');
       });
