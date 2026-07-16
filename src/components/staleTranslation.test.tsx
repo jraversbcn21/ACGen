@@ -28,7 +28,6 @@ const TOOLS = [
 
 describe.each(TOOLS)('$name — language switching', ({ Tool }) => {
   beforeEach(() => {
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] });
     localStorage.setItem('acgen_lang', JSON.stringify('es'));
   });
 

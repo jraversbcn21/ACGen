@@ -201,12 +201,15 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   };
 
   const stopSpeech = () => {
-    window.speechSynthesis.cancel();
+    // Read-aloud is optional: without the API there is nothing to stop.
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     setIsSpeaking(false);
   };
 
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    };
   }, []);
 
   useEffect(() => {

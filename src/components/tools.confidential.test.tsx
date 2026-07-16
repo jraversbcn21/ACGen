@@ -39,8 +39,6 @@ function sentMap(): Record<string, string> | undefined {
 
 describe.each(TOOLS)('$name — confidential mode', ({ Tool, storageKey }) => {
   beforeEach(() => {
-    // jsdom has no speechSynthesis; some tools call it in cleanup unguarded.
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] });
     localStorage.setItem('acgen_lang', JSON.stringify('es'));
     streamMock.mockReset();
     streamMock.mockImplementation(async function* () {
