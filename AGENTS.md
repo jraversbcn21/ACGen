@@ -5,7 +5,6 @@
 | Command | Action |
 |---|---|
 | `npm run dev` | Start Vite dev server (port 5173) |
-| `npm run dev:all` | Start Vite + Jira functions together via `vercel dev` |
 | `npm run build` | Type-check (`tsc -b`) + Vite build |
 | `npm run lint` | ESLint |
 | `npm run preview` | Vite preview |
@@ -19,20 +18,19 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 
 | Test file | Tests |
 |---|---|
-| `api/_lib/jiraUtils.test.js` | 22 — `validateAndEncodeIssueKey` (regex + URI-encoding), `validateBaseUrl` (http/https schema, `JIRA_ALLOWED_HOSTS` allowlist: case-insensitivity, quote/whitespace tolerance, fail-closed on unset/empty, no subdomain-suffix bypass) |
 | `src/services/apiService.test.ts` | 17 — `validateTestCases`, `validateTestDataRows`, `isModelDecommissioned` (400/404 detection) |
 | `src/hooks/useSprints.test.ts` | 20 — init, addSprint, archiveSprint, updateSprint, updateTabJql, updateGridCell, setTabGrid, deleteSprint (removes column-widths key), moveRow (down/up/no-op/oob), persistence, hydration, invalid JSON recovery, old-sprint migration (with and without JSD tab), quota-exceeded resilience |
 | `src/hooks/useLocalStorage.test.ts` | 14 — in-memory, same-tab cross-instance sync, cross-tab `storage` event sync, ignoring unrelated keys, reset on external clear, quota-exceeded resilience |
 | `src/hooks/useHistory.test.ts` | 11 — add, max entries, load from history, clear, quota-exceeded resilience |
 | `src/components/ErrorBoundary.test.tsx` | 3 — renders children, catches render crash, recovers on reset |
 
-**Total: 87 tests across 6 files.**
+**Total: 65 tests across 5 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
 ## Architecture
 
-- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser. Jira API calls proxy through Vercel serverless functions under `api/` (same origin as the frontend, no CORS needed).
+- **React 18 SPA**, Vite 5, TypeScript. All core logic in-browser.
 - **State-based view routing** (`'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker'`) in `App.tsx` — no router library. The view router is wrapped in `<ErrorBoundary key={view}>`: a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recoverable fallback (message + "Reintentar" button). Keyed by `view` so switching tools remounts it and clears any stuck error state.
 - **Settings persistence**: API key and model stored in `localStorage` (`acgen_api_key`, `acgen_model`). Jira URL base and PAT stored separately (`acgen_jira_token`, `acgen_jira_base_url`). Theme stored as `acgen_theme`. History for criteria and bug reports stored as `acgen_criteria_history` / `acgen_bug_history`. Sprint data stored as `acgen_sprints`. Sprint column widths stored as `acgen_sprint_col_widths_{sprintId}`. Model validated against `AVAILABLE_MODELS` on read; stale values discarded to `DEFAULT_MODEL`.
 - **`useLocalStorage` cross-instance/cross-tab sync**: on write, dispatches a custom `acgen-local-storage` window event (same-tab instances sharing a key stay in sync) and listens for the native `storage` event (cross-tab sync; `newValue: null` resets to `initialValue`). All `localStorage.setItem` calls are wrapped in try/catch so `QuotaExceededError` degrades to a console error instead of crashing the render.
@@ -102,22 +100,9 @@ In `apiService.ts`, `getReasoningParams(model, tool)` returns request-body param
 
 Exported `isModelDecommissioned(message, status)` checks both HTTP 400 and 404 for keywords `model_decommissioned`, `model_not_found`, `invalid model`, `model not found`. Used in `generateWithGroq()` to surface: *"El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo."* Also handles HTTP 401 (invalid API key) and HTTP 429 (rate limit) with specific Spanish messages.
 
-### Jira serverless functions (Vercel)
-
-- **`api/jira/issue/[issueKey].js`** — `GET /api/jira/issue/:issueKey`. Validates issueKey + baseUrl, proxies to Jira with an 8s `AbortSignal.timeout` (under the 10s Hobby function limit). Returns 400 on invalid input, 404 on missing ticket, 504 on timeout, 405 on non-GET.
-- **`api/jira/search.js`** — `GET /api/jira/search?jql=`. Validates baseUrl, proxies with 8s timeout. Returns 400 on invalid input/JQL, 504 on timeout, 405 on non-GET.
-- **`api/_lib/jiraUtils.js`** — `validateAndEncodeIssueKey()` (regex `^[A-Z][A-Z0-9]*-\d+$` + `encodeURIComponent`) and `validateBaseUrl()` (http/https only via `new URL()`, plus a `JIRA_ALLOWED_HOSTS` host allowlist — see below). The `_lib` prefix keeps it (and its test) from being deployed as an endpoint.
-- Headers: `X-Jira-Token` (PAT), `X-Jira-Base-Url`. Errors in Spanish. Same-origin, so no CORS layer.
-- `FETCH_TIMEOUT_MS = 8_000` in each handler and `maxDuration: 10` in `vercel.json` are the two knobs to raise on a Pro plan.
-- **`JIRA_ALLOWED_HOSTS`** (env var, comma-separated hostnames, e.g. `mycompany.atlassian.net`) — `validateBaseUrl()` rejects any host not in this list (case-insensitive, quotes/whitespace trimmed per entry). Required: unset or empty means every request is rejected (fail-closed). Once these endpoints run on a public domain instead of `localhost`, they're reachable by anyone; without a host allowlist a caller could point `X-Jira-Base-Url` at an arbitrary http/https host (constrained SSRF — fixed REST paths only, caller supplies their own credentials, but still usable for internal-network probing or burning the project's function quota). Configure with `vercel env add JIRA_ALLOWED_HOSTS <environment>` for each of `development`/`preview`/`production`, then `vercel env pull .env.local` to sync locally — hand-editing `.env.local` directly does **not** work, `vercel dev`'s function runtime only picks up variables that are registered with the linked Vercel project.
-
-**Known limitation — a private-network Jira instance won't work on a public deployment.** If `X-Jira-Base-Url` points at a host that only resolves to a private (RFC1918) IP — a self-hosted Jira reachable only from inside a corporate network/VPN — the request fails at the public deployment with `500 "Error de conexión con el servidor proxy."` (a `fetch()`-level network failure, not a timeout), because Vercel's serverless functions run on Vercel's own public cloud and cannot route to private addresses. This is an infrastructure constraint, not a bug in this code, and reproduces on any public host, not just Vercel. It does **not** affect Jira Cloud instances (`*.atlassian.net`), which have public IPs. Workaround for a private instance: run `npm run dev:all` (`vercel dev`) on a machine with network access to it, or expose it through a tunnel/reverse-proxy and add that public hostname to `JIRA_ALLOWED_HOSTS`. The other four tools (Groq-based) and Sprint Tracker (fully offline) are unaffected either way.
-
 ### Jira ticket integration
 
-Tools that use Jira: AcceptanceCriteria, BugReport, TestData, SprintTracker.
-- `jiraService.ts` exports: `extractIssueKey()` (matches `https?://` URLs and bare `KEY-123` keys), `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()`.
-- Config persisted via `useLocalStorage(STORAGE_KEYS.JIRA_TOKEN)` and `useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL)`.
+- `src/types/` contiene los tipos para integracion con trackers externos.
 
 ## Layout
 
@@ -165,14 +150,9 @@ AVAILABLE_MODELS = [
 
 | File | Purpose |
 |---|---|
-| `api/jira/issue/[issueKey].js` | Serverless function: `GET /api/jira/issue/:issueKey`, 8s timeout |
-| `api/jira/search.js` | Serverless function: `GET /api/jira/search?jql=`, 8s timeout |
-| `api/_lib/jiraUtils.js` | `validateAndEncodeIssueKey()`, `validateBaseUrl()` — shared validation |
-| `api/_lib/jiraUtils.test.js` | 16 unit tests for validation functions |
-| `src/config/constants.ts` | API_URL, PROXY_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES, JIRA_URL_REGEX |
+| `src/config/constants.ts` | API_URL, prompts, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
 | `src/services/apiService.ts` | `generateWithGroq()`, `generateCriteria()`, `generateTestCases()`, `generateBugReport()`, `generateTestData()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `extractJsonArray()` |
 | `src/services/apiService.test.ts` | 17 unit tests — validation type checks, model decommission detection |
-| `src/services/jiraService.ts` | `extractIssueKey()` (URLs + bare keys), `fetchJiraTicket()`, `formatTicketAsText()`, `jiraSearch()` |
 | `src/App.tsx` | View state routing (5 tools + landing) wrapped in `ErrorBoundary`. Theme state (applied before paint). Jira token/URL state |
 | `src/components/ErrorBoundary.tsx` | Class component error boundary with recoverable fallback UI |
 | `src/components/Icons.tsx` | SVG icons — `Icon` object with 12 named components |

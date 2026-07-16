@@ -34,14 +34,13 @@ function colToLetter(col: number): string {
 
 interface SprintDashboardProps {
   sprint: Sprint;
-  jiraBaseUrl: string;
   onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
   onSetTabGrid: (tabId: TabId, grid: string[][]) => void;
   onMoveRow: (tabId: TabId, fromRow: number, toRow: number) => void;
   onArchive: () => void;
 }
 
-export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
+export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>('resolved');
   const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`, {});
   const [isResizing, setIsResizing] = useState(false);
@@ -136,7 +135,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
     return grid[row]?.[col] || '';
   };
 
-  const baseUrl = jiraBaseUrl.replace(/\/+$/, '');
+  const baseUrl = (useLocalStorage(STORAGE_KEYS.TRACKER_BASE_URL, '')[0] || '').replace(/\/+$/, '');
 
   const handleDragStart = (e: React.DragEvent, ri: number) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -306,7 +305,7 @@ export function SprintDashboard({ sprint, jiraBaseUrl, onUpdateGridCell, onSetTa
                           window.open(`${baseUrl}/browse/${ticketKey}`, '_blank');
                         }
                       }}
-                      title={ticketKey ? `Abrir ${ticketKey} en Jira` : undefined}
+                          title={ticketKey ? `Abrir ${ticketKey} en el tracker` : undefined}
                       style={{
                         border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                         cursor: ticketKey ? 'pointer' : undefined,

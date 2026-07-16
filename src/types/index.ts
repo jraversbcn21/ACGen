@@ -17,18 +17,6 @@ export interface GroqApiError {
 
 export type GenerationStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export interface JiraTicketData {
-  key: string | null;
-  summary: string | null;
-  description: string | null;
-  issueType: string | null;
-  priority: string | null;
-  status: string | null;
-  labels: string[];
-  components: string[];
-  acceptanceCriteria: string | null;
-}
-
 export interface TestCaseData {
   key: string;
   summary: string;
@@ -50,7 +38,7 @@ export interface BugReportFormData {
   appVersion?: string;
   device?: string;
   osVersion?: string;
-  jiraTicketUrl?: string;
+  additionalContext?: string;
 }
 
 export type DataTypeId = 'shipping-address' | 'billing-data' | 'user-registration' | 'payment-cards' | 'promo-codes';
@@ -59,7 +47,7 @@ export interface TestDataFormData {
   dataType: DataTypeId;
   market: string;
   quantity: number;
-  jiraTicketUrl?: string;
+  additionalContext?: string;
 }
 
 export interface HistoryEntry {
@@ -69,10 +57,4 @@ export interface HistoryEntry {
   output: string;
 }
 
-export interface JiraSearchResult {
-  key: string;
-  summary: string;
-  status: string;
-  created: string;
-  updated: string;
-}
+

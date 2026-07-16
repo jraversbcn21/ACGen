@@ -4,8 +4,6 @@ import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { generateCriteria } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
-import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useHistory } from '../hooks/useHistory';
 import type { GenerationStatus } from '../types';
 
@@ -22,12 +20,11 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
   const [reasoning, setReasoning] = useState<string | undefined>();
   const [ttsLang, setTtsLang] = useState<'es-ES' | 'en-US'>('en-US');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [additionalContext, setAdditionalContext] = useState('');
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const [copied, setCopied] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
   const [showHistory, setShowHistory] = useState(false);
-  const [jiraToken, setJiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
-  const [jiraBaseUrl, setJiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
@@ -41,20 +38,8 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
 
     try {
       let inputText = requirements;
-      const issueKey = extractIssueKey(requirements);
-
-      if (issueKey) {
-        if (!jiraToken.trim() || !jiraBaseUrl.trim()) {
-          setError('Jira no está configurado — generando solo con el texto introducido. Configura Jira para añadir contexto del ticket.');
-        } else {
-          try {
-            setLoadingStatus('Obteniendo datos del ticket...');
-            const ticket = await fetchJiraTicket(issueKey, jiraToken.trim(), jiraBaseUrl.trim());
-            inputText = `${requirements}\n\n--- Contexto del ticket ${issueKey} ---\n${formatTicketAsText(ticket)}`;
-          } catch {
-            setError('No se pudo obtener el ticket de Jira — generando solo con el texto introducido.');
-          }
-        }
+      if (additionalContext.trim()) {
+        inputText = `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`;
       }
 
       setLoadingStatus('Generando criterios...');
@@ -70,7 +55,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
     } finally {
       setLoadingStatus('');
     }
-  }, [apiKey, model, requirements, canGenerate, jiraToken, jiraBaseUrl, addEntry]);
+  }, [apiKey, model, requirements, canGenerate, additionalContext, addEntry]);
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
@@ -81,6 +66,7 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
     setError(null);
     setStatus('idle');
     setCopied(false);
+    setAdditionalContext('');
   }, []);
 
   const reasoningRef = useRef<HTMLDetailsElement>(null);
@@ -153,45 +139,22 @@ export function AcceptanceCriteriaTool({ apiKey, model }: AcceptanceCriteriaTool
 
   return (
     <div>
-      <div className="jira-config">
-        <span className="jira-config-title">Jira (opcional)</span>
-        <div className="jira-fields">
-          <div>
-            <label htmlFor="jira-base-url" className="field-label">URL base de Jira</label>
-            <input
-              id="jira-base-url"
-              type="text"
-              value={jiraBaseUrl}
-              onChange={(e) => setJiraBaseUrl(e.target.value)}
-              placeholder="https://jira.tuempresa.com/jira"
-              className="field-input"
-            />
-          </div>
-          <div>
-            <label htmlFor="jira-token" className="field-label">Token PAT de Jira</label>
-            <input
-              id="jira-token"
-              type="password"
-              value={jiraToken}
-              onChange={(e) => setJiraToken(e.target.value)}
-              placeholder="Tu Personal Access Token"
-              className="field-input"
-            />
-          </div>
-        </div>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-          Estos datos pasan por el servidor de esta demo antes de llegar a tu Jira (no se guardan). Si prefieres no compartirlos, escribe los requisitos a mano — la app funciona igual.
-        </p>
-      </div>
-
       <div className="criteria-grid">
         <div className="criteria-left">
           <textarea
             id="requirements"
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
-            placeholder="Pega la URL del ticket de Jira o escribe los requisitos..."
+            placeholder="Escribe los requisitos o pega la descripcion del ticket..."
             className="field-textarea criteria-input-ta"
+          />
+          <textarea
+            id="additional-context"
+            value={additionalContext}
+            onChange={(e) => setAdditionalContext(e.target.value)}
+            placeholder="Contexto adicional (opcional — pega aqui la descripcion del ticket, notas, etc.)"
+            className="field-textarea"
+            style={{ minHeight: 60, marginTop: 8 }}
           />
           <textarea
             id="criteria-output"

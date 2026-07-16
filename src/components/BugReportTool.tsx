@@ -5,8 +5,6 @@ import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { generateBugReport } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
-import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useHistory } from '../hooks/useHistory';
 import type { BugReportFormData, PlatformId } from '../types';
 
@@ -32,7 +30,7 @@ const DEFAULT_FORM: BugReportFormData = {
   appVersion: '',
   device: '',
   osVersion: '',
-  jiraTicketUrl: '',
+  additionalContext: '',
 };
 
 export function BugReportTool({ apiKey, model }: BugReportToolProps) {
@@ -47,13 +45,9 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [jiraToken, setJiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
-  const [jiraBaseUrl, setJiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
-  const [jiraConfigExpanded, setJiraConfigExpanded] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
-  const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
 
   const marketOptions = useMemo(
@@ -84,21 +78,8 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
     setReasoning(undefined);
 
     try {
-      let jiraContext: string | undefined;
-
-      if (formData.jiraTicketUrl && jiraToken.trim() && jiraBaseUrl.trim()) {
-        const issueKey = extractIssueKey(formData.jiraTicketUrl);
-        if (issueKey) {
-          setLoadingStatus('Obteniendo contexto del ticket...');
-          const ticket = await fetchJiraTicket(issueKey, jiraToken.trim(), jiraBaseUrl.trim());
-          jiraContext = formatTicketAsText(ticket);
-        }
-      } else if (formData.jiraTicketUrl && (!jiraToken.trim() || !jiraBaseUrl.trim())) {
-        throw new Error('Configura la URL base y el token de Jira para obtener contexto del ticket.');
-      }
-
       setLoadingStatus('Generando bug report...');
-      const result = await generateBugReport(apiKey, model, formData, jiraContext);
+      const result = await generateBugReport(apiKey, model, formData);
       setOutput(result.content);
       setReasoning(result.reasoning);
       addEntry(formData.description, result.content);
@@ -109,7 +90,7 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, jiraToken, jiraBaseUrl, addEntry]);
+  }, [apiKey, model, formData, canGenerate, addEntry]);
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
@@ -203,61 +184,6 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
 
   return (
     <div>
-      {/* Jira config section */}
-      {jiraConfigured && !jiraConfigExpanded ? (
-        <div className="jira-indicator">
-          <span className="jira-indicator-text">Jira configurado ✓</span>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => setJiraConfigExpanded(true)}
-          >
-            Editar
-          </button>
-        </div>
-      ) : (
-        <div className="jira-config">
-          <span className="jira-config-title">Jira (opcional)</span>
-          <div className="jira-fields">
-            <div>
-              <label htmlFor="br-jira-base-url" className="field-label">URL base de Jira</label>
-              <input
-                id="br-jira-base-url"
-                type="text"
-                value={jiraBaseUrl}
-                onChange={(e) => setJiraBaseUrl(e.target.value)}
-                placeholder="https://jira.tuempresa.com/jira"
-                className="field-input"
-              />
-            </div>
-            <div>
-              <label htmlFor="br-jira-token" className="field-label">Token PAT de Jira</label>
-              <input
-                id="br-jira-token"
-                type="password"
-                value={jiraToken}
-                onChange={(e) => setJiraToken(e.target.value)}
-                placeholder="Tu Personal Access Token"
-                className="field-input"
-              />
-            </div>
-          </div>
-          <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-            Estos datos pasan por el servidor de esta demo antes de llegar a tu Jira (no se guardan). Si prefieres no compartirlos, escribe el reporte a mano — la app funciona igual.
-          </p>
-          {jiraConfigured && (
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setJiraConfigExpanded(false)}
-              style={{ alignSelf: 'flex-end', marginTop: '4px' }}
-            >
-              Ocultar
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Compact fields row */}
       <div className="br-compact-row">
         <div className="br-compact-field">
@@ -366,14 +292,14 @@ export function BugReportTool({ apiKey, model }: BugReportToolProps) {
             </div>
           </>
         )}
-        <div className="br-compact-field br-compact-field-jira">
-          <label htmlFor="br-jira-ticket" className="field-label">Ticket Jira</label>
+        <div className="br-compact-field br-compact-field-wide">
+          <label htmlFor="br-context" className="field-label">Contexto adicional</label>
           <input
-            id="br-jira-ticket"
+            id="br-context"
             type="text"
-            value={formData.jiraTicketUrl || ''}
-            onChange={(e) => updateForm('jiraTicketUrl', e.target.value)}
-            placeholder="URL opcional"
+            value={formData.additionalContext || ''}
+            onChange={(e) => updateForm('additionalContext', e.target.value)}
+            placeholder="Notas, contexto, etc."
             className="field-input"
           />
         </div>

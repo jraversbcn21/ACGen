@@ -3,9 +3,7 @@ import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { generateTestData } from '../services/apiService';
-import { SUPPORTED_MARKETS, DATA_TYPES, STORAGE_KEYS } from '../config/constants';
-import { extractIssueKey, fetchJiraTicket, formatTicketAsText } from '../services/jiraService';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import type { TestDataFormData } from '../types';
 
 interface TestDataToolProps {
@@ -95,12 +93,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
-  const [jiraToken, setJiraToken] = useLocalStorage(STORAGE_KEYS.JIRA_TOKEN, '');
-  const [jiraBaseUrl, setJiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
-  const [jiraConfigExpanded, setJiraConfigExpanded] = useState(false);
-  const [jiraTicketUrl, setJiraTicketUrl] = useState('');
 
-  const jiraConfigured = jiraToken.trim().length > 0 && jiraBaseUrl.trim().length > 0;
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
 
@@ -121,21 +114,8 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
     setGeneratedModel(undefined);
 
     try {
-      let jiraContext: string | undefined;
-
-      if (jiraTicketUrl && jiraToken.trim() && jiraBaseUrl.trim()) {
-        const issueKey = extractIssueKey(jiraTicketUrl);
-        if (issueKey) {
-          setLoadingStatus('Obteniendo contexto del ticket...');
-          const ticket = await fetchJiraTicket(issueKey, jiraToken.trim(), jiraBaseUrl.trim());
-          jiraContext = formatTicketAsText(ticket);
-        }
-      } else if (jiraTicketUrl && (!jiraToken.trim() || !jiraBaseUrl.trim())) {
-        throw new Error('Configura la URL base y el token de Jira para obtener contexto del ticket.');
-      }
-
       setLoadingStatus('Generando datos de prueba...');
-      const result = await generateTestData(apiKey, model, formData, jiraContext);
+      const result = await generateTestData(apiKey, model, formData);
       setGeneratedData(result.data);
       setGeneratedModel(result.model);
     } catch (err) {
@@ -145,7 +125,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
       setIsLoading(false);
       setLoadingStatus('');
     }
-  }, [apiKey, model, formData, canGenerate, jiraToken, jiraBaseUrl, jiraTicketUrl]);
+  }, [apiKey, model, formData, canGenerate]);
 
   const handleClear = useCallback(() => {
     if (!window.confirm('¿Seguro que quieres limpiar los campos?')) return;
@@ -155,7 +135,6 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
     setError(null);
     setCopied(false);
     setCopiedRowIndex(null);
-    setJiraTicketUrl('');
   }, []);
 
   const handleCopyRow = useCallback(async (row: Record<string, string>, index: number) => {
@@ -206,61 +185,6 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
 
   return (
     <div>
-      {/* Jira config section */}
-      {jiraConfigured && !jiraConfigExpanded ? (
-        <div className="jira-indicator">
-          <span className="jira-indicator-text">Jira configurado ✓</span>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => setJiraConfigExpanded(true)}
-          >
-            Editar
-          </button>
-        </div>
-      ) : (
-        <div className="jira-config">
-          <span className="jira-config-title">Jira (opcional)</span>
-          <div className="jira-fields">
-            <div>
-              <label htmlFor="td-jira-base-url" className="field-label">URL base de Jira</label>
-              <input
-                id="td-jira-base-url"
-                type="text"
-                value={jiraBaseUrl}
-                onChange={(e) => setJiraBaseUrl(e.target.value)}
-                placeholder="https://jira.tuempresa.com/jira"
-                className="field-input"
-              />
-            </div>
-            <div>
-              <label htmlFor="td-jira-token" className="field-label">Token PAT de Jira</label>
-              <input
-                id="td-jira-token"
-                type="password"
-                value={jiraToken}
-                onChange={(e) => setJiraToken(e.target.value)}
-                placeholder="Tu Personal Access Token"
-                className="field-input"
-              />
-            </div>
-          </div>
-          <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-            Estos datos pasan por el servidor de esta demo antes de llegar a tu Jira (no se guardan). Si prefieres no compartirlos, deja estos campos vacíos — la app funciona igual, solo sin el contexto del ticket.
-          </p>
-          {jiraConfigured && (
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setJiraConfigExpanded(false)}
-              style={{ alignSelf: 'flex-end', marginTop: '4px' }}
-            >
-              Ocultar
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Form grid */}
       <div className="td-form-grid">
         {/* Row 1: Data type + Market + Quantity */}
@@ -308,16 +232,16 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
           </div>
         </div>
 
-        {/* Row 2: Related Jira ticket */}
+        {/* Row 2: Contexto adicional */}
         <div className="td-form-row-single">
           <div className="td-form-field">
-            <label htmlFor="td-jira-ticket" className="field-label">Ticket relacionado (opcional)</label>
+            <label htmlFor="td-context" className="field-label">Contexto adicional (opcional)</label>
             <input
-              id="td-jira-ticket"
+              id="td-context"
               type="text"
-              value={jiraTicketUrl}
-              onChange={(e) => setJiraTicketUrl(e.target.value)}
-              placeholder="URL del ticket de Jira para contextualizar los datos (opcional)"
+              value={formData.additionalContext || ''}
+              onChange={(e) => updateForm('additionalContext', e.target.value)}
+              placeholder="Descripcion del ticket, notas o contexto para generar datos mas relevantes (opcional)"
               className="field-input"
             />
           </div>
@@ -340,7 +264,7 @@ export function TestDataTool({ apiKey, model }: TestDataToolProps) {
           type="button"
           className="btn-ghost"
           onClick={handleClear}
-          disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput && !jiraTicketUrl}
+          disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput}
         >
           Limpiar
         </button>

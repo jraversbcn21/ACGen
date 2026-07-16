@@ -23,7 +23,6 @@ const toolNames: Record<string, string> = {
 export default function App() {
   const [apiKey, setApiKey] = useLocalStorage(STORAGE_KEYS.API_KEY, '');
   const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
-  const [jiraBaseUrl] = useLocalStorage(STORAGE_KEYS.JIRA_BASE_URL, '');
   const [view, setView] = useState<ViewType>('landing');
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
 
@@ -82,7 +81,7 @@ export default function App() {
           )}
 
           {view === 'sprinttracker' && (
-            <SprintTracker jiraBaseUrl={jiraBaseUrl} />
+            <SprintTracker />
           )}
         </ErrorBoundary>
       </main>

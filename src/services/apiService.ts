@@ -219,11 +219,10 @@ export async function generateBugReport(
   apiKey: string,
   model: string,
   formData: BugReportFormData,
-  jiraContext?: string,
 ): Promise<GroqResponse> {
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-  let userMessage = `Descripción del bug: ${formData.description}\n\n`;
+  let userMessage = `Descripcion del bug: ${formData.description}\n\n`;
   userMessage += `Plataforma: ${formData.platform}\n`;
   userMessage += `Mercado: ${formData.market}\n`;
   userMessage += `Fecha actual: ${today}\n`;
@@ -232,13 +231,13 @@ export async function generateBugReport(
     if (formData.browser) userMessage += `Navegador: ${formData.browser}\n`;
     if (formData.url) userMessage += `URL: ${formData.url}\n`;
   } else {
-    if (formData.appVersion) userMessage += `Versión de la app: ${formData.appVersion}\n`;
+    if (formData.appVersion) userMessage += `Version de la app: ${formData.appVersion}\n`;
     if (formData.device) userMessage += `Dispositivo: ${formData.device}\n`;
-    if (formData.osVersion) userMessage += `Versión del OS: ${formData.osVersion}\n`;
+    if (formData.osVersion) userMessage += `Version del OS: ${formData.osVersion}\n`;
   }
 
-  if (jiraContext) {
-    userMessage += `\nContexto del ticket relacionado:\n${jiraContext}\n`;
+  if (formData.additionalContext?.trim()) {
+    userMessage += `\nContexto adicional:\n${formData.additionalContext.trim()}\n`;
   }
 
   const reasoningParams = getReasoningParams(model, 'criteria');
@@ -264,21 +263,20 @@ export async function generateTestData(
   apiKey: string,
   model: string,
   formData: TestDataFormData,
-  jiraContext?: string,
 ): Promise<{ data: Record<string, string>[]; model: string }> {
   const dataTypeLabels: Record<string, string> = {
-    'shipping-address': 'direcciones de envío',
-    'billing-data': 'datos de facturación',
+    'shipping-address': 'direcciones de envio',
+    'billing-data': 'datos de facturacion',
     'user-registration': 'datos de registro de usuario',
     'payment-cards': 'tarjetas de pago de prueba',
-    'promo-codes': 'cupones y códigos promocionales',
+    'promo-codes': 'cupones y codigos promocionales',
   };
 
   let userMessage = `Genera ${formData.quantity} registro(s) de ${dataTypeLabels[formData.dataType]} para el mercado ${formData.market}.\n`;
   userMessage += `Tipo de dato: ${formData.dataType}\n`;
 
-  if (jiraContext) {
-    userMessage += `\nContexto del ticket relacionado (usa esta información para hacer los datos más relevantes al escenario de prueba):\n${jiraContext}\n`;
+  if (formData.additionalContext?.trim()) {
+    userMessage += `\nContexto adicional (usa esta informacion para hacer los datos mas relevantes al escenario de prueba):\n${formData.additionalContext.trim()}\n`;
   }
 
   const reasoningParams = getReasoningParams(model, 'testcase');

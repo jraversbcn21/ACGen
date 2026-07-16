@@ -1,5 +1,4 @@
 export const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-export const PROXY_URL = '/api';
 
 export const HARDCODED_PROMPT = `Based on all the information provided, read it, analyze it, and generate one or more acceptance criteria as you consider necessary. Do not be overly detailed; generate only the most important and general criteria. The criteria can be one or several depending on the scope of the information provided. The criteria must be written from the perspective of an end user going through the process, not from a technical point of view. Describe the steps and conditions as if a regular person were navigating or interacting with the system, using natural and everyday language, avoiding technical or implementation-specific terms.
 
@@ -69,19 +68,16 @@ export const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 export const STORAGE_KEYS = {
   API_KEY: 'acgen_api_key',
   MODEL: 'acgen_model',
-  JIRA_TOKEN: 'acgen_jira_token',
-  JIRA_BASE_URL: 'acgen_jira_base_url',
   THEME: 'acgen_theme',
   CRITERIA_HISTORY: 'acgen_criteria_history',
   BUG_HISTORY: 'acgen_bug_history',
   SPRINT_COL_WIDTHS: 'acgen_sprint_col_widths',
+  TRACKER_BASE_URL: 'acgen_tracker_base_url',
 } as const;
 
 export const TEMPERATURE = 0.2;
 
 export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker';
-
-export const JIRA_URL_REGEX = /https?:\/\/(?:[^/]+\/)?(?:jira\/)?browse\/([A-Z]+-\d+)/i;
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },

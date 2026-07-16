@@ -4,11 +4,9 @@ import { SprintDashboard } from './SprintDashboard';
 import { useSprints } from '../hooks/useSprints';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
-interface SprintTrackerProps {
-  jiraBaseUrl: string;
-}
+interface SprintTrackerProps {}
 
-export function SprintTracker({ jiraBaseUrl }: SprintTrackerProps) {
+export function SprintTracker(_props: SprintTrackerProps) {
   const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
@@ -58,7 +56,6 @@ export function SprintTracker({ jiraBaseUrl }: SprintTrackerProps) {
 
         <SprintDashboard
           sprint={selectedSprint}
-          jiraBaseUrl={jiraBaseUrl.trim()}
           onUpdateGridCell={handleUpdateGridCell}
           onSetTabGrid={handleSetTabGrid}
           onMoveRow={handleMoveRow}
