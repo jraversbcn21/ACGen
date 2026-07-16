@@ -33,7 +33,7 @@ function generateJiraTable(testCases: TestCaseData[]): string {
   return [header, ...rows].join('\n');
 }
 
-export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model: string; profile?: ProjectProfile }) {
+export function TestCaseTool({ apiKey, model, profile, prefill }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string }) {
   const [input, setInput] = useState('');
   const [testCases, setTestCases] = useState<TestCaseData[]>([]);
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -42,6 +42,10 @@ export function TestCaseTool({ apiKey, model, profile }: { apiKey: string; model
   const [copied, setCopied] = useState(false);
   const { toast, showToast } = useToast();
   const { isStreaming, stream } = useStreamingResponse();
+
+  useEffect(() => {
+    if (prefill) setInput(prefill);
+  }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
   const hasOutput = testCases.length > 0;

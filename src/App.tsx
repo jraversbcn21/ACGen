@@ -41,13 +41,18 @@ export default function App() {
   const [view, setView] = useState<ViewType>(getViewFromHash);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
 
+  const [prefill, setPrefill] = useState<{ view: ViewType; text: string } | null>(null);
+
   useEffect(() => {
     const onHashChange = () => setView(getViewFromHash());
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const navigate = useCallback((v: ViewType) => {
+  const navigate = useCallback((v: ViewType, opts?: { prefill?: string }) => {
+    if (opts?.prefill) {
+      setPrefill({ view: v, text: opts.prefill });
+    }
     window.location.hash = `#/${v}`;
   }, []);
 
@@ -92,11 +97,14 @@ export default function App() {
           )}
 
           {view === 'acceptance' && (
-            <AcceptanceCriteriaTool apiKey={apiKey} model={model} profile={profile} />
+            <AcceptanceCriteriaTool apiKey={apiKey} model={model} profile={profile}
+              onChain={(v, text) => navigate(v, { prefill: text })}
+              prefill={prefill?.view === 'acceptance' ? prefill.text : undefined} />
           )}
 
           {view === 'testcase' && (
-            <TestCaseTool apiKey={apiKey} model={model} profile={profile} />
+            <TestCaseTool apiKey={apiKey} model={model} profile={profile}
+              prefill={prefill?.view === 'testcase' ? prefill.text : undefined} />
           )}
 
           {view === 'bugreport' && (
@@ -112,15 +120,20 @@ export default function App() {
           )}
 
           {view === 'userstory' && (
-            <UserStoryTool apiKey={apiKey} model={model} profile={profile} />
+            <UserStoryTool apiKey={apiKey} model={model} profile={profile}
+              onChain={(v, text) => navigate(v, { prefill: text })}
+              prefill={prefill?.view === 'userstory' ? prefill.text : undefined} />
           )}
 
           {view === 'refiner' && (
-            <RefinerTool apiKey={apiKey} model={model} profile={profile} />
+            <RefinerTool apiKey={apiKey} model={model} profile={profile}
+              onChain={(v, text) => navigate(v, { prefill: text })}
+              prefill={prefill?.view === 'refiner' ? prefill.text : undefined} />
           )}
 
           {view === 'edgecase' && (
-            <EdgeCaseTool apiKey={apiKey} model={model} profile={profile} />
+            <EdgeCaseTool apiKey={apiKey} model={model} profile={profile}
+              prefill={prefill?.view === 'edgecase' ? prefill.text : undefined} />
           )}
         </ErrorBoundary>
       </main>

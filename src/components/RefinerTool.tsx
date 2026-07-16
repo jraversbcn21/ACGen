@@ -5,20 +5,28 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq } from '../services/apiService';
 import { REFINER_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { ChainMenu } from './ChainMenu';
+import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
 interface RefinerToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onChain?: (view: ViewType, text: string) => void;
+  prefill?: string;
 }
 
-export function RefinerTool({ apiKey, model, profile }: RefinerToolProps) {
+export function RefinerTool({ apiKey, model, profile, onChain, prefill }: RefinerToolProps) {
   const [requirement, setRequirement] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+
+  useEffect(() => {
+    if (prefill) setRequirement(prefill);
+  }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 
@@ -86,6 +94,7 @@ export function RefinerTool({ apiKey, model, profile }: RefinerToolProps) {
         {result && (
           <div className="output-section" style={{ marginTop: 16 }}>
             <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, padding: '16px 0' }}>{result}</div>
+            {onChain && <ChainMenu sourceView="refiner" content={result} onChain={onChain} />}
           </div>
         )}
         {(isStreaming || loading) && !result && (

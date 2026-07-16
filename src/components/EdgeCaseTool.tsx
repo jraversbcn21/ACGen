@@ -7,12 +7,6 @@ import { EDGE_CASE_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import type { ProjectProfile } from '../types/context';
 
-interface EdgeCaseToolProps {
-  apiKey: string;
-  model: string;
-  profile?: ProjectProfile;
-}
-
 const CATEGORY_BADGES: Record<string, string> = {
   'Valores frontera': 'badge-high',
   'Estados vacios': 'badge-medium',
@@ -23,13 +17,17 @@ const CATEGORY_BADGES: Record<string, string> = {
   'Internacionalizacion': 'badge-info',
 };
 
-export function EdgeCaseTool({ apiKey, model, profile }: EdgeCaseToolProps) {
+export function EdgeCaseTool({ apiKey, model, profile, prefill }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string }) {
   const [requirement, setRequirement] = useState('');
   const [edgeCases, setEdgeCases] = useState<Array<{ categoria: string; escenario: string; resultadoEsperado: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+
+  useEffect(() => {
+    if (prefill) setRequirement(prefill);
+  }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 

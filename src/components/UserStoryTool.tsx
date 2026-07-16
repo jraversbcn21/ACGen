@@ -5,20 +5,28 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq } from '../services/apiService';
 import { USER_STORY_PROMPT } from '../config/constants';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { ChainMenu } from './ChainMenu';
+import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
 interface UserStoryToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onChain?: (view: ViewType, text: string) => void;
+  prefill?: string;
 }
 
-export function UserStoryTool({ apiKey, model, profile }: UserStoryToolProps) {
+export function UserStoryTool({ apiKey, model, profile, onChain, prefill }: UserStoryToolProps) {
   const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const { text: streamText, isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
+
+  useEffect(() => {
+    if (prefill) setIdea(prefill);
+  }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && idea.trim().length > 0;
 
@@ -86,6 +94,7 @@ export function UserStoryTool({ apiKey, model, profile }: UserStoryToolProps) {
         {result && (
           <div className="output-section" style={{ marginTop: 16 }}>
             <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, padding: '16px 0' }}>{result}</div>
+            {onChain && <ChainMenu sourceView="userstory" content={result} onChain={onChain} />}
           </div>
         )}
         {(isStreaming || loading) && !result && (

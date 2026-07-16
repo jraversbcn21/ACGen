@@ -7,17 +7,22 @@ import { streamWithGroq } from '../services/apiService';
 import { HARDCODED_PROMPT, STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import type { ViewType } from '../config/constants';
 import { useHistory } from '../hooks/useHistory';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
+
+import { ChainMenu } from './ChainMenu';
 
 interface AcceptanceCriteriaToolProps {
   apiKey: string;
   model: string;
   profile?: ProjectProfile;
+  onChain?: (view: ViewType, text: string) => void;
+  prefill?: string;
 }
 
-export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCriteriaToolProps) {
+export function AcceptanceCriteriaTool({ apiKey, model, profile, onChain, prefill }: AcceptanceCriteriaToolProps) {
   const [requirements, setRequirements] = useState('');
   const [criteria, setCriteria] = useState('');
   const [status, setStatus] = useState<GenerationStatus>('idle');
@@ -33,6 +38,12 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
   const { toast, showToast } = useToast();
   const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
+
+  useEffect(() => {
+    if (prefill) {
+      setRequirements(prefill);
+    }
+  }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
@@ -212,9 +223,12 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile }: AcceptanceCri
                 className="btn-ghost btn-copy"
                 onClick={handleCopy}
               >
-                {copied ? '¡Copiado!' : 'Copiar Criterio'}
+                {copied ? 'Copiado!' : 'Copiar Criterio'}
               </button>
             </div>
+          )}
+          {criteria && onChain && (
+            <ChainMenu sourceView="acceptance" content={criteria} onChain={onChain} />
           )}
         </div>
         <div className="criteria-right">
