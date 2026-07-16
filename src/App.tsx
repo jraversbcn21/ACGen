@@ -17,6 +17,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
 import { useProfile } from './components/ContextProfile';
+import { I18nProvider } from './i18n/I18nContext';
 import type { ViewType } from './config/constants';
 
 const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'userstory', 'refiner', 'edgecase', 'converter'];
@@ -75,6 +76,7 @@ export default function App() {
   }
 
   return (
+    <I18nProvider>
     <div className="page">
       <Header
         model={model}
@@ -161,5 +163,6 @@ export default function App() {
       </main>
       </div>
     </div>
+    </I18nProvider>
   );
 }

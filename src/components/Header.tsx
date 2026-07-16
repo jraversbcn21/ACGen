@@ -1,5 +1,6 @@
 import { Icon } from './Icons';
 import { WorkspacePicker } from './WorkspacePicker';
+import { useLang } from '../i18n/I18nContext';
 import type { Workspace } from '../types/workspace';
 
 interface HeaderProps {
@@ -29,6 +30,8 @@ export function Header({
   onExportWorkspace,
   onImportWorkspace,
 }: HeaderProps) {
+  const { lang, setLang } = useLang();
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -51,6 +54,10 @@ export function Header({
           <Icon.spark size={14} />
           {model}
         </span>
+        <button type="button" className="btn-ghost" onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+          style={{ fontSize: 12, padding: '2px 8px' }} title="Idioma / Language">
+          {lang === 'es' ? 'EN' : 'ES'}
+        </button>
         <button
           type="button"
           className="theme-toggle"
