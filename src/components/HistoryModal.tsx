@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { HistoryEntry } from '../types';
+import { useT } from '../i18n/I18nContext';
 
 interface HistoryModalProps {
   entries: HistoryEntry[];
@@ -18,29 +20,39 @@ function formatDate(ts: number): string {
 }
 
 export function HistoryModal({ entries, onLoad, onClearAll, onClose }: HistoryModalProps) {
+  const t = useT();
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
   return (
     <div className="history-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="history-modal">
         <div className="history-modal-header">
-          <span className="history-modal-title">Historial</span>
+          <span className="history-modal-title">{t('history.title')}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             {entries.length > 0 && (
               <button
                 type="button"
                 className="btn-ghost"
                 style={{ fontSize: 12, padding: '4px 10px' }}
-                onClick={() => { if (window.confirm('¿Borrar todo el historial?')) onClearAll(); }}
+                onClick={() => {
+                  if (confirmingClear) {
+                    onClearAll();
+                    setConfirmingClear(false);
+                  } else {
+                    setConfirmingClear(true);
+                  }
+                }}
               >
-                Borrar todo
+                {confirmingClear ? t('history.confirmClear') : t('history.clearAll')}
               </button>
             )}
-            <button type="button" className="history-close-btn" onClick={onClose} aria-label="Cerrar">✕</button>
+            <button type="button" className="history-close-btn" onClick={onClose} aria-label={t('common.close')}>✕</button>
           </div>
         </div>
 
         <div className="history-modal-body">
           {entries.length === 0 ? (
-            <div className="history-empty">No hay entradas en el historial todavía.</div>
+            <div className="history-empty">{t('history.empty')}</div>
           ) : (
             entries.map((entry) => (
               <div key={entry.id} className="history-entry">
@@ -53,7 +65,7 @@ export function HistoryModal({ entries, onLoad, onClearAll, onClose }: HistoryMo
                   className="btn-ghost history-entry-load"
                   onClick={() => { onLoad(entry.output); onClose(); }}
                 >
-                  Cargar
+                  {t('history.load')}
                 </button>
               </div>
             ))

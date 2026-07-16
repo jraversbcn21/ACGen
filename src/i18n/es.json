@@ -211,5 +211,10 @@
   "export.copy": "Copiar",
   "export.pdf": "Descargar PDF",
   "export.csv": "Descargar CSV",
-  "export.tsv": "Copiar TSV"
+  "export.tsv": "Copiar TSV",
+  "history.title": "Historial",
+  "history.clearAll": "Borrar todo",
+  "history.confirmClear": "¿Confirmar borrado?",
+  "history.empty": "No hay entradas en el historial todavía.",
+  "history.load": "Cargar"
 }
