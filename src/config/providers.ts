@@ -48,3 +48,14 @@ export const DEFAULT_PROVIDER = 'groq';
 export function getProvider(id: string): ProviderDef {
   return PROVIDERS[id] ?? PROVIDERS[DEFAULT_PROVIDER];
 }
+
+/**
+ * Providers with a fixed model list reject models outside it (a model decommissioned
+ * by the provider would otherwise be sent forever). Providers with an open list
+ * (custom endpoints) accept any model id.
+ */
+export function sanitizeModel(providerId: string, model: string): string {
+  const def = getProvider(providerId);
+  if (def.models.length === 0) return model;
+  return def.models.includes(model) ? model : def.defaultModel;
+}

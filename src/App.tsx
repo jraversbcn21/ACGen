@@ -16,7 +16,7 @@ import { ConverterTool } from './components/ConverterTool';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
-import { DEFAULT_PROVIDER, PROVIDERS } from './config/providers';
+import { DEFAULT_PROVIDER, PROVIDERS, sanitizeModel } from './config/providers';
 import { useProfile } from './components/ContextProfile';
 import { I18nProvider } from './i18n/I18nContext';
 import type { ViewType } from './config/constants';
@@ -39,8 +39,9 @@ export default function App() {
     } catch { /* migration parse error */ }
     return '';
   })());
-  const [model, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
+  const [storedModel, setModel] = useLocalStorage(STORAGE_KEYS.MODEL, DEFAULT_MODEL);
   const [provider, setProvider] = useLocalStorage('acgen_provider', DEFAULT_PROVIDER);
+  const model = useMemo(() => sanitizeModel(provider, storedModel), [provider, storedModel]);
   const [openrouterKey, setOpenrouterKey] = useLocalStorage('acgen_key_openrouter', '');
   const [customKey, setCustomKey] = useLocalStorage('acgen_key_custom', '');
   const [customBaseUrl, setCustomBaseUrl] = useLocalStorage('acgen_custom_base_url', '');
