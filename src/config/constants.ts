@@ -71,6 +71,7 @@ export const STORAGE_KEYS = {
   CRITERIA_HISTORY: 'acgen_criteria_history',
   BUG_HISTORY: 'acgen_bug_history',
   SPRINT_COL_WIDTHS: 'acgen_sprint_col_widths',
+  REGRESSION_COL_WIDTHS: 'acgen_regression_col_widths',
   TRACKER_BASE_URL: 'acgen_tracker_base_url',
   WORKSPACES: 'acgen_workspaces',
   ACTIVE_WORKSPACE: 'acgen_active_workspace',
