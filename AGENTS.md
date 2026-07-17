@@ -102,7 +102,7 @@ Run `npm test` before committing when modifying hooks or services.
 | Tool | View | Key files | LLM? |
 |---|---|---|---|
 | Sprint Tracker | `sprinttracker` | `SprintTracker.tsx`, `SprintList.tsx`, `SprintDashboard.tsx` | No (offline) |
-| Regression Tracker | `regressiontracker` | `RegressionTracker.tsx`, `TrackerGrid.tsx`, `useRegressions.ts` | No |
+| Regression Tracker | `regressiontracker` | `RegressionTracker.tsx`, `TrackerGrid.tsx`, `useRegressions.ts` | No (offline) |
 
 ## Cross-cutting features
 
@@ -200,6 +200,16 @@ Run `npm test` before committing when modifying hooks or services.
 - 5 tabs: Resueltos, Creados, ReOpen, Prioridad Alta, JSD
 - Editable spreadsheet grid (20x6), resizable columns, drag-and-drop rows
 - Search bar (debounced 250ms), SnapLink support, Ctrl+click ticket links, keyboard navigation
+
+### Regression Tracker
+
+- Fully offline — no LLM dependencies
+- Single permanent board with 4 platform tabs: iOS, Android, Web-Desktop, Web-Mobile
+- Editable spreadsheet grid (20x6) with headers: Regresión, Versión, Fecha, Notas, Status + empty 6th column
+- Column A accepts "Nombre - URL" (accent link, Ctrl+click opens exact URL) or bare URLs
+- Search bar (debounced 250ms) + SnapLink link support
+- "Archivar Regresión" snapshots the board to history (named "Regresión YYYY-MM-DD") and clears it; archived snapshots open read-only and can be deleted
+- Shared grid component: `TrackerGrid.tsx` (linkMode 'url'). Storage: board+archived in `acgen_regressions`, column widths in `acgen_regression_col_widths`
 
 ### User Stories
 
@@ -328,5 +338,6 @@ None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across P
 | PHONE regex digit floor | 2026-07-16 | `/\+?\d(?:[\s()-]*\d){6,}/g`: requires 7+ digits (not 7+ chars of the class), starts at +/digit, ends on a digit — indented list runs and short ids no longer become false `[PHONE_N]` rows, matches no longer swallow surrounding whitespace. Bare 7+ digit numbers stay masked on purpose (privacy-first). Closes the last known issue. 211 → 216 tests. |
 | Landing layout restore | 2026-07-16 | Landing re-centered (`:only-child` span for the sidebar-less main + `.landing` wrapper), config strip's stale 1.5fr/1fr grid removed (Proveedor\|Modelo\|API Key now one horizontal row), 9 tools moved to a 2-column card grid with the "more coming" slot as the 10th cell (2×5, no scroll; 1 column <950px). Verified via playwright screenshots. 216 → 220 tests. |
 | Template fields cleanup | 2026-07-16 | "Validado por:" ships as a bare label (no hardcoded name) in the acceptance and bug report templates; bug report DESCRIPCIÓN pins `Entorno/Pais: Pro/ES` (regardless of the market selector) and leaves Versión/Evidencia empty for manual fill-in. Demo data matched. Guarded by `promptTemplates.test.ts`. 220 → 225 tests. |
+| Regression Tracker + TrackerGrid extraction | 2026-07-17 | New offline tracking tool for regression testing: 4 platform tabs, single permanent board (20×6 grid per platform), "Nombre - URL" accent links with Ctrl+click, SnapLink + search bar, "Archivar Regresión" snapshots to history (read-only), deletable archives. Shared spreadsheet component `TrackerGrid.tsx` extracted from Sprint Tracker (used by both via linkMode). 225 → 254 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
