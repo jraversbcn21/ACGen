@@ -318,7 +318,7 @@ export function TrackerGrid<T extends string>({
                       key={ci}
                       onClick={(e) => {
                         if (linkUrl && e.ctrlKey) {
-                          window.open(linkUrl, '_blank');
+                          window.open(linkUrl, '_blank', 'noopener,noreferrer');
                         }
                       }}
                       title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : linkUrl ? t('regression.openLink') : undefined}

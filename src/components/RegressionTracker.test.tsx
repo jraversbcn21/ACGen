@@ -41,7 +41,7 @@ describe('RegressionTracker', () => {
     const cell = screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9');
     expect((cell as HTMLInputElement).style.color).toBe('var(--accent)');
     fireEvent.click(cell, { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank');
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
   });
 
   it('each platform keeps its own grid', () => {

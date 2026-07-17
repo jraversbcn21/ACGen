@@ -64,7 +64,7 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
     grid[0][0] = 'ABC-123 Login roto';
     renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
     fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://jira.example.com/browse/ABC-123', '_blank');
+    expect(open).toHaveBeenCalledWith('https://jira.example.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
   });
 
   it('pasting a SnapLink transforms it to "KEY Nombre"', () => {
@@ -104,14 +104,14 @@ describe('TrackerGrid — url mode', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     renderUrlGrid('Smoke Login - https://zephyr.example.com/plan/9');
     fireEvent.click(screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9'), { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank');
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
   });
 
   it('a bare URL is also a link', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     renderUrlGrid('https://zephyr.example.com/plan/9');
     fireEvent.click(screen.getByDisplayValue('https://zephyr.example.com/plan/9'), { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank');
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
   });
 
   it('plain text is not a link', () => {
