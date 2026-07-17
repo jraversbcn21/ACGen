@@ -2,14 +2,14 @@
 
 ![ACGen landing](public/screenshot.png)
 
-**\ud83d\udd17 Demo en vivo: [acgen.vercel.app](https://acgen.vercel.app)**
+**🔗 Demo en vivo: [acgen.vercel.app](https://acgen.vercel.app)**
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
 
-ACGen es una aplicacion web (SPA) que integra cinco herramientas para agilizar el trabajo diario de equipos QA: cuatro impulsadas por IA mediante la API de Groq (LLM) y un Sprint Tracker offline para seguimiento de tickets. Deploy 100% estatico.
+ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el trabajo diario de equipos QA: ocho generadores impulsados por IA (multi-proveedor: Groq, OpenRouter o cualquier endpoint compatible con OpenAI) y dos herramientas de seguimiento 100% offline (Sprint Tracker y Regression Tracker). Deploy 100% estatico, sin backend propio.
 
 ## Caracteristicas
 
@@ -17,10 +17,19 @@ ACGen es una aplicacion web (SPA) que integra cinco herramientas para agilizar e
 - **Test Case Generator**: Genera casos de prueba QA estructurados (JSON) con prioridad, tipo, pasos y resultado esperado. Exporta como tabla estructurada o PDF.
 - **Bug Report Generator**: Genera bug reports en formato estructurado con paneles, seleccion de plataforma (web/App Android/App iOS), campos dinamicos y campo de contexto adicional. Historial persistente de las ultimas 10 generaciones.
 - **Datos de Prueba**: Genera datos realistas (direcciones, facturacion, registros, tarjetas, cupones) adaptados a 217 mercados. Exporta como TSV o CSV (con proteccion contra inyeccion de formulas en Excel).
-- **Sprint Tracker**: Hoja de calculo offline por sprint con 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico. Sin dependencia de Groq ni APIs externas.
+- **Historia de Usuario**: Genera historias en formato Como/Quiero/Para con evaluacion de criterios INVEST.
+- **Refinador de Requisitos**: Detecta ambiguedades, contradicciones, informacion faltante y dependencias no declaradas en un requisito.
+- **Casos Limite**: Genera edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos, red).
+- **Conversor de Formatos**: Convierte texto entre Gherkin, Markdown, Jira wiki, Azure DevOps y texto plano.
+- **Sprint Tracker**: Hoja de calculo offline por sprint con 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico.
+- **Regression Tracker**: Tablero unico de regresiones con 4 pestanas por plataforma (iOS, Android, Web-Desktop, Web-Mobile). Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado con snapshot al historial (solo lectura).
+- **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
+- **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
+- **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
+- **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
+- **PWA**: instalable, con precache offline de los assets estaticos.
 - **Tema oscuro**: Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
 - **Text-to-speech**: Lectura en voz alta del razonamiento del modelo en Criterios y Bug Report.
-
 
 ---
 
@@ -38,8 +47,23 @@ Genera bug reports en formato estructurado con paneles. Cuatro plataformas (Web 
 ### Datos de Prueba
 Genera datos de prueba realistas y con formato valido para cada mercado. Cinco tipos de dato: direcciones de envio, datos de facturacion, registros de usuario, tarjetas de pago (con numeros de prueba de Adyen) y codigos promocionales. La salida se muestra en una tabla HTML con cabeceras en espanol, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
 
+### Historia de Usuario
+Genera una historia de usuario en formato **Como / Quiero / Para** a partir de una idea o necesidad, junto con una evaluacion de los seis criterios INVEST (Independiente, Negociable, Valiosa, Estimable, Pequena, Testeable) y criterios de aceptacion preliminares en formato Dado/Cuando/Entonces.
+
+### Refinador de Requisitos
+Analiza un requisito o historia de usuario y detecta ambiguedades, contradicciones, informacion faltante, dependencias no declaradas y sugiere preguntas concretas para refinarlo con los stakeholders.
+
+### Casos Limite
+Genera una lista de edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos y roles, red y conectividad) a partir de un requisito.
+
+### Conversor de Formatos
+Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido.
+
 ### Sprint Tracker
 Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints se archivan con fecha de cierre y permanecen consultables. Funciona completamente offline. Los datos viven en localStorage.
+
+### Regression Tracker
+Tablero unico y permanente de regresiones ejecutadas, con 4 pestanas por plataforma (iOS, Android, Web-Desktop, Web-Mobile). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
 
 ---
 
@@ -48,9 +72,10 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 | Capa | Tecnologia |
 |---|---|
 | Frontend | React 18, TypeScript, Vite 5 |
-| LLM API | Groq (endpoint compatible con OpenAI) |
+| LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (65 tests) |
+| Tests | Vitest + React Testing Library (255 tests) |
+| PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 
 ---
@@ -59,7 +84,7 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 
 - **Node.js 18+**
 - **npm**
-- **Clave de API de Groq**: registrate en [https://console.groq.com](https://console.groq.com) y obten una API key gratuita
+- **Clave de API**: de [Groq](https://console.groq.com) (gratuita), [OpenRouter](https://openrouter.ai), o de tu proveedor Custom compatible con OpenAI
 
 ---
 
@@ -97,7 +122,7 @@ npm test
 npm run lint
 ```
 
-> **Primer uso:** Al abrir la app por primera vez, introduce tu API key de Groq en el campo superior. La configuracion se almacena unicamente en el localStorage del navegador.
+> **Primer uso:** Al abrir la app por primera vez, elige tu proveedor (Groq/OpenRouter/Custom) e introduce tu API key en la configuracion superior. Todo se almacena unicamente en el localStorage del navegador.
 
 ---
 
@@ -107,9 +132,10 @@ npm run lint
 acgen/
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
-│   ├── config/             # Constantes, prompts, configuracion de modelos
-│   ├── hooks/              # useLocalStorage, useHistory, useSprints
-│   ├── services/           # Servicio API (Groq)
+│   ├── config/             # Constantes, prompts, proveedores, datos de demo
+│   ├── hooks/              # useLocalStorage, useHistory, useSprints, useRegressions, useWorkspace...
+│   ├── services/           # Servicio API (multi-proveedor) + anonimizador
+│   ├── i18n/                # Contexto de idioma, es.json / en.json
 │   ├── types/              # Interfaces TypeScript
 │   ├── App.tsx             # Componente principal con ruteo por vista + ErrorBoundary
 │   ├── App.css             # Todos los estilos
@@ -126,7 +152,7 @@ Tests unitarios co-localizados con el codigo (*.test.ts / *.test.tsx).
 
 ## Modelos Disponibles
 
-Los modelos se ejecutan a traves de la API de Groq:
+Los modelos se ejecutan a traves del proveedor seleccionado (Groq por defecto):
 
 | Modelo | Notas |
 |---|---|
@@ -135,6 +161,8 @@ Los modelos se ejecutan a traves de la API de Groq:
 | `llama-3.3-70b-versatile` | Buen equilibrio velocidad/calidad |
 | `llama-3.1-8b-instant` | Maxima velocidad |
 | `qwen/qwen3-32b` | Soporta reasoning format (visible/oculto) |
+
+Con OpenRouter o Custom puedes usar cualquier modelo que exponga el proveedor.
 
 ---
 

@@ -115,7 +115,7 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
 
       <div className="sec-head">
         <h2 className="sec-title">{t('landing.generators')}</h2>
-        <span className="sec-count">05</span>
+        <span className="sec-count">{String(tools.length).padStart(2, '0')}</span>
       </div>
 
       <div className="tool-list">

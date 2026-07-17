@@ -37,7 +37,6 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/components/WorkspacePicker.test.tsx` | 5 — delete requires a second confirming click, cancel abandons it, only one row confirms at a time |
 | `src/components/speechSynthesis.test.tsx` | 3 — AcceptanceCriteriaTool/BugReportTool mount, unmount and clear without crashing when the Speech Synthesis API is absent |
 | `src/components/errorTranslation.test.tsx` | 1 — an API 401 renders the English `error.apiKey` text end-to-end (not the Spanish i18n key or raw upstream message) |
-| `src/components/ExportBar.test.tsx` | 3 — English labels, proper nouns (Markdown/Jira Wiki) stay literal, translated "Copied!" state |
 | `src/components/HistoryModal.test.tsx` | 3 — clear-all requires a second confirming click, renders in English, translated empty state |
 | `src/components/SearchableSelect.test.tsx` | 3 — search input placeholder defaults to translated `common.search`, translated empty state, trigger placeholder defaults to translated `common.select` |
 | `src/utils/download.test.ts` | 7 — `downloadJson` (Blob download, object-URL revoked, no anchor left behind), `toFilename` (slugify, path-separator stripping, fallback) |
@@ -49,7 +48,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/components/LandingScreen.test.tsx` | 4 — 10 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 11th cell, `onSelect` fires |
 | `src/config/promptTemplates.test.ts` | 5 — no prompt or demo output hardcodes a validator name; bug report pins `Entorno/Pais: Pro/ES` and leaves Versión/Evidencia empty |
 
-**Total: 258 tests across 30 files.**
+**Total: 255 tests across 29 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -67,9 +66,9 @@ Run `npm test` before committing when modifying hooks or services.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
 - **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
 - **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
-- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (220 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (231 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
 - **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
-- **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, export bar in `App.css`.
+- **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `autoUpdate` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts.
 
 ## Tools (10 total)
@@ -143,7 +142,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ### Demo mode
 
-- `src/config/demoData.ts` — `DEMO_DATA` object with pre-generated input/output for each tool
+- `src/config/demoData.ts` — `DEMO_DATA` object with pre-generated input/output for 4 of the 8 LLM tools (acceptance, testcase, bugreport, testdata); the other 4 (userstory, refiner, edgecase, converter) have no demo entry or "Ver ejemplo" button
 - "Ver ejemplo" button fills input + shows output without requiring API key
 
 ### Artifact chaining
@@ -264,17 +263,17 @@ Run `npm test` before committing when modifying hooks or services.
 |---|---|
 | `src/config/constants.ts` | API_URL, all 8 prompts, `DEFAULT_PROMPTS` map, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
 | `src/config/providers.ts` | `PROVIDERS` registry, `ProviderDef` interface, `getProvider()` |
-| `src/config/demoData.ts` | `DEMO_DATA` pre-generated samples per tool |
+| `src/config/demoData.ts` | `DEMO_DATA` pre-generated samples (acceptance/testcase/bugreport/testdata only) |
 | `src/services/apiService.ts` | `streamWithGroq()` (streaming — the only generation path all tools use), `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`. Plain module with no React context, so it can't call `t()` — thrown errors are `I18nError` (`message` = i18n key, `params?` for interpolation, `cause` = the raw upstream error text on HTTP errors). Each of the 8 tools' catch block calls `t(err.message, err.params)` to render the translated string. |
 | `src/services/anonymizer.ts` | `anonymize()`, `deanonymize()`, `applyPlaceholderEdits()`, `splitPendingPlaceholder()` — 7 regex patterns |
 | `src/utils/download.ts` | `downloadJson()`, `toFilename()` — client-side file download used by workspace export |
 | `src/App.tsx` | Hash routing, provider state, workspace state, theme state, prefill/chaining state, I18nProvider wrapper, sidebar layout |
 | `src/i18n/I18nContext.tsx` | `I18nProvider`, `useT()` hook, `useLang()` hook, language detection |
-| `src/i18n/es.json` | 220 Spanish UI strings |
-| `src/i18n/en.json` | 220 English UI strings — key set kept in exact parity with `es.json`, guarded by `src/i18n/keyParity.test.ts` |
+| `src/i18n/es.json` | 231 Spanish UI strings |
+| `src/i18n/en.json` | 231 English UI strings — key set kept in exact parity with `es.json`, guarded by `src/i18n/keyParity.test.ts` |
 | `src/components/Header.tsx` | Brand, WorkspacePicker, ProviderConfig, Model badge, theme toggle, language toggle |
 | `src/components/Sidebar.tsx` | Collapsible tool nav grouped by category, workspace name, prompt editor link |
-| `src/components/LandingScreen.tsx` | Hero, config strip (ProviderConfig), 9-tool grid |
+| `src/components/LandingScreen.tsx` | Hero, config strip (ProviderConfig), 10-tool grid |
 | `src/components/ErrorBoundary.tsx` | Class component with recoverable fallback |
 | `src/components/Icons.tsx` | SVG icon components |
 | `src/hooks/useLocalStorage.ts` | Generic localStorage hook with cross-instance/-tab sync |
@@ -291,7 +290,6 @@ Run `npm test` before committing when modifying hooks or services.
 | `src/components/PromptEditor.tsx` | Per-tool prompt override editor |
 | `src/components/ProviderConfig.tsx` | Provider + model + API key selector |
 | `src/components/WorkspacePicker.tsx` | Workspace dropdown with CRUD (delete requires confirm) + export/import |
-| `src/components/ExportBar.tsx` | Format export buttons (copy, markdown, Jira, CSV, TSV) |
 | `src/types/context.ts` | `ProjectProfile` interface, `DEFAULT_PROFILE` |
 | `src/types/workspace.ts` | `Workspace`, `Artifact` interfaces |
 
@@ -339,5 +337,8 @@ None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across P
 | Landing layout restore | 2026-07-16 | Landing re-centered (`:only-child` span for the sidebar-less main + `.landing` wrapper), config strip's stale 1.5fr/1fr grid removed (Proveedor\|Modelo\|API Key now one horizontal row), 9 tools moved to a 2-column card grid with the "more coming" slot as the 10th cell (2×5, no scroll; 1 column <950px). Verified via playwright screenshots. 216 → 220 tests. |
 | Template fields cleanup | 2026-07-16 | "Validado por:" ships as a bare label (no hardcoded name) in the acceptance and bug report templates; bug report DESCRIPCIÓN pins `Entorno/Pais: Pro/ES` (regardless of the market selector) and leaves Versión/Evidencia empty for manual fill-in. Demo data matched. Guarded by `promptTemplates.test.ts`. 220 → 225 tests. |
 | Regression Tracker + TrackerGrid extraction | 2026-07-17 | New offline tracking tool for regression testing: 4 platform tabs, single permanent board (20×6 grid per platform), "Nombre - URL" accent links with Ctrl+click, SnapLink + search bar, "Archivar Regresión" snapshots to history (read-only), deletable archives. Shared spreadsheet component `TrackerGrid.tsx` extracted from Sprint Tracker (used by both via linkMode). Link cells show only the name at rest (full value on focus). 225 → 258 tests. |
+| Docs sync + dead code cleanup | 2026-07-17 | Post-merge audit: removed `ExportBar.tsx`‡ (zero importers) and 10 orphaned `*.loadExample` i18n keys (superseded by the shared `common.example`); fixed the landing's hardcoded "05" section-count badge to reflect the real tool count; corrected this file's stale i18n key count (was claiming 220, real count 236 before this cleanup, 231 after removing the dead keys) and the demo-data claim (covers 4 of 8 LLM tools, not "each tool"); README.md rewritten to match the current 10-tool app. 258 → 255 tests (net: -3 from ExportBar.test.tsx). |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
+
+‡ `ExportBar.tsx` (added Fase 2) was removed in the 2026-07-17 docs/cleanup pass for the same reason: every tool had grown its own inline export buttons and nothing imported it.
