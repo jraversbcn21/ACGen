@@ -59,9 +59,14 @@ interface TrackerGridProps<T extends string> {
   `${baseUrl}/browse/CLAVE` con la base configurada.
 - `linkMode: 'url'` — nuevo: paste de SnapLink `Nombre - https://cualquier.url/…` →
   guarda el texto completo `Nombre - URL`. Si la celda encaja con el patrón
-  `/^(.+?)\s*-\s*(https?:\/\/\S+)$/` (o es solo una URL), se pinta en color acento y
-  **Ctrl+clic abre esa URL exacta** en pestaña nueva. El nombre queda visible al inicio de
-  la celda; la URL se trunca por overflow.
+  `/^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/` (o es solo una URL), se pinta en color acento y
+  **Ctrl+clic abre esa URL exacta** en pestaña nueva.
+- **Visualización del nombre (amendment 2026-07-17, aprobado por Jorge):** cuando la celda
+  tiene parte de nombre (`Nombre - URL`) y NO tiene el foco, se muestra **solo el nombre**
+  (span superpuesto con el mismo padding/fuente, color acento, elipsis; el texto del input
+  se vuelve transparente). Al entrar a editar (foco) el overlay desaparece y se ve el valor
+  completo `Nombre - URL` para poder corregir el enlace, con caret visible. Una URL sola
+  (sin nombre) se muestra tal cual, sin overlay. El modo `jira` no cambia.
 - `readOnly` — inputs deshabilitados, sin drag & drop, sin "+ Fila". Ctrl+clic en enlaces
   sigue funcionando.
 

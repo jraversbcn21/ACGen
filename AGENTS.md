@@ -43,13 +43,13 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/utils/download.test.ts` | 7 — `downloadJson` (Blob download, object-URL revoked, no anchor left behind), `toFilename` (slugify, path-separator stripping, fallback) |
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
-| `src/components/TrackerGrid.test.tsx` | 11 — shared spreadsheet: tabs/headers render and switch, jira mode (ctrl+click opens baseUrl/browse/KEY, SnapLink paste → "KEY Nombre"), url mode (ctrl+click opens the exact pasted URL, bare URL, plain text is not a link, accent styling), readOnly (inputs readonly, no "+ Fila", no drag), "+ Fila" appends, dragDisabled removes handles |
+| `src/components/TrackerGrid.test.tsx` | 15 — shared spreadsheet: tabs/headers render and switch, jira mode (ctrl+click opens baseUrl/browse/KEY, SnapLink paste → "KEY Nombre", no name overlay), url mode (ctrl+click opens the exact pasted URL, bare URL, plain text is not a link, name-only overlay at rest with accent styling, focus reveals the full value for editing, bare URL gets no overlay), readOnly (inputs readonly, no "+ Fila", no drag), "+ Fila" appends, dragDisabled removes handles |
 | `src/hooks/useRegressions.test.ts` | 12 — init 4×(20×6), updateGridCell, persistence+hydration, setTabGrid, moveRow (incl. out-of-range), archiveBoard (snapshot+clear+name "Regresión YYYY-MM-DD", persisted), deleteArchived, corrupt JSON, missing-platform merge, quota resilience |
 | `src/components/RegressionTracker.test.tsx` | 6 — 4 platform tabs + headers, "Nombre - URL" cell is an accent link that ctrl+click opens, per-platform grids, archive flow (confirm → cleared board → "Archivadas (1)" → snapshot listed), snapshot read-only, delete archived → empty state |
 | `src/components/LandingScreen.test.tsx` | 4 — 10 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 11th cell, `onSelect` fires |
 | `src/config/promptTemplates.test.ts` | 5 — no prompt or demo output hardcodes a validator name; bug report pins `Entorno/Pais: Pro/ES` and leaves Versión/Evidencia empty |
 
-**Total: 254 tests across 30 files.**
+**Total: 258 tests across 30 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -206,7 +206,7 @@ Run `npm test` before committing when modifying hooks or services.
 - Fully offline — no LLM dependencies
 - Single permanent board with 4 platform tabs: iOS, Android, Web-Desktop, Web-Mobile
 - Editable spreadsheet grid (20x6) with headers: Regresión, Versión, Fecha, Notas, Status + empty 6th column
-- Column A accepts "Nombre - URL" (accent link, Ctrl+click opens exact URL) or bare URLs
+- Column A accepts "Nombre - URL" (accent link, Ctrl+click opens exact URL) or bare URLs. At rest a "Nombre - URL" cell displays only the name (overlay span, ellipsis); focusing the cell reveals the full value for editing. Bare URLs display as-is
 - Search bar (debounced 250ms) + SnapLink link support
 - "Archivar Regresión" snapshots the board to history (named "Regresión YYYY-MM-DD") and clears it; archived snapshots open read-only and can be deleted
 - Shared grid component: `TrackerGrid.tsx` (linkMode 'url'). Storage: board+archived in `acgen_regressions`, column widths in `acgen_regression_col_widths`
@@ -338,6 +338,6 @@ None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across P
 | PHONE regex digit floor | 2026-07-16 | `/\+?\d(?:[\s()-]*\d){6,}/g`: requires 7+ digits (not 7+ chars of the class), starts at +/digit, ends on a digit — indented list runs and short ids no longer become false `[PHONE_N]` rows, matches no longer swallow surrounding whitespace. Bare 7+ digit numbers stay masked on purpose (privacy-first). Closes the last known issue. 211 → 216 tests. |
 | Landing layout restore | 2026-07-16 | Landing re-centered (`:only-child` span for the sidebar-less main + `.landing` wrapper), config strip's stale 1.5fr/1fr grid removed (Proveedor\|Modelo\|API Key now one horizontal row), 9 tools moved to a 2-column card grid with the "more coming" slot as the 10th cell (2×5, no scroll; 1 column <950px). Verified via playwright screenshots. 216 → 220 tests. |
 | Template fields cleanup | 2026-07-16 | "Validado por:" ships as a bare label (no hardcoded name) in the acceptance and bug report templates; bug report DESCRIPCIÓN pins `Entorno/Pais: Pro/ES` (regardless of the market selector) and leaves Versión/Evidencia empty for manual fill-in. Demo data matched. Guarded by `promptTemplates.test.ts`. 220 → 225 tests. |
-| Regression Tracker + TrackerGrid extraction | 2026-07-17 | New offline tracking tool for regression testing: 4 platform tabs, single permanent board (20×6 grid per platform), "Nombre - URL" accent links with Ctrl+click, SnapLink + search bar, "Archivar Regresión" snapshots to history (read-only), deletable archives. Shared spreadsheet component `TrackerGrid.tsx` extracted from Sprint Tracker (used by both via linkMode). 225 → 254 tests. |
+| Regression Tracker + TrackerGrid extraction | 2026-07-17 | New offline tracking tool for regression testing: 4 platform tabs, single permanent board (20×6 grid per platform), "Nombre - URL" accent links with Ctrl+click, SnapLink + search bar, "Archivar Regresión" snapshots to history (read-only), deletable archives. Shared spreadsheet component `TrackerGrid.tsx` extracted from Sprint Tracker (used by both via linkMode). Link cells show only the name at rest (full value on focus). 225 → 258 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.

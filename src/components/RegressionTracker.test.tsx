@@ -39,7 +39,9 @@ describe('RegressionTracker', () => {
     const input = document.querySelector('tbody input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Smoke Login - https://zephyr.example.com/plan/9' } });
     const cell = screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9');
-    expect((cell as HTMLInputElement).style.color).toBe('var(--accent)');
+    // En reposo la celda muestra solo el nombre; el valor completo sigue en el input
+    expect(screen.getByText('Smoke Login')).toBeInTheDocument();
+    expect((cell as HTMLInputElement).style.color).toBe('transparent');
     fireEvent.click(cell, { ctrlKey: true });
     expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
   });

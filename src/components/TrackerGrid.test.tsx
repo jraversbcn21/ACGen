@@ -86,6 +86,15 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
     expect(newGrid[3]).toEqual(['', '', '', '', '', '']);
   });
 
+  it('jira cells keep showing the full value (no name overlay)', () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
+    expect(input.style.color).toBe('var(--accent)');
+    expect(input.closest('td')!.querySelector('span')).toBeNull();
+  });
+
   it('dragDisabled removes the drag handles', () => {
     renderGrid({ dragDisabled: true });
     const handle = document.querySelector('tbody td');
@@ -121,10 +130,36 @@ describe('TrackerGrid — url mode', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('link cells get the accent styling', () => {
+  it('link cells get the accent styling on the name overlay', () => {
     renderUrlGrid('Smoke Login - https://zephyr.example.com/plan/9');
-    const input = screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9') as HTMLInputElement;
+    const overlay = screen.getByText('Smoke Login');
+    expect((overlay as HTMLElement).style.color).toBe('var(--accent)');
+  });
+
+  it('shows only the name over a "Nombre - URL" cell at rest', () => {
+    renderUrlGrid('WEB 3.1.0+1.xlsx - https://sharepoint.example.com/Doc.aspx?sourcedoc=x&file=y');
+    const input = screen.getByDisplayValue('WEB 3.1.0+1.xlsx - https://sharepoint.example.com/Doc.aspx?sourcedoc=x&file=y') as HTMLInputElement;
+    const overlay = screen.getByText('WEB 3.1.0+1.xlsx');
+    expect(overlay.tagName).toBe('SPAN');
+    expect(input.style.color).toBe('transparent');
+  });
+
+  it('focusing the cell reveals the full value for editing, blur hides it again', () => {
+    renderUrlGrid('Smoke - https://zephyr.example.com/plan/9');
+    const input = screen.getByDisplayValue('Smoke - https://zephyr.example.com/plan/9') as HTMLInputElement;
+    fireEvent.focus(input);
+    expect(screen.queryByText('Smoke')).not.toBeInTheDocument();
     expect(input.style.color).toBe('var(--accent)');
+    fireEvent.blur(input);
+    expect(screen.getByText('Smoke')).toBeInTheDocument();
+    expect(input.style.color).toBe('transparent');
+  });
+
+  it('a bare URL keeps showing the full URL (no overlay)', () => {
+    renderUrlGrid('https://zephyr.example.com/plan/9');
+    const input = screen.getByDisplayValue('https://zephyr.example.com/plan/9') as HTMLInputElement;
+    expect(input.style.color).toBe('var(--accent)');
+    expect(input.closest('td')!.querySelector('span')).toBeNull();
   });
 });
 

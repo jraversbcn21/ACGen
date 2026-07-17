@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
-const URL_CELL_PATTERN = /^(?:.+?\s*-\s*)?(https?:\/\/\S+)$/;
+const URL_CELL_PATTERN = /^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
 
 function colToLetter(col: number): string {
@@ -149,7 +149,12 @@ export function TrackerGrid<T extends string>({
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
     const m = value.match(URL_CELL_PATTERN);
-    return m ? m[1] : null;
+    return m ? m[2] : null;
+  };
+
+  const getLinkName = (value: string): string | null => {
+    if (linkMode !== 'url') return null;
+    return value.match(URL_CELL_PATTERN)?.[1] ?? null;
   };
 
   const handleDragStart = (e: React.DragEvent, ri: number) => {
@@ -311,8 +316,10 @@ export function TrackerGrid<T extends string>({
                   const value = getCellValue(ri, ci);
                   const linkUrl = ci === 0 ? getLinkUrl(value) : null;
                   const ticketKey = linkMode === 'jira' && linkUrl ? value.match(TICKET_KEY_PATTERN)![1] : null;
+                  const linkName = ci === 0 && linkUrl ? getLinkName(value) : null;
                   const isFocused = focusedCell?.row === ri && focusedCell?.col === ci;
                   const showFocus = linkUrl && isFocused;
+                  const showNameOverlay = Boolean(linkName) && !isFocused;
                   return (
                     <td
                       key={ci}
@@ -385,12 +392,22 @@ export function TrackerGrid<T extends string>({
                         style={{
                           width: '100%', height: 28, border: 'none', outline: 'none',
                           padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
-                          background: 'transparent', color: linkUrl ? 'var(--accent)' : 'var(--text)',
+                          background: 'transparent',
+                          color: showNameOverlay ? 'transparent' : linkUrl ? 'var(--accent)' : 'var(--text)',
                           fontWeight: linkUrl ? 600 : 400,
-                          caretColor: linkUrl ? 'transparent' : undefined,
+                          caretColor: linkUrl && !(linkMode === 'url' && isFocused) ? 'transparent' : undefined,
                           cursor: linkUrl ? 'pointer' : undefined,
                         }}
                       />
+                      {showNameOverlay && (
+                        <span style={{
+                          position: 'absolute', left: 0, right: 0, top: 0, height: 28, lineHeight: '28px',
+                          padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
+                          color: 'var(--accent)', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                        }}>{linkName}</span>
+                      )}
                     </td>
                   );
                 })}
