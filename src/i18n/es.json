@@ -207,6 +207,7 @@
   "sprint.namePlaceholder": "Sprint 25",
   "sprint.enCurso": "En curso",
   "sprint.openTicket": "Abrir {ticket} en el tracker",
+  "regression.openLink": "Abrir enlace",
   "error.noEdgeCases": "No se generaron casos limite. Intenta con una descripcion mas detallada.",
   "workspace.none": "Sin workspace",
   "workspace.new": "+ Nuevo workspace",

@@ -92,3 +92,49 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
     expect(handle).toHaveAttribute('draggable', 'false');
   });
 });
+
+describe('TrackerGrid — url mode', () => {
+  function renderUrlGrid(cell0: string, overrides: Partial<TrackerGridProps<Tab>> = {}) {
+    const grid = makeGrid();
+    grid[0][0] = cell0;
+    return renderGrid({ linkMode: 'url', tabGrid: { one: grid, two: makeGrid() }, ...overrides });
+  }
+
+  it('ctrl+click on "Nombre - URL" opens the exact URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderUrlGrid('Smoke Login - https://zephyr.example.com/plan/9');
+    fireEvent.click(screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank');
+  });
+
+  it('a bare URL is also a link', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderUrlGrid('https://zephyr.example.com/plan/9');
+    fireEvent.click(screen.getByDisplayValue('https://zephyr.example.com/plan/9'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank');
+  });
+
+  it('plain text is not a link', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderUrlGrid('Smoke Login sin enlace');
+    fireEvent.click(screen.getByDisplayValue('Smoke Login sin enlace'), { ctrlKey: true });
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('link cells get the accent styling', () => {
+    renderUrlGrid('Smoke Login - https://zephyr.example.com/plan/9');
+    const input = screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9') as HTMLInputElement;
+    expect(input.style.color).toBe('var(--accent)');
+  });
+});
+
+describe('TrackerGrid — readOnly', () => {
+  it('inputs are readOnly, no "+ Fila", no drag handles', () => {
+    renderGrid({ readOnly: true });
+    const input = document.querySelector('tbody input') as HTMLInputElement;
+    expect(input).toHaveAttribute('readonly');
+    expect(screen.queryByText('+ Fila')).not.toBeInTheDocument();
+    const handle = document.querySelector('tbody td');
+    expect(handle).toHaveAttribute('draggable', 'false');
+  });
+});

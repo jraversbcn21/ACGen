@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
+const URL_CELL_PATTERN = /^(?:.+?\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
 
 function colToLetter(col: number): string {
@@ -23,6 +24,7 @@ export interface TrackerGridProps<T extends string> {
   tabGrid: Record<T, string[][]>;
   linkMode: 'jira' | 'url';
   dragDisabled?: boolean;
+  readOnly?: boolean;
   colWidthsStorageKey: string;
   searchPlaceholder: string;
   onUpdateGridCell: (tab: T, row: number, col: number, value: string) => void;
@@ -37,12 +39,14 @@ export function TrackerGrid<T extends string>({
   tabGrid,
   linkMode,
   dragDisabled = false,
+  readOnly = false,
   colWidthsStorageKey,
   searchPlaceholder,
   onUpdateGridCell,
   onSetTabGrid,
   onMoveRow,
 }: TrackerGridProps<T>) {
+  const noDrag = dragDisabled || readOnly;
   const [activeTab, setActiveTab] = useState<T>(tabs[0]);
   const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(colWidthsStorageKey, {});
   const [isResizing, setIsResizing] = useState(false);
@@ -144,7 +148,8 @@ export function TrackerGrid<T extends string>({
       const m = value.match(TICKET_KEY_PATTERN);
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
-    return null;
+    const m = value.match(URL_CELL_PATTERN);
+    return m ? m[1] : null;
   };
 
   const handleDragStart = (e: React.DragEvent, ri: number) => {
@@ -286,18 +291,18 @@ export function TrackerGrid<T extends string>({
                 }}
               >
                 <td
-                  draggable={!dragDisabled}
-                  onDragStart={(e) => !dragDisabled ? handleDragStart(e, ri) : e.preventDefault()}
+                  draggable={!noDrag}
+                  onDragStart={(e) => !noDrag ? handleDragStart(e, ri) : e.preventDefault()}
                   onDragEnd={handleDragEnd}
                   style={{
                     position: 'sticky', left: 0, zIndex: 1,
                     width: 44, minWidth: 44, height: 28, background: 'var(--surface-2)',
                     border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
                     textAlign: 'center', fontWeight: 700,
-                    cursor: dragDisabled ? undefined : 'grab',
+                    cursor: noDrag ? undefined : 'grab',
                   }}
                 >
-                  {!dragDisabled && (
+                  {!noDrag && (
                     <span style={{ marginRight: 2, fontSize: 12, lineHeight: 1, verticalAlign: 'middle', opacity: 0.5 }}>&#x22EE;&#x22EE;</span>
                   )}
                   {ri + 1}
@@ -316,7 +321,7 @@ export function TrackerGrid<T extends string>({
                           window.open(linkUrl, '_blank');
                         }
                       }}
-                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : undefined}
+                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : linkUrl ? t('regression.openLink') : undefined}
                       style={{
                         border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                         cursor: linkUrl ? 'pointer' : undefined,
@@ -335,6 +340,7 @@ export function TrackerGrid<T extends string>({
                           else cellRefs.current.delete(key);
                         }}
                         value={value}
+                        readOnly={readOnly}
                         onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
                         onKeyDown={(e) => {
                           const key = e.key;
@@ -395,7 +401,7 @@ export function TrackerGrid<T extends string>({
         </table>
       </div>
 
-      {!searchQuery.trim() && (
+      {!searchQuery.trim() && !readOnly && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
             {t('sprint.addRow')}
