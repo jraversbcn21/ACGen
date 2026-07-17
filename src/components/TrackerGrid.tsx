@@ -1,154 +1,10 @@
-### Task 1: Extraer `TrackerGrid` de `SprintDashboard` (refactor sin cambio de comportamiento)
-
-**Files:**
-- Create: `src/components/TrackerGrid.tsx`
-- Create: `src/components/TrackerGrid.test.tsx`
-- Modify: `src/components/SprintDashboard.tsx` (reescritura completa como envoltorio)
-
-**Interfaces:**
-- Consumes: `useLocalStorage` (`src/hooks/useLocalStorage.ts`), `STORAGE_KEYS.TRACKER_BASE_URL` (`src/config/constants.ts`), `useT` (`src/i18n/I18nContext.tsx`).
-- Produces: `TrackerGrid<T extends string>` y `TrackerGridProps<T>` exportados desde `src/components/TrackerGrid.tsx` con esta firma exacta (Tasks 2, 4 y 5 dependen de ella):
-
-```tsx
-export interface TrackerGridProps<T extends string> {
-  tabs: readonly T[];
-  tabLabels: Record<T, string>;
-  tabHeaders: Record<T, string[]>;
-  tabGrid: Record<T, string[][]>;
-  linkMode: 'jira' | 'url';
-  dragDisabled?: boolean;
-  colWidthsStorageKey: string;
-  searchPlaceholder: string;
-  onUpdateGridCell: (tab: T, row: number, col: number, value: string) => void;
-  onSetTabGrid: (tab: T, grid: string[][]) => void;
-  onMoveRow: (tab: T, fromRow: number, toRow: number) => void;
-}
-```
-
-En esta tarea `linkMode: 'url'` se declara pero aún no enlaza nada (lo implementa la Task 2 con TDD). `dragDisabled` sustituye al antiguo `sprint.archived` dentro del grid.
-
-- [ ] **Step 1: Baseline — ejecutar la suite completa**
-
-Run: `npm test`
-Expected: `Test Files 27 passed (27)`, `Tests 225 passed (225)`. Si algo falla, PARAR: el problema no es de esta tarea.
-
-- [ ] **Step 2: Escribir los tests del nuevo componente (fallan: el módulo no existe)**
-
-Crear `src/components/TrackerGrid.test.tsx`:
-
-```tsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { I18nProvider } from '../i18n/I18nContext';
-import { TrackerGrid } from './TrackerGrid';
-import type { TrackerGridProps } from './TrackerGrid';
-
-type Tab = 'one' | 'two';
-
-function makeGrid(rows = 3, cols = 6): string[][] {
-  return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
-}
-
-function renderGrid(overrides: Partial<TrackerGridProps<Tab>> = {}) {
-  const props: TrackerGridProps<Tab> = {
-    tabs: ['one', 'two'],
-    tabLabels: { one: 'Uno', two: 'Dos' },
-    tabHeaders: { one: ['Ticket', 'Fecha'], two: ['Ticket', 'Motivo'] },
-    tabGrid: { one: makeGrid(), two: makeGrid() },
-    linkMode: 'jira',
-    colWidthsStorageKey: 'test_grid_col_widths',
-    searchPlaceholder: 'Buscar...',
-    onUpdateGridCell: vi.fn(),
-    onSetTabGrid: vi.fn(),
-    onMoveRow: vi.fn(),
-    ...overrides,
-  };
-  render(
-    <I18nProvider>
-      <TrackerGrid {...props} />
-    </I18nProvider>
-  );
-  return props;
-}
-
-beforeEach(() => {
-  localStorage.clear();
-  // Fija el idioma: jsdom arranca con navigator.language en-US y los textos asertados son en español
-  localStorage.setItem('acgen_lang', JSON.stringify('es'));
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => {
-  it('renders tab labels and the active tab headers', () => {
-    renderGrid();
-    expect(screen.getByText('Uno')).toBeInTheDocument();
-    expect(screen.getByText('Dos')).toBeInTheDocument();
-    expect(screen.getByText('Fecha')).toBeInTheDocument();
-  });
-
-  it('switching tab shows that tab headers', () => {
-    renderGrid();
-    fireEvent.click(screen.getByText('Dos'));
-    expect(screen.getByText('Motivo')).toBeInTheDocument();
-    expect(screen.queryByText('Fecha')).not.toBeInTheDocument();
-  });
-
-  it('ctrl+click on a ticket cell opens baseUrl/browse/KEY', () => {
-    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const grid = makeGrid();
-    grid[0][0] = 'ABC-123 Login roto';
-    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
-    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://jira.example.com/browse/ABC-123', '_blank');
-  });
-
-  it('pasting a SnapLink transforms it to "KEY Nombre"', () => {
-    const props = renderGrid();
-    const inputs = document.querySelectorAll('tbody input');
-    fireEvent.paste(inputs[0], {
-      clipboardData: { getData: () => 'Mi ticket - https://jira.example.com/browse/ABC-999' },
-    });
-    expect(props.onUpdateGridCell).toHaveBeenCalledWith('one', 0, 0, 'ABC-999 Mi ticket');
-  });
-
-  it('"+ Fila" appends an empty row via onSetTabGrid', () => {
-    const props = renderGrid();
-    fireEvent.click(screen.getByText('+ Fila'));
-    expect(props.onSetTabGrid).toHaveBeenCalledTimes(1);
-    const [tab, newGrid] = (props.onSetTabGrid as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(tab).toBe('one');
-    expect(newGrid).toHaveLength(4);
-    expect(newGrid[3]).toEqual(['', '', '', '', '', '']);
-  });
-
-  it('dragDisabled removes the drag handles', () => {
-    renderGrid({ dragDisabled: true });
-    const handle = document.querySelector('tbody td');
-    expect(handle).toHaveAttribute('draggable', 'false');
-  });
-});
-```
-
-- [ ] **Step 3: Ejecutar para verificar que fallan**
-
-Run: `npm test -- src/components/TrackerGrid.test.tsx`
-Expected: FAIL — `Failed to resolve import "./TrackerGrid"` (o `Cannot find module`).
-
-- [ ] **Step 4: Crear `src/components/TrackerGrid.tsx`**
-
-Es la extracción literal del spreadsheet de `SprintDashboard.tsx` actual con estas sustituciones: `sprint.tabGrid` → `tabGrid`, `TAB_LABELS`/`TAB_HEADERS` → props, `sprint.archived` → `dragDisabled`, clave de anchos → `colWidthsStorageKey`, placeholder → `searchPlaceholder`, y el enlace de celda encapsulado en `getLinkUrl` según `linkMode`. Contenido completo:
-
-```tsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
+const URL_CELL_PATTERN = /^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
 
 function colToLetter(col: number): string {
@@ -168,6 +24,7 @@ export interface TrackerGridProps<T extends string> {
   tabGrid: Record<T, string[][]>;
   linkMode: 'jira' | 'url';
   dragDisabled?: boolean;
+  readOnly?: boolean;
   colWidthsStorageKey: string;
   searchPlaceholder: string;
   onUpdateGridCell: (tab: T, row: number, col: number, value: string) => void;
@@ -182,12 +39,14 @@ export function TrackerGrid<T extends string>({
   tabGrid,
   linkMode,
   dragDisabled = false,
+  readOnly = false,
   colWidthsStorageKey,
   searchPlaceholder,
   onUpdateGridCell,
   onSetTabGrid,
   onMoveRow,
 }: TrackerGridProps<T>) {
+  const noDrag = dragDisabled || readOnly;
   const [activeTab, setActiveTab] = useState<T>(tabs[0]);
   const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(colWidthsStorageKey, {});
   const [isResizing, setIsResizing] = useState(false);
@@ -289,7 +148,13 @@ export function TrackerGrid<T extends string>({
       const m = value.match(TICKET_KEY_PATTERN);
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
-    return null;
+    const m = value.match(URL_CELL_PATTERN);
+    return m ? m[2] : null;
+  };
+
+  const getLinkName = (value: string): string | null => {
+    if (linkMode !== 'url') return null;
+    return value.match(URL_CELL_PATTERN)?.[1] ?? null;
   };
 
   const handleDragStart = (e: React.DragEvent, ri: number) => {
@@ -431,18 +296,18 @@ export function TrackerGrid<T extends string>({
                 }}
               >
                 <td
-                  draggable={!dragDisabled}
-                  onDragStart={(e) => !dragDisabled ? handleDragStart(e, ri) : e.preventDefault()}
+                  draggable={!noDrag}
+                  onDragStart={(e) => !noDrag ? handleDragStart(e, ri) : e.preventDefault()}
                   onDragEnd={handleDragEnd}
                   style={{
                     position: 'sticky', left: 0, zIndex: 1,
                     width: 44, minWidth: 44, height: 28, background: 'var(--surface-2)',
                     border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
                     textAlign: 'center', fontWeight: 700,
-                    cursor: dragDisabled ? undefined : 'grab',
+                    cursor: noDrag ? undefined : 'grab',
                   }}
                 >
-                  {!dragDisabled && (
+                  {!noDrag && (
                     <span style={{ marginRight: 2, fontSize: 12, lineHeight: 1, verticalAlign: 'middle', opacity: 0.5 }}>&#x22EE;&#x22EE;</span>
                   )}
                   {ri + 1}
@@ -451,17 +316,19 @@ export function TrackerGrid<T extends string>({
                   const value = getCellValue(ri, ci);
                   const linkUrl = ci === 0 ? getLinkUrl(value) : null;
                   const ticketKey = linkMode === 'jira' && linkUrl ? value.match(TICKET_KEY_PATTERN)![1] : null;
+                  const linkName = ci === 0 && linkUrl ? getLinkName(value) : null;
                   const isFocused = focusedCell?.row === ri && focusedCell?.col === ci;
                   const showFocus = linkUrl && isFocused;
+                  const showNameOverlay = Boolean(linkName) && !isFocused;
                   return (
                     <td
                       key={ci}
                       onClick={(e) => {
                         if (linkUrl && e.ctrlKey) {
-                          window.open(linkUrl, '_blank');
+                          window.open(linkUrl, '_blank', 'noopener,noreferrer');
                         }
                       }}
-                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : undefined}
+                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : linkUrl ? t('regression.openLink') : undefined}
                       style={{
                         border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                         cursor: linkUrl ? 'pointer' : undefined,
@@ -480,6 +347,7 @@ export function TrackerGrid<T extends string>({
                           else cellRefs.current.delete(key);
                         }}
                         value={value}
+                        readOnly={readOnly}
                         onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
                         onKeyDown={(e) => {
                           const key = e.key;
@@ -524,12 +392,22 @@ export function TrackerGrid<T extends string>({
                         style={{
                           width: '100%', height: 28, border: 'none', outline: 'none',
                           padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
-                          background: 'transparent', color: linkUrl ? 'var(--accent)' : 'var(--text)',
+                          background: 'transparent',
+                          color: showNameOverlay ? 'transparent' : linkUrl ? 'var(--accent)' : 'var(--text)',
                           fontWeight: linkUrl ? 600 : 400,
-                          caretColor: linkUrl ? 'transparent' : undefined,
+                          caretColor: linkUrl && !(linkMode === 'url' && isFocused) ? 'transparent' : undefined,
                           cursor: linkUrl ? 'pointer' : undefined,
                         }}
                       />
+                      {showNameOverlay && (
+                        <span style={{
+                          position: 'absolute', left: 0, right: 0, top: 0, height: 28, lineHeight: '28px',
+                          padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
+                          color: 'var(--accent)', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                        }}>{linkName}</span>
+                      )}
                     </td>
                   );
                 })}
@@ -540,7 +418,7 @@ export function TrackerGrid<T extends string>({
         </table>
       </div>
 
-      {!searchQuery.trim() && (
+      {!searchQuery.trim() && !readOnly && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button type="button" className="btn-ghost" onClick={handleAddRow} style={{ padding: '6px 14px', fontSize: 13 }}>
             {t('sprint.addRow')}
@@ -550,95 +428,3 @@ export function TrackerGrid<T extends string>({
     </div>
   );
 }
-```
-
-Nota: la dependencia `setColWidths` se añade al `useEffect` del resize porque el linter puede exigirla; es estable (viene de `useLocalStorage`).
-
-- [ ] **Step 5: Ejecutar los tests nuevos**
-
-Run: `npm test -- src/components/TrackerGrid.test.tsx`
-Expected: PASS (6 tests).
-
-- [ ] **Step 6: Reescribir `src/components/SprintDashboard.tsx` como envoltorio**
-
-Contenido completo del fichero:
-
-```tsx
-import type { Sprint, TabId } from '../hooks/useSprints';
-import { STORAGE_KEYS } from '../config/constants';
-import { useT } from '../i18n/I18nContext';
-import { TrackerGrid } from './TrackerGrid';
-
-const TABS: readonly TabId[] = ['resolved', 'created', 'reopened', 'highPriority', 'jsd'];
-
-const TAB_LABELS: Record<TabId, string> = {
-  resolved: 'Resueltos',
-  created: 'Creados',
-  reopened: 'ReOpen',
-  highPriority: 'Prioridad Alta',
-  jsd: 'JSD',
-};
-
-const TAB_HEADERS: Record<TabId, string[]> = {
-  resolved: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
-  created: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
-  reopened: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
-  highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
-  jsd: ['JSD', 'Fecha', 'Motivo'],
-};
-
-interface SprintDashboardProps {
-  sprint: Sprint;
-  onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
-  onSetTabGrid: (tabId: TabId, grid: string[][]) => void;
-  onMoveRow: (tabId: TabId, fromRow: number, toRow: number) => void;
-  onArchive: () => void;
-}
-
-export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
-  const t = useT();
-
-  return (
-    <div className="sprint-dashboard">
-      <TrackerGrid
-        tabs={TABS}
-        tabLabels={TAB_LABELS}
-        tabHeaders={TAB_HEADERS}
-        tabGrid={sprint.tabGrid}
-        linkMode="jira"
-        dragDisabled={sprint.archived}
-        colWidthsStorageKey={`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`}
-        searchPlaceholder={t('sprint.searchPlaceholder')}
-        onUpdateGridCell={onUpdateGridCell}
-        onSetTabGrid={onSetTabGrid}
-        onMoveRow={onMoveRow}
-      />
-
-      {!sprint.archived && (
-        <div className="actions-bar">
-          <button type="button" className="btn-ghost" onClick={onArchive}>
-            {t('sprint.archive')}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-```
-
-- [ ] **Step 7: Ejecutar la suite completa + lint**
-
-Run: `npm test` y después `npm run lint`
-Expected: `Tests 231 passed` (225 + 6 nuevos), 28 ficheros. Lint sin errores.
-
-- [ ] **Step 8: Commit**
-
-```bash
-git add src/components/TrackerGrid.tsx src/components/TrackerGrid.test.tsx src/components/SprintDashboard.tsx
-git commit -m "refactor(tracker): extract shared TrackerGrid from SprintDashboard
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
-```
-
----
-

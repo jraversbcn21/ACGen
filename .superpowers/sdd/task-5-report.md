@@ -1,121 +1,119 @@
-# Task 5: HistoryModal — i18n + inline 2-step confirm
+# Task 5 Report: Integración — routing, landing, sidebar, icono
 
 **Status:** DONE
 
-**Commit:** `9a05584` — feat(i18n): translate HistoryModal and replace window.confirm with inline 2-step confirm
+**Commit:** 6e67098 - feat(regression): wire Regression Tracker into routing, landing and sidebar
 
----
+## What Was Implemented
 
-## Implementation Summary
+Integrated the RegressionTracker component from Task 4 into the full application:
 
-Completed full TDD cycle: RED → GREEN → verification.
+1. **Routing** (`src/config/constants.ts`, `src/App.tsx`):
+   - Added `'regressiontracker'` to `ViewType` union type
+   - Added import for `RegressionTracker` component
+   - Added `'regressiontracker'` to `VALID_VIEWS` array
+   - Added render block for `view === 'regressiontracker'`
 
-### Changes Made
+2. **Icon** (`src/components/Icons.tsx`):
+   - Added `regression` icon to the `Icon` object with SVG paths:
+     - Circular arrow (re-execution)
+     - Check mark inside
+     - Style: 24×24, stroke 1.6, `currentColor`
 
-1. **Dictionary keys** (5 new keys added to both `es.json` and `en.json`):
-   - `history.title` — "Historial" / "History"
-   - `history.clearAll` — "Borrar todo" / "Clear all"
-   - `history.confirmClear` — "¿Confirmar borrado?" / "Confirm deletion?"
-   - `history.empty` — "No hay entradas..." / "No history entries yet."
-   - `history.load` — "Cargar" / "Load"
+3. **Landing Screen** (`src/components/LandingScreen.tsx`):
+   - Updated `onSelect` callback type to include `'regressiontracker'`
+   - Added tenth tool card to the `tools` array:
+     - ID: `regressiontracker`
+     - Icon: `Icon.regression`
+     - Title key: `landing.tool.regressiontracker`
+     - Description key: `landing.tool.regressiontrackerDesc`
+     - Tag: `Tracking`
 
-2. **HistoryModal component** (`src/components/HistoryModal.tsx`):
-   - Added `useState(false)` for `confirmingClear` state
-   - Imported `useT` from I18nContext
-   - Replaced all hardcoded Spanish strings with `t()` calls
-   - Implemented 2-step confirm pattern: first click arms the button (shows confirm label), second click executes `onClearAll()`
-   - Button label toggles between `history.clearAll` and `history.confirmClear` based on state
-   - Close button now uses `t('common.close')` for accessibility label
+4. **Sidebar** (`src/components/Sidebar.tsx`):
+   - Added regressiontracker entry to `TOOLS` array:
+     - View: `regressiontracker`
+     - Icon: `Icon.regression`
+     - Label key: `sidebar.regression`
+     - Category: `sidebar.seguimiento` (Seguimiento group)
 
-3. **Test file** (`src/components/HistoryModal.test.tsx`):
-   - Created new test suite with 3 test cases
-   - Used `fireEvent.click()` instead of `userEvent.click()` (per amendment)
-   - Fixture verified against actual `HistoryEntry` type (all fields match)
-   - Tests cover:
-     - 2-step confirm flow (first click sets state, second calls onClearAll)
-     - English language rendering
-     - Empty state translation
-
----
+5. **Tests** (`src/components/LandingScreen.test.tsx`):
+   - Updated test "renders the 9 tool buttons" → "renders the 10 tool buttons" with expected length 10
+   - Updated test "places the 'more coming' slot inside the tool grid as its 10th cell" → "places the 'more coming' slot inside the tool grid as its 11th cell" with expected length 11
 
 ## TDD Evidence
 
-### RED Phase
-```
-npx vitest run src/components/HistoryModal.test.tsx
-Result: 3 FAILED
-- "clear-all requires a second confirming click" — Unable to find "¿Confirmar borrado?" button
-- "renders in English" — Unable to find "History" text
-- "shows the translated empty state" — Unable to find "No history entries yet."
+### RED Phase (Before Implementation)
+```bash
+npm test -- src/components/LandingScreen.test.tsx
 ```
 
-### GREEN Phase
+Output:
+- ✗ renders the 10 tool buttons: expected 9 to have a length of 10
+- ✓ wraps everything in a centered .landing container
+- ✗ places the "more coming" slot inside the tool grid as its 11th cell: expected 10 to have a length of 11
+- ✓ still fires onSelect when a tool is clicked
+
+**Result: 2 FAILED, 2 PASSED**
+
+### GREEN Phase (After Implementation)
+```bash
+npm test -- src/components/LandingScreen.test.tsx
 ```
-npx vitest run src/components/HistoryModal.test.tsx
-Result: 3 PASSED (140ms)
-✓ HistoryModal (3 tests) 140ms
-  Test Files: 1 passed (1)
-  Tests: 3 passed (3)
-```
+
+Output:
+- ✓ renders the 10 tool buttons
+- ✓ wraps everything in a centered .landing container
+- ✓ places the "more coming" slot inside the tool grid as its 11th cell
+- ✓ still fires onSelect when a tool is clicked
+
+**Result: 4 PASSED**
 
 ### Full Test Suite
-```
-npm run test
-Result: 189 PASSED across 22 test files (19.74s)
-- All existing tests continue to pass
-- HistoryModal.test.tsx: 3 PASSED
-- No regressions
+```bash
+npm test
 ```
 
-### Type Checking & Linting
+**Result: 254 PASSED (no changes to test count, landing stays at 4 tests)**
+
+### Build & Lint
+```bash
+npm run build
 ```
-npx tsc --noEmit         → No errors
-npx eslint *.tsx         → No errors
+**Result:** TypeScript compilation OK, Vite build successful
+
+```bash
+npm run lint
 ```
-
----
-
-## Self-Review
-
-✓ **Faithfulness to brief:** Component implementation exactly matches Step 4 code spec
-
-✓ **Dictionary completeness:** All 5 keys added to both es.json and en.json
-
-✓ **Test amendment compliance:** Used fireEvent.click() as instructed
-
-✓ **Fixture validation:** Verified HistoryEntry type matches test fixture
-
-✓ **2-step confirm logic:** Clean state flow, no edge cases
-
-✓ **Accessibility:** aria-label on close button now dynamic via t('common.close')
-
-✓ **Quality gates:** All tests pass, no TypeScript errors, no ESLint violations
-
----
+**Result:** 15 pre-existing warnings (no new errors or warnings introduced)
 
 ## Files Changed
 
-- `src/components/HistoryModal.tsx` — i18n + 2-step confirm refactor
-- `src/components/HistoryModal.test.tsx` — New test suite (3 tests)
-- `src/i18n/es.json` — 5 new history.* keys
-- `src/i18n/en.json` — 5 new history.* keys
+1. `src/config/constants.ts` — ViewType union updated (+1 'regressiontracker')
+2. `src/App.tsx` — Import, VALID_VIEWS array, render block (+7 lines)
+3. `src/components/Icons.tsx` — Added regression icon (+6 lines)
+4. `src/components/LandingScreen.tsx` — onSelect type, tool entry (+8 lines)
+5. `src/components/Sidebar.tsx` — TOOLS array entry (+1 line)
+6. `src/components/LandingScreen.test.tsx` — Test names and expectations updated
 
-**Total:** 4 files changed, 80 insertions, 8 deletions
+Total changes: **27 insertions, 7 deletions**
+
+## Self-Review Findings
+
+✓ All steps followed (except manual dev-server verification, as instructed)
+✓ TDD cycle complete: RED → implementation → GREEN
+✓ Tests: 4/4 landing tests pass, 254/254 full suite passes
+✓ Lint: Clean (no new errors)
+✓ TypeScript: Compiles successfully
+✓ Exactly 6 files touched (no extra files modified)
+✓ Icon matches style (24×24, stroke 1.6, currentColor)
+✓ Router/ViewType includes 'regressiontracker'
+✓ Landing card appears as 10th tool, "more coming" as 11th cell
+✓ Sidebar entry appears in Seguimiento category
+✓ i18n keys consumed (landing.tool.regressiontracker, landing.tool.regressiontrackerDesc, sidebar.regression already exist from Task 4)
+
+## Issues & Concerns
+
+None. Implementation is complete and verified.
 
 ---
-
-## Test Coverage
-
-| Test | Expected | Result |
-|------|----------|--------|
-| 2-step confirm (1st click) | state true, confirm label visible | ✓ PASS |
-| 2-step confirm (2nd click) | onClearAll() called once | ✓ PASS |
-| English rendering | "History", "Clear all", "Load", "Close" visible | ✓ PASS |
-| Empty state i18n | Uses t('history.empty') | ✓ PASS |
-| Full suite (189 tests) | No regressions | ✓ PASS |
-
----
-
-## Concerns
-
-None identified. Implementation complete and verified.
+Generated: 2026-07-17 09:33 UTC

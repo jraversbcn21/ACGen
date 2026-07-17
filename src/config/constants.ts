@@ -71,6 +71,7 @@ export const STORAGE_KEYS = {
   CRITERIA_HISTORY: 'acgen_criteria_history',
   BUG_HISTORY: 'acgen_bug_history',
   SPRINT_COL_WIDTHS: 'acgen_sprint_col_widths',
+  REGRESSION_COL_WIDTHS: 'acgen_regression_col_widths',
   TRACKER_BASE_URL: 'acgen_tracker_base_url',
   WORKSPACES: 'acgen_workspaces',
   ACTIVE_WORKSPACE: 'acgen_active_workspace',
@@ -78,7 +79,7 @@ export const STORAGE_KEYS = {
 
 export const TEMPERATURE = 0.2;
 
-export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter';
+export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter';
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },

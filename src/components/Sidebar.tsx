@@ -14,6 +14,7 @@ const TOOLS = [
   { view: 'edgecase' as ViewType, icon: Icon.edgecase, labelKey: 'sidebar.edgecase', categoryKey: 'sidebar.refinar' },
   { view: 'converter' as ViewType, icon: Icon.converter, labelKey: 'sidebar.converter', categoryKey: 'sidebar.convertir' },
   { view: 'sprinttracker' as ViewType, icon: Icon.sprint, labelKey: 'sidebar.sprint', categoryKey: 'sidebar.seguimiento' },
+  { view: 'regressiontracker' as ViewType, icon: Icon.regression, labelKey: 'sidebar.regression', categoryKey: 'sidebar.seguimiento' },
 ];
 
 function groupBy<T>(items: T[], key: keyof T): Record<string, T[]> {

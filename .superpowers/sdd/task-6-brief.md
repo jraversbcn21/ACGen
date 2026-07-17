@@ -1,115 +1,60 @@
-### Task 6: SearchableSelect + call sites
+### Task 6: Sincronizar AGENTS.md y verificación final
 
 **Files:**
-- Modify: `src/components/SearchableSelect.tsx`
-- Create: `src/components/SearchableSelect.test.tsx`
-- Modify: `src/components/BugReportTool.tsx:285`, `src/components/TestDataTool.tsx:284` (hardcoded `placeholder` props)
-- Modify: `src/i18n/es.json`, `src/i18n/en.json` (2 new keys)
+- Modify: `AGENTS.md`
 
 **Interfaces:**
-- Produces: `SearchableSelectProps` gains optional `searchPlaceholder?: string` (search input placeholder, defaults to `t('common.search')`). Existing `placeholder` prop (trigger button) keeps its signature; its default becomes `t('common.select')`.
+- Consumes: los totales reales de la suite tras las Tasks 1-5 (esperado: 254 tests / 30 ficheros — verificar con la salida real de `npm test` y usar ESOS números).
+- Produces: AGENTS.md fiel al estado del repo.
 
-- [ ] **Step 1: Add keys**
+- [ ] **Step 1: Ejecutar la suite y anotar los totales reales**
 
-`es.json`:
+Run: `npm test`
+Expected: `Test Files 30 passed (30)`, `Tests 254 passed (254)`. Si difiere, usar los números reales en los pasos siguientes.
 
-```json
-  "common.select": "Seleccionar...",
-  "common.searchMarket": "Buscar mercado...",
+- [ ] **Step 2: Actualizar AGENTS.md**
+
+1. Tabla de tests — añadir tres filas y actualizar la de LandingScreen:
+
+```markdown
+| `src/components/TrackerGrid.test.tsx` | 11 — shared spreadsheet: tabs/headers render and switch, jira mode (ctrl+click opens baseUrl/browse/KEY, SnapLink paste → "KEY Nombre"), url mode (ctrl+click opens the exact pasted URL, bare URL, plain text is not a link, accent styling), readOnly (inputs readonly, no "+ Fila", no drag), "+ Fila" appends, dragDisabled removes handles |
+| `src/hooks/useRegressions.test.ts` | 12 — init 4×(20×6), updateGridCell, persistence+hydration, setTabGrid, moveRow (incl. out-of-range), archiveBoard (snapshot+clear+name "Regresión YYYY-MM-DD", persisted), deleteArchived, corrupt JSON, missing-platform merge, quota resilience |
+| `src/components/RegressionTracker.test.tsx` | 6 — 4 platform tabs + headers, "Nombre - URL" cell is an accent link that ctrl+click opens, per-platform grids, archive flow (confirm → cleared board → "Archivadas (1)" → snapshot listed), snapshot read-only, delete archived → empty state |
 ```
 
-`en.json`:
+Fila de LandingScreen — actualizar a:
 
-```json
-  "common.select": "Select...",
-  "common.searchMarket": "Search market...",
+```markdown
+| `src/components/LandingScreen.test.tsx` | 4 — 10 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 11th cell, `onSelect` fires |
 ```
 
-- [ ] **Step 2: Write the failing tests**
+Línea de total: `**Total: 254 tests across 30 files.**` (o los números reales del Step 1).
 
-`src/components/SearchableSelect.test.tsx`:
+2. Sección **Architecture**:
+- Línea de hash-based routing / ViewType: añadir `'regressiontracker'` a la lista de vistas.
+- Línea de Settings persistence: añadir `Regression tracker board+archived as `acgen_regressions`, column widths as `acgen_regression_col_widths`.`
 
-```tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { I18nProvider } from '../i18n/I18nContext';
-import { SearchableSelect } from './SearchableSelect';
+3. Sección **Tools**: el encabezado pasa a `## Tools (10 total)` y en el grupo de tracking (donde está Sprint Tracker) añadir la fila:
 
-const options = [{ value: 'es', label: 'España' }];
-
-function renderEn(ui: React.ReactElement) {
-  localStorage.setItem('acgen_lang', '"en"');
-  return render(<I18nProvider>{ui}</I18nProvider>);
-}
-
-describe('SearchableSelect i18n', () => {
-  afterEach(() => localStorage.clear());
-
-  it('search input placeholder defaults to the translated common.search', async () => {
-    renderEn(<SearchableSelect options={options} value="" onChange={() => {}} />);
-    await userEvent.click(screen.getByRole('button'));
-    expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument();
-  });
-
-  it('shows the translated empty state', async () => {
-    renderEn(<SearchableSelect options={options} value="" onChange={() => {}} />);
-    await userEvent.click(screen.getByRole('button'));
-    await userEvent.type(screen.getByPlaceholderText('Search...'), 'zzz');
-    expect(screen.getByText('No results')).toBeInTheDocument();
-  });
-
-  it('trigger placeholder defaults to the translated common.select', () => {
-    renderEn(<SearchableSelect options={options} value="" onChange={() => {}} />);
-    expect(screen.getByText('Select...')).toBeInTheDocument();
-  });
-});
+```markdown
+| Regression Tracker | `regressiontracker` | `RegressionTracker.tsx`, `TrackerGrid.tsx`, `useRegressions.ts` | No |
 ```
 
-- [ ] **Step 3: Run to verify RED**
+(Ajustar las columnas exactas al formato real de la tabla de AGENTS.md al editarla.)
 
-Run: `npx vitest run src/components/SearchableSelect.test.tsx`
-Expected: FAIL on all 3 (Spanish literals).
+4. Si AGENTS.md menciona que `SprintDashboard` contiene el spreadsheet, actualizar la mención: el spreadsheet vive ahora en `TrackerGrid.tsx` (compartido por Sprint Tracker y Regression Tracker).
 
-- [ ] **Step 4: Implement**
+- [ ] **Step 3: Verificación final completa**
 
-In `src/components/SearchableSelect.tsx`:
+Run: `npm test` → verde con los totales de AGENTS.md.
+Run: `npm run lint` → sin errores.
+Run: `npm run build` → compila (tsc + vite) sin errores.
 
-```tsx
-import { useT } from '../i18n/I18nContext';
-
-interface SearchableSelectProps {
-  options: readonly SelectOption[];
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  searchPlaceholder?: string;
-}
-
-export function SearchableSelect({ options, value, onChange, placeholder, searchPlaceholder }: SearchableSelectProps) {
-  const t = useT();
-  // ... existing state/hooks unchanged ...
-```
-
-Then three render changes:
-- Trigger (line 104): `{selectedOption ? selectedOption.label : (placeholder || t('common.select'))}`
-- Search input (line 119): `placeholder={searchPlaceholder || t('common.search')}`
-- Empty item (line 130): `<li className="sselect-empty">{t('common.noResults')}</li>`
-
-Call sites (both already have `t` in scope):
-- `BugReportTool.tsx:285`: `placeholder="Buscar..."` → `placeholder={t('common.search')} searchPlaceholder={t('common.searchMarket')}`
-- `TestDataTool.tsx:284`: `placeholder="Buscar mercado..."` → `placeholder={t('common.searchMarket')} searchPlaceholder={t('common.searchMarket')}`
-
-- [ ] **Step 5: Run to verify GREEN**
-
-Run: `npx vitest run src/components`
-Expected: ALL PASS.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/components/SearchableSelect.tsx src/components/SearchableSelect.test.tsx src/components/BugReportTool.tsx src/components/TestDataTool.tsx src/i18n/es.json src/i18n/en.json
-git commit -m "feat(i18n): translate SearchableSelect and its call-site placeholders"
+git add AGENTS.md
+git commit -m "docs: sync AGENTS.md with Regression Tracker and TrackerGrid extraction
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
-
----
-

@@ -3,7 +3,7 @@ import { Icon } from './Icons';
 import { useT } from '../i18n/I18nContext';
 
 interface LandingScreenProps {
-  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker') => void;
+  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker') => void;
   provider: string;
   onProviderChange: (provider: string) => void;
   apiKey: string;
@@ -76,6 +76,13 @@ const tools = [
     icon: Icon.sprint,
     titleKey: 'landing.tool.sprinttracker',
     descKey: 'landing.tool.sprinttrackerDesc',
+    tag: 'Tracking',
+  },
+  {
+    id: 'regressiontracker' as const,
+    icon: Icon.regression,
+    titleKey: 'landing.tool.regressiontracker',
+    descKey: 'landing.tool.regressiontrackerDesc',
     tag: 'Tracking',
   },
 ];

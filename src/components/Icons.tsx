@@ -88,6 +88,13 @@ export const Icon = {
       <circle cx="17" cy="20" r="1.2" />
     </Svg>
   ),
+  regression: (p: SvgProps) => (
+    <Svg {...p}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+      <path d="M20 4v4h-4" />
+      <path d="m8.8 12.5 2.2 2.2 4.2-4.2" />
+    </Svg>
+  ),
   userstory: (p: SvgProps) => (
     <Svg {...p}>
       <circle cx="12" cy="7" r="3.5" />

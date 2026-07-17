@@ -8,6 +8,7 @@ import { TestCaseTool } from './components/TestCaseTool';
 import { BugReportTool } from './components/BugReportTool';
 import { TestDataTool } from './components/TestDataTool';
 import { SprintTracker } from './components/SprintTracker';
+import { RegressionTracker } from './components/RegressionTracker';
 import { Sidebar } from './components/Sidebar';
 import { UserStoryTool } from './components/UserStoryTool';
 import { RefinerTool } from './components/RefinerTool';
@@ -22,7 +23,7 @@ import { downloadJson, toFilename } from './utils/download';
 import { I18nProvider } from './i18n/I18nContext';
 import type { ViewType } from './config/constants';
 
-const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'userstory', 'refiner', 'edgecase', 'converter'];
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter'];
 
 function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
@@ -175,6 +176,10 @@ export default function App() {
 
           {view === 'sprinttracker' && (
             <SprintTracker />
+          )}
+
+          {view === 'regressiontracker' && (
+            <RegressionTracker />
           )}
 
           {view === 'userstory' && (

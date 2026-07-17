@@ -1,83 +1,103 @@
-# Task 3: ExportBar i18n — Report
+# Task 3: Hook `useRegressions` - Implementation Report
 
-## Status
-**DONE**
+## Summary
+Successfully implemented the `useRegressions` hook and comprehensive test suite following TDD methodology. All 12 tests passing, code committed.
 
-## Implementation Summary
+## What Was Implemented
 
-Successfully implemented i18n for ExportBar component with TDD approach following the brief exactly.
+Created two new files:
+1. **`src/hooks/useRegressions.ts`** - State management hook for regression tracking
+2. **`src/hooks/useRegressions.test.ts`** - Comprehensive test suite with 12 test cases
 
-### Files Changed
-- `src/i18n/es.json` — Added 4 export.* keys
-- `src/i18n/en.json` — Added 4 export.* keys
-- `src/components/ExportBar.tsx` — Replaced with i18n-aware version
-- `src/components/ExportBar.test.tsx` — Created (new test file)
+### Hook Exports
+- `PlatformId` type: Union of 'ios' | 'android' | 'webDesktop' | 'webMobile'
+- `PLATFORM_IDS` const: Readonly array of valid platform IDs
+- `ArchivedRegression` interface: Structure for archived board snapshots
+- `useRegressions()` function: Returns object with state and 7 action methods
 
-### Commit
-```
-479da68 feat(i18n): translate ExportBar labels
-```
+### State Management
+- **Active Board**: 4 platforms × 20 rows × 6 columns grid (empty strings by default)
+- **Archived Snapshots**: Array of timestamped board copies with unique IDs
+- **Persistence**: localStorage key `'acgen_regressions'` with error recovery
+- **Actions**: updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived
 
 ## TDD Evidence
 
-### RED Phase
-Ran `npx vitest run src/components/ExportBar.test.tsx` with current (Spanish-hardcoded) ExportBar implementation:
-- Result: **2 FAILED, 1 PASSED**
-- `renders English labels` — FAILED (buttons showed "Copiar", "Descargar PDF", "Descargar CSV", "Copiar TSV" instead of English)
-- `keeps proper nouns literal` — PASSED (proper nouns rendered correctly as-is)
-- `shows the copied state translated` — FAILED (showed "Copiado!" instead of "Copied!")
+### Step 1: RED Test (Expected Failure)
+**Command:**
+```bash
+npm test -- src/hooks/useRegressions.test.ts
+```
 
-### GREEN Phase
-Replaced ExportBar.tsx with i18n-aware implementation using `useT()` hook from I18nContext.
-Ran `npx vitest run src/components/ExportBar.test.tsx` again:
-- Result: **3 PASSED** ✓
-- All tests now pass with correct English labels displayed
+**Output:**
+```
+FAIL src/hooks/useRegressions.test.ts
+Error: Failed to resolve import "./useRegressions" from "src/hooks/useRegressions.test.ts". Does the file exist?
+```
 
-## Verification Steps Completed
+**Why Expected:** Test file imports the hook module which doesn't exist yet.
 
-1. **Full Test Suite**: `npx vitest run`
-   - 21 test files passed
-   - 185 total tests passed
-   - No regressions
+### Step 2: GREEN Test (All Passing)
+**Command:**
+```bash
+npm test -- src/hooks/useRegressions.test.ts
+```
 
-2. **Type Check**: `npx tsc --noEmit`
-   - No errors
+**Output:**
+```
+✓ src/hooks/useRegressions.test.ts (12 tests) 192ms
 
-3. **Linting**: `npx eslint src/components/ExportBar.tsx src/components/ExportBar.test.tsx`
-   - No issues
+Test Files  1 passed (1)
+      Tests  12 passed (12)
+```
 
-## Key Implementation Details
+**Test Coverage:**
+1. ✓ initializes with an empty 20x6 board per platform and no archived
+2. ✓ updateGridCell writes a value in the right platform
+3. ✓ persists to localStorage and hydrates on a fresh mount
+4. ✓ setTabGrid replaces the whole grid of one platform
+5. ✓ moveRow reorders rows
+6. ✓ moveRow ignores out-of-range indices
+7. ✓ archiveBoard snapshots the board, clears it and names it with today
+8. ✓ archiveBoard persists snapshot and cleared board
+9. ✓ deleteArchived removes a snapshot
+10. ✓ recovers from corrupt JSON in localStorage
+11. ✓ merges missing platforms when hydrating old data
+12. ✓ keeps changes in memory even when localStorage.setItem throws (quota exceeded)
 
-### i18n Keys Added
-Spanish (es.json):
-- `export.copy`: "Copiar"
-- `export.pdf`: "Descargar PDF"
-- `export.csv`: "Descargar CSV"
-- `export.tsv`: "Copiar TSV"
+## Files Changed
+- **Created:** `src/hooks/useRegressions.ts` (130 lines)
+- **Created:** `src/hooks/useRegressions.test.ts` (186 lines)
 
-English (en.json):
-- `export.copy`: "Copy"
-- `export.pdf`: "Download PDF"
-- `export.csv`: "Download CSV"
-- `export.tsv`: "Copy TSV"
+## Commit
+```
+fce1c1b feat(regression): useRegressions hook with single board + archived snapshots
+```
 
-### FORMAT_LABELS Mapping
-Updated to reference i18n keys instead of hardcoded Spanish strings:
-- Proper nouns (Markdown, Jira Wiki) remain literal strings (t() passes them through)
-- i18n keys (export.copy, export.pdf, etc.) are resolved via t() hook
-- Dictionaries maintained in parity (4 new keys in both es.json and en.json)
+## Self-Review Findings
 
-### Test Coverage
-ExportBar i18n test suite covers:
-1. English label rendering for all export formats
-2. Proper noun passthrough (Markdown, Jira Wiki)
-3. Translated copied state ("Copied!" in English)
+✓ All steps followed in order (RED → GREEN → COMMIT)
+✓ RED test failed for expected reason (module not found)
+✓ GREEN shows exactly 12/12 tests passing
+✓ Test output pristine (quota error mocked and suppressed)
+✓ No extraneous code (YAGNI principle observed)
+✓ Exports match brief exactly:
+  - PlatformId type ✓
+  - PLATFORM_IDS const (readonly array) ✓
+  - ArchivedRegression interface ✓
+  - useRegressions function ✓
+✓ Code transcribed faithfully from brief
+✓ localStorage error handling implemented
+✓ hydration with missing platforms handled
+✓ Date formatting uses local time (YYYY-MM-DD)
+✓ UUID generation via crypto.randomUUID()
+✓ All callbacks use useCallback for stability
 
-## Concerns
-None. All requirements met:
-- TDD approach followed (RED → GREEN)
-- Code transcribed faithfully from brief
-- All tests pass
-- No type or lint errors
-- Dictionary parity maintained
-- Commit message and trailers exact as specified
+## Issues or Concerns
+None. Task completed successfully per specification.
+
+---
+
+**Status:** DONE
+**Test Results:** 12/12 passing
+**Duration:** ~20 minutes
