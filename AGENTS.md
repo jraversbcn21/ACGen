@@ -43,10 +43,13 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/utils/download.test.ts` | 7 — `downloadJson` (Blob download, object-URL revoked, no anchor left behind), `toFilename` (slugify, path-separator stripping, fallback) |
 | `src/test/pwaIcons.test.ts` | 2 — reads the PNG IHDR of both PWA icons and asserts they are really 192×192 / 512×512, not placeholders |
 | `src/i18n/keyParity.test.ts` | 2 — `es.json`/`en.json` have exactly the same key set, and every `{param}` placeholder in one exists in the other |
-| `src/components/LandingScreen.test.tsx` | 4 — 9 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 10th cell, `onSelect` fires |
+| `src/components/TrackerGrid.test.tsx` | 11 — shared spreadsheet: tabs/headers render and switch, jira mode (ctrl+click opens baseUrl/browse/KEY, SnapLink paste → "KEY Nombre"), url mode (ctrl+click opens the exact pasted URL, bare URL, plain text is not a link, accent styling), readOnly (inputs readonly, no "+ Fila", no drag), "+ Fila" appends, dragDisabled removes handles |
+| `src/hooks/useRegressions.test.ts` | 12 — init 4×(20×6), updateGridCell, persistence+hydration, setTabGrid, moveRow (incl. out-of-range), archiveBoard (snapshot+clear+name "Regresión YYYY-MM-DD", persisted), deleteArchived, corrupt JSON, missing-platform merge, quota resilience |
+| `src/components/RegressionTracker.test.tsx` | 6 — 4 platform tabs + headers, "Nombre - URL" cell is an accent link that ctrl+click opens, per-platform grids, archive flow (confirm → cleared board → "Archivadas (1)" → snapshot listed), snapshot read-only, delete archived → empty state |
+| `src/components/LandingScreen.test.tsx` | 4 — 10 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 11th cell, `onSelect` fires |
 | `src/config/promptTemplates.test.ts` | 5 — no prompt or demo output hardcodes a validator name; bug report pins `Entorno/Pais: Pro/ES` and leaves Versión/Evidencia empty |
 
-**Total: 225 tests across 27 files.**
+**Total: 254 tests across 30 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -54,11 +57,11 @@ Run `npm test` before committing when modifying hooks or services.
 
 - **React 18 SPA**, Vite 5, TypeScript. 100% static deploy. All core logic in-browser.
 - **Hash-based routing** (`#/landing`, `#/acceptance`, `#/testcase`, etc.) via `getViewFromHash()` + `hashchange` listener. `navigate(view, { prefill? })` callback. Browser back/forward and F5 work.
-- **ViewType**: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter'`
+- **ViewType**: `'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter'`
 - **App shell**: `<I18nProvider>` > `<div className="page">` > `<Header>` + `<div className="app-layout">` > `<Sidebar>` + `<main className="container">`. Sidebar hidden on landing.
 - **Sidebar**: collapsible icon-nav grouped by category (Generar/Refinar/Convertir/Seguimiento) + active workspace name + prompt editor link. Active highlight via hash.
 - **View router** wrapped in `<ErrorBoundary key={view}>`: class component with `getDerivedStateFromError`/`componentDidCatch`, renders recoverable fallback. Keyed by `view` so switching tools remounts it.
-- **Settings persistence**: API keys stored per provider (`acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`). Model stored as `acgen_model`. Provider stored as `acgen_provider`. Theme as `acgen_theme`. Language as `acgen_lang`. Workspaces as `acgen_workspaces`. Project profile as `acgen_project_profile`. History, sprints, and sprint configs in their own keys.
+- **Settings persistence**: API keys stored per provider (`acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`). Model stored as `acgen_model`. Provider stored as `acgen_provider`. Theme as `acgen_theme`. Language as `acgen_lang`. Workspaces as `acgen_workspaces`. Project profile as `acgen_project_profile`. History, sprints, and sprint configs in their own keys. Regression tracker board+archived as `acgen_regressions`, column widths as `acgen_regression_col_widths`.
 - **`useLocalStorage` cross-instance/cross-tab sync**: dispatches custom `acgen-local-storage` window event + listens for native `storage` event. All writes wrapped in try/catch for `QuotaExceededError`.
 - **LLM API**: provider-agnostic via `baseUrl` parameter. Supports Groq (default), OpenRouter, and Custom (any OpenAI-compatible endpoint). Called via `fetch` with SSE streaming. Temperature fixed at `0.2`.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
@@ -69,7 +72,7 @@ Run `npm test` before committing when modifying hooks or services.
 - **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, export bar in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `autoUpdate` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts.
 
-## Tools (9 total)
+## Tools (10 total)
 
 ### Generar (Generate)
 
@@ -99,6 +102,7 @@ Run `npm test` before committing when modifying hooks or services.
 | Tool | View | Key files | LLM? |
 |---|---|---|---|
 | Sprint Tracker | `sprinttracker` | `SprintTracker.tsx`, `SprintList.tsx`, `SprintDashboard.tsx` | No (offline) |
+| Regression Tracker | `regressiontracker` | `RegressionTracker.tsx`, `TrackerGrid.tsx`, `useRegressions.ts` | No |
 
 ## Cross-cutting features
 
