@@ -122,6 +122,17 @@ npm test
 npm run lint
 ```
 
+### Despliegue
+
+El despliegue a produccion es **automatico**. El proyecto esta conectado a Vercel por integracion Git, asi que cada merge a `main` dispara un build en la nube de Vercel que se promociona a produccion y actualiza el dominio publico [acgen.vercel.app](https://acgen.vercel.app). No hay pasos manuales (ni CLI de Vercel ni comandos de alias).
+
+```
+merge a main  ->  Vercel build + deploy (nube)  ->  produccion (acgen.vercel.app)
+```
+
+- Cada Pull Request genera ademas un deploy de *preview* con su propia URL para revisar los cambios antes de mergear.
+- No requiere variables de entorno en el build: la app es 100% estatica y las API keys las introduce el usuario en el navegador.
+
 > **Primer uso:** Al abrir la app por primera vez, elige tu proveedor (Groq/OpenRouter/Custom) e introduce tu API key en la configuracion superior. Todo se almacena unicamente en el localStorage del navegador.
 
 ---
