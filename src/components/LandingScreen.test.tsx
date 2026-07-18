@@ -39,12 +39,11 @@ describe('LandingScreen layout', () => {
     expect(landing?.querySelector('.tool-list')).not.toBeNull();
   });
 
-  it('places the "more coming" slot inside the tool grid as its 11th cell', () => {
+  it('renders exactly the 10 tool cells with no placeholder slot', () => {
     renderLanding();
     const list = document.querySelector('.tool-list');
-    const slot = list?.querySelector('.add-slot');
-    expect(slot).not.toBeNull();
-    expect(list?.children).toHaveLength(11);
+    expect(list?.querySelector('.add-slot')).toBeNull();
+    expect(list?.children).toHaveLength(10);
   });
 
   it('still fires onSelect when a tool is clicked', () => {

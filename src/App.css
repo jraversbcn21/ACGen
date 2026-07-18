@@ -204,20 +204,6 @@ body {
 }
 .tool-row:hover .row-arrow { opacity: 1; transform: translateX(0); color: var(--accent); }
 
-/* === EXTENSIBILITY SLOT === */
-/* Lives inside .tool-list as its 10th cell. */
-.add-slot {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding: 20px; border: 1.5px dashed var(--border-strong);
-  border-radius: 14px; color: var(--text-3); font-size: 14px; font-weight: 600;
-  background: transparent; cursor: default;
-}
-.add-plus {
-  display: grid; place-items: center; width: 26px; height: 26px;
-  border-radius: 8px; border: 1.5px dashed var(--border-strong);
-  font-size: 18px; line-height: 1; font-weight: 500;
-}
-
 /* === SHARED FORM PRIMITIVES === */
 .input-wrap { position: relative; display: flex; align-items: center; }
 .field-input {
