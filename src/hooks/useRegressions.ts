@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'acgen_regressions';
 
-export type PlatformId = 'ios' | 'android' | 'webDesktop' | 'webMobile';
+export type PlatformId = 'ios' | 'android' | 'webDesktop';
 
-export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'android', 'webDesktop', 'webMobile'];
+export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'android', 'webDesktop'];
 
 export interface ArchivedRegression {
   id: string;
@@ -27,7 +27,6 @@ function emptyBoard(): Record<PlatformId, string[][]> {
     ios: createEmptyGrid(),
     android: createEmptyGrid(),
     webDesktop: createEmptyGrid(),
-    webMobile: createEmptyGrid(),
   };
 }
 
