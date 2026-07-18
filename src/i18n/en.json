@@ -54,7 +54,6 @@
   "landing.model": "Model",
   "landing.greeting": "What do you want to work on today?",
   "landing.qaSession": "QA Session",
-  "landing.moreComing": "More generators coming soon",
   "landing.tool.acceptance": "Acceptance Criteria",
   "landing.tool.acceptanceDesc": "Generate criteria from functional requirements",
   "landing.tool.testcase": "Test Case Generator",

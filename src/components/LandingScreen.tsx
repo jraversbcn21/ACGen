@@ -134,10 +134,6 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
             </button>
           );
         })}
-        <div className="add-slot">
-          <span className="add-plus">+</span>
-          {t('landing.moreComing')}
-        </div>
       </div>
     </div>
   );

@@ -45,7 +45,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/components/TrackerGrid.test.tsx` | 15 — shared spreadsheet: tabs/headers render and switch, jira mode (ctrl+click opens baseUrl/browse/KEY, SnapLink paste → "KEY Nombre", no name overlay), url mode (ctrl+click opens the exact pasted URL, bare URL, plain text is not a link, name-only overlay at rest with accent styling, focus reveals the full value for editing, bare URL gets no overlay), readOnly (inputs readonly, no "+ Fila", no drag), "+ Fila" appends, dragDisabled removes handles |
 | `src/hooks/useRegressions.test.ts` | 12 — init 3×(20×6), updateGridCell, persistence+hydration, setTabGrid, moveRow (incl. out-of-range), archiveBoard (snapshot+clear+name "Regresión YYYY-MM-DD", persisted), deleteArchived, corrupt JSON, missing-platform merge, quota resilience |
 | `src/components/RegressionTracker.test.tsx` | 6 — 3 platform tabs (iOS/Android/WEB) + headers, "Nombre - URL" cell is an accent link that ctrl+click opens, per-platform grids, archive flow (confirm → cleared board → "Archivadas (1)" → snapshot listed), snapshot read-only, delete archived → empty state |
-| `src/components/LandingScreen.test.tsx` | 4 — 10 tool cards rendered, centered `.landing` wrapper present, "more coming" slot is the tool grid's 11th cell, `onSelect` fires |
+| `src/components/LandingScreen.test.tsx` | 4 — exactly the 10 tool cards rendered with no placeholder slot, centered `.landing` wrapper present, `onSelect` fires |
 | `src/config/promptTemplates.test.ts` | 5 — no prompt or demo output hardcodes a validator name; bug report pins `Entorno/Pais: Pro/ES` and leaves Versión/Evidencia empty |
 
 **Total: 255 tests across 29 files.**
@@ -319,10 +319,6 @@ Run `npm test` before committing when modifying hooks or services.
 ## Known issues
 
 None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across PRs #2–#7 plus the PHONE-regex fix — the full trail is in "Evolution history" below and in each PR's description on GitHub. (The audit's meta-lesson stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
-
-## Planned (next)
-
-- **Remove the "Más generadores próximamente" placeholder card** from the landing grid — the dashed "more coming" slot (currently the tool grid's 11th cell, see `LandingScreen.tsx` / `LandingScreen.test.tsx`). The app now ships 10 real tools; the landing should render just those 10 cards with no placeholder. When done, update `LandingScreen.test.tsx` (the "more coming slot is the 11th cell" assertion) and the i18n key(s) behind the placeholder text.
 
 ## Evolution history
 
