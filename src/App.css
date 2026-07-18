@@ -119,13 +119,6 @@ body {
   cursor: pointer; transition: all .18s var(--ease);
 }
 .theme-toggle:hover { color: var(--text); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
-.topbar-back {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 38px; height: 38px; border-radius: 10px;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
-  cursor: pointer; transition: all .18s var(--ease);
-}
-.topbar-back:hover { color: var(--accent); border-color: var(--accent); }
 
 /* === CONTAINER === */
 .container {
@@ -156,8 +149,7 @@ body {
 
 /* === CONFIG STRIP === */
 /* Single child (ProviderConfig) whose own flex row lays the fields out
-   horizontally — the old 1.5fr/1fr grid was for the deleted
-   ApiKeyConfig + ModelSelector pair and cramped it into half the width. */
+   horizontally across the full width. */
 .config-strip { margin-bottom: 46px; }
 
 /* === SECTION HEADER === */
@@ -171,7 +163,7 @@ body {
 .sec-count { font-size: 13px; font-weight: 700; color: var(--text-3); font-family: var(--font-mono); }
 
 /* === TOOL LIST (editorial numbered rows) === */
-/* 9 tools + the "more coming" slot = a clean 2x5 grid of cards. */
+/* 10 tool cards in a 2-column grid. */
 .tool-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .tool-row {
   display: grid; grid-template-columns: 44px 56px 1fr auto auto;
@@ -216,7 +208,6 @@ body {
 }
 .field-input::placeholder { color: var(--text-3); }
 .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
-.field-input.has-adorn { padding-right: 46px; }
 
 .field-select {
   width: 100%; height: 46px; padding: 0 42px 0 14px;
@@ -342,14 +333,6 @@ body {
 .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
 
-.btn-icon-new {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--surface); color: var(--text-2); cursor: pointer;
-  transition: all .18s var(--ease);
-}
-.btn-icon-new:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-
 /* === SHARED TABLE === */
 .data-table-wrap {
   overflow-x: auto; border: 1px solid var(--border);
@@ -382,21 +365,6 @@ body {
 .badge-positive { background: var(--success-bg); color: var(--success); }
 .badge-negative { background: var(--danger-bg);  color: var(--danger); }
 .badge-info   { background: var(--accent-weak); color: var(--accent); }
-
-/* === SHARED OUTPUT PANEL (for wiki/monospace output) === */
-.panel {
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); overflow: hidden;
-}
-.panel-header {
-  padding: 10px 14px; background: var(--surface-2);
-  font-size: 13px; font-weight: 700; color: var(--text-2);
-  border-bottom: 1px solid var(--border);
-}
-.panel-body {
-  padding: 14px; font-family: var(--font-mono); font-size: 13px;
-  line-height: 1.6; white-space: pre-wrap; color: var(--text);
-}
 
 /* === SHARED REASONING SECTION === */
 .reasoning {
@@ -548,24 +516,6 @@ body {
   margin-left: 4px; font-family: var(--font-mono);
 }
 
-/* === SHARED JIRA CONFIG INDICATOR === */
-.jira-indicator {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border: 1px solid var(--success);
-  border-radius: var(--radius-sm); background: var(--success-bg);
-}
-.jira-indicator-text { font-size: 13px; font-weight: 600; color: var(--success); }
-
-.jira-config {
-  border-left: 3px solid var(--border-strong); padding-left: 14px;
-}
-.jira-config-title {
-  font-size: 11px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; color: var(--text-3); margin-bottom: 8px;
-}
-.jira-fields { display: flex; gap: 12px; }
-.jira-fields > div { flex: 1; }
-
 /* === ACTION BAR === */
 .actions-bar {
   display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px;
@@ -596,7 +546,6 @@ body {
   .tool-row { grid-template-columns: 40px 48px 1fr; gap: 16px; padding: 18px 12px; }
   .row-num { font-size: 22px; }
   .row-tag, .row-arrow { display: none; }
-  .jira-fields { flex-direction: column; }
 }
 
 .main {
@@ -699,11 +648,6 @@ body {
 .br-compact-field-wide {
   flex: 0 0 230px;
   max-width: 230px;
-}
-
-.br-compact-field-jira {
-  flex: 0 0 500px;
-  max-width: 500px;
 }
 
 .br-output-ta {
@@ -841,12 +785,8 @@ body {
   .criteria-grid {
     grid-template-columns: 1fr;
   }
-  .br-form-row {
-    grid-template-columns: 1fr;
-  }
   .br-compact-field,
-  .br-compact-field-wide,
-  .br-compact-field-jira {
+  .br-compact-field-wide {
     min-width: 100%;
     max-width: 100%;
   }

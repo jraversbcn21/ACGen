@@ -23,14 +23,6 @@ REGLAS ADICIONALES:
 
 If more than one acceptance criterion is needed, repeat the full block above for each one, separated by a blank line. Do not add any text outside of these blocks.`;
 
-export const REQUIRED_MARKERS = [
-  '{panel:title=Criterios aceptación}',
-  '{quote}',
-  '*Dado*',
-  '*Cuando*',
-  '*Entonces*',
-];
-
 export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para un {dominio}. Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
 
 Basa tu respuesta en patrones estandar de {dominio} — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: Home, Footer, Menú/Navegación, Buscador, Parrillas de productos, Filtros, PDP (Detalle de Producto), Cesta y Checkout.

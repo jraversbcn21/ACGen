@@ -66,7 +66,7 @@ Run `npm test` before committing when modifying hooks or services.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
 - **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
 - **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
-- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (231 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (192 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
 - **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
 - **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `autoUpdate` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts.
@@ -269,8 +269,8 @@ Run `npm test` before committing when modifying hooks or services.
 | `src/utils/download.ts` | `downloadJson()`, `toFilename()` — client-side file download used by workspace export |
 | `src/App.tsx` | Hash routing, provider state, workspace state, theme state, prefill/chaining state, I18nProvider wrapper, sidebar layout |
 | `src/i18n/I18nContext.tsx` | `I18nProvider`, `useT()` hook, `useLang()` hook, language detection |
-| `src/i18n/es.json` | 231 Spanish UI strings |
-| `src/i18n/en.json` | 231 English UI strings — key set kept in exact parity with `es.json`, guarded by `src/i18n/keyParity.test.ts` |
+| `src/i18n/es.json` | 192 Spanish UI strings |
+| `src/i18n/en.json` | 192 English UI strings — key set kept in exact parity with `es.json`, guarded by `src/i18n/keyParity.test.ts` |
 | `src/components/Header.tsx` | Brand, WorkspacePicker, ProviderConfig, Model badge, theme toggle, language toggle |
 | `src/components/Sidebar.tsx` | Collapsible tool nav grouped by category, workspace name, prompt editor link |
 | `src/components/LandingScreen.tsx` | Hero, config strip (ProviderConfig), 10-tool grid |
@@ -339,6 +339,8 @@ None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across P
 | Regression Tracker + TrackerGrid extraction | 2026-07-17 | New offline tracking tool for regression testing: 4 platform tabs, single permanent board (20×6 grid per platform), "Nombre - URL" accent links with Ctrl+click, SnapLink + search bar, "Archivar Regresión" snapshots to history (read-only), deletable archives. Shared spreadsheet component `TrackerGrid.tsx` extracted from Sprint Tracker (used by both via linkMode). Link cells show only the name at rest (full value on focus). 225 → 258 tests. |
 | Docs sync + dead code cleanup | 2026-07-17 | Post-merge audit: removed `ExportBar.tsx`‡ (zero importers) and 10 orphaned `*.loadExample` i18n keys (superseded by the shared `common.example`); fixed the landing's hardcoded "05" section-count badge to reflect the real tool count; corrected this file's stale i18n key count (was claiming 220, real count 236 before this cleanup, 231 after removing the dead keys) and the demo-data claim (covers 4 of 8 LLM tools, not "each tool"); README.md rewritten to match the current 10-tool app. 258 → 255 tests (net: -3 from ExportBar.test.tsx). |
 | Regression Tracker: 3 platform tabs | 2026-07-18 | Reduced the Regression Tracker from 4 platform tabs to 3: **iOS, Android, WEB**. Removed the Web-Mobile tab; renamed Web-Desktop → "WEB". Kept the internal `PlatformId` `webDesktop` (only the visible label changed) so existing regression data under that localStorage key is preserved under "WEB"; Web-Mobile data becomes orphaned in `acgen_regressions` (no longer rendered). Light direct-TDD (RED verified). PR #12 (`adc924b`). 255 → 255 tests. |
+| Landing placeholder removed | 2026-07-18 | Removed the "Más generadores próximamente" placeholder card (dashed `.add-slot`, the tool grid's 11th cell) plus its CSS and the `landing.moreComing` i18n key; the landing now renders exactly the 10 real tool cards. PR #13 (`808c0fe`). 255 → 255 tests. |
+| Dead-code + docs sweep | 2026-07-18 | Session-close audit removed remaining dead code: the unused `REQUIRED_MARKERS` export, **38 orphaned i18n keys × 2 langs** (230 → 192 keys, parity kept), and **12 unused CSS classes** (`.topbar-back`, `.field-input.has-adorn`, `.btn-icon-new`, `.panel`/`.panel-header`/`.panel-body`, the `.jira-*` config block, `.br-compact-field-jira`, `.br-form-row`) plus 2 stale CSS comments. Every orphan verified via quoted-string grep before deletion (`t()` silently falls back to the key, so tests can't catch a wrong removal). README gained a "Despliegue" section documenting the auto-deploy flow. 255 → 255 tests. |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
 
