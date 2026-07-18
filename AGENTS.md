@@ -203,7 +203,7 @@ Run `npm test` before committing when modifying hooks or services.
 ### Regression Tracker
 
 - Fully offline — no LLM dependencies
-- Single permanent board with 4 platform tabs: iOS, Android, Web-Desktop, Web-Mobile
+- Single permanent board with 3 platform tabs: iOS, Android, WEB (internal id `webDesktop`, label "WEB")
 - Editable spreadsheet grid (20x6) with headers: Regresión, Versión, Fecha, Notas, Status + empty 6th column
 - Column A accepts "Nombre - URL" (accent link, Ctrl+click opens exact URL) or bare URLs. At rest a "Nombre - URL" cell displays only the name (overlay span, ellipsis); focusing the cell reveals the full value for editing. Bare URLs display as-is
 - Search bar (debounced 250ms) + SnapLink link support

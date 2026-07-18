@@ -13,7 +13,7 @@ afterEach(() => {
 describe('useRegressions', () => {
   it('initializes with an empty 20x6 board per platform and no archived', () => {
     const { result } = renderHook(() => useRegressions());
-    expect(PLATFORM_IDS).toEqual(['ios', 'android', 'webDesktop', 'webMobile']);
+    expect(PLATFORM_IDS).toEqual(['ios', 'android', 'webDesktop']);
     for (const p of PLATFORM_IDS) {
       expect(result.current.board[p]).toHaveLength(20);
       expect(result.current.board[p][0]).toHaveLength(6);
@@ -48,7 +48,7 @@ describe('useRegressions', () => {
       result.current.setTabGrid('webDesktop', newGrid);
     });
     expect(result.current.board.webDesktop).toEqual(newGrid);
-    expect(result.current.board.webMobile).toHaveLength(20);
+    expect(result.current.board.android).toHaveLength(20);
   });
 
   it('moveRow reorders rows', () => {
@@ -79,7 +79,7 @@ describe('useRegressions', () => {
   it('archiveBoard snapshots the board, clears it and names it with today', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
-      result.current.updateGridCell('webMobile', 0, 0, 'Regresión checkout');
+      result.current.updateGridCell('webDesktop', 0, 0, 'Regresión checkout');
     });
     act(() => {
       result.current.archiveBoard();
@@ -89,8 +89,8 @@ describe('useRegressions', () => {
     expect(snap.id).toBeTruthy();
     expect(snap.name).toMatch(/^Regresión \d{4}-\d{2}-\d{2}$/);
     expect(snap.archivedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(snap.board.webMobile[0][0]).toBe('Regresión checkout');
-    expect(result.current.board.webMobile[0][0]).toBe('');
+    expect(snap.board.webDesktop[0][0]).toBe('Regresión checkout');
+    expect(result.current.board.webDesktop[0][0]).toBe('');
   });
 
   it('archiveBoard persists snapshot and cleared board', () => {
@@ -133,7 +133,6 @@ describe('useRegressions', () => {
     expect(result.current.board.ios[0][0]).toBe('x');
     expect(result.current.board.android).toHaveLength(20);
     expect(result.current.board.webDesktop).toHaveLength(20);
-    expect(result.current.board.webMobile).toHaveLength(20);
   });
 
   it('keeps changes in memory even when localStorage.setItem throws (quota exceeded)', () => {

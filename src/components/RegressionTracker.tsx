@@ -8,8 +8,7 @@ import { useT } from '../i18n/I18nContext';
 const PLATFORM_LABELS: Record<PlatformId, string> = {
   ios: 'iOS',
   android: 'Android',
-  webDesktop: 'Web-Desktop',
-  webMobile: 'Web-Mobile',
+  webDesktop: 'WEB',
 };
 
 const REGRESSION_HEADERS = ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status'];
@@ -18,7 +17,6 @@ const PLATFORM_HEADERS: Record<PlatformId, string[]> = {
   ios: REGRESSION_HEADERS,
   android: REGRESSION_HEADERS,
   webDesktop: REGRESSION_HEADERS,
-  webMobile: REGRESSION_HEADERS,
 };
 
 type Screen = { kind: 'board' } | { kind: 'archivedList' } | { kind: 'snapshot'; id: string };

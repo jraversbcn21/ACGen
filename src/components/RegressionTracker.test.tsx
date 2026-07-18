@@ -22,12 +22,13 @@ afterEach(() => {
 });
 
 describe('RegressionTracker', () => {
-  it('renders the 4 platform tabs and the regression headers', () => {
+  it('renders the 3 platform tabs and the regression headers', () => {
     renderTracker();
     expect(screen.getByText('iOS')).toBeInTheDocument();
     expect(screen.getByText('Android')).toBeInTheDocument();
-    expect(screen.getByText('Web-Desktop')).toBeInTheDocument();
-    expect(screen.getByText('Web-Mobile')).toBeInTheDocument();
+    expect(screen.getByText('WEB')).toBeInTheDocument();
+    expect(screen.queryByText('Web-Desktop')).not.toBeInTheDocument();
+    expect(screen.queryByText('Web-Mobile')).not.toBeInTheDocument();
     for (const h of ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status']) {
       expect(screen.getByText(h)).toBeInTheDocument();
     }
