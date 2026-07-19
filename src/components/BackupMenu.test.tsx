@@ -155,6 +155,28 @@ describe('BackupMenu', () => {
     expect(localStorage.getItem('acgen_theme')).toBe('"dark"');
   });
 
+  it('alerts on a quota error during restore, clears the pending state, and keeps the import button available', async () => {
+    localStorage.setItem('acgen_theme', '"dark"');
+    renderMenu();
+    openPanel();
+
+    importJson(makeBackupJson({ data: { acgen_theme: '"light"' } }));
+    await screen.findByText(/reemplazará TODOS/i);
+
+    const originalSetItem = Storage.prototype.setItem.bind(localStorage);
+    let calls = 0;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string, value: string) => {
+      calls++;
+      if (calls === 1) throw new DOMException('quota exceeded', 'QuotaExceededError');
+      originalSetItem(key, value);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /sí, restaurar/i }));
+
+    expect(window.alert).toHaveBeenCalledWith('No hay espacio suficiente para restaurar la copia.');
+    expect(screen.getByRole('button', { name: /importar copia/i })).toBeInTheDocument();
+  });
+
   it('alerts on a corrupt import file and writes nothing', async () => {
     renderMenu();
     openPanel();
