@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAutoBackup } from './useAutoBackup';
 import * as autoBackupService from '../services/autoBackup';
+import { STORAGE_KEYS } from '../config/constants';
 
 vi.mock('../services/autoBackup', () => ({
   isFileSystemAccessSupported: vi.fn(),
@@ -161,6 +162,52 @@ describe('useAutoBackup', () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
 
+    expect(mocked.writeSnapshot).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not self-sustain: onSnapshot writing acgen_last_backup must not reschedule another snapshot', async () => {
+    mocked.writeSnapshot.mockResolvedValue(true);
+    // Simulate exactly what markDone (via useLocalStorage's setValue) does
+    // after a successful snapshot: write acgen_last_backup and dispatch the
+    // same sync event useAutoBackup listens to for scheduling.
+    const onSnapshot = vi.fn(() => {
+      localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, JSON.stringify(Date.now()));
+      window.dispatchEvent(
+        new CustomEvent('acgen-local-storage', { detail: { key: STORAGE_KEYS.LAST_BACKUP, value: Date.now() } }),
+      );
+    });
+    const { result } = await mountActive(onSnapshot);
+    vi.useFakeTimers();
+
+    // A genuine data change schedules and produces exactly one snapshot.
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('acgen-local-storage', { detail: { key: 'acgen_theme', value: '"dark"' } }),
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(mocked.writeSnapshot).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('active');
+
+    // Advance through several more debounce windows. If the LAST_BACKUP
+    // dispatch from onSnapshot rescheduled itself, this grows unboundedly.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000 * 5);
+    });
+    expect(mocked.writeSnapshot).toHaveBeenCalledTimes(1);
+
+    // A subsequent genuine data change still schedules normally — the fix
+    // must not over-filter real changes.
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('acgen-local-storage', { detail: { key: 'acgen_theme', value: '"light"' } }),
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
     expect(mocked.writeSnapshot).toHaveBeenCalledTimes(2);
   });
 

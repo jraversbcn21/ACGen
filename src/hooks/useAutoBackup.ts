@@ -27,6 +27,7 @@ import {
   writeSnapshot,
 } from '../services/autoBackup';
 import { createBackup } from '../services/backup';
+import { STORAGE_KEYS } from '../config/constants';
 
 export type AutoBackupStatus = 'unsupported' | 'off' | 'active' | 'permissionNeeded' | 'error';
 
@@ -127,7 +128,19 @@ export function useAutoBackup(onSnapshot?: () => void): AutoBackupState {
     const handle = handleRef.current;
     if (!handle) return;
 
-    const scheduleSnapshot = () => {
+    // Identify which key changed, when the event carries that info:
+    // CustomEvent('acgen-local-storage') from useLocalStorage sets
+    // detail.key; the native cross-tab 'storage' event sets e.key. A change
+    // to acgen_last_backup can never affect snapshot content (collectBackupData
+    // excludes it) — scheduling on it would let onSnapshot's own markDone()
+    // call (which writes that key) reschedule another snapshot forever. If
+    // the event carries no key info at all (an older-style dispatch), fail
+    // open and schedule anyway — a redundant snapshot beats a missed one.
+    const changedKey = (e: Event): string | undefined =>
+      e instanceof StorageEvent ? (e.key ?? undefined) : (e as CustomEvent<{ key?: string }>).detail?.key;
+
+    const scheduleSnapshot = (e: Event) => {
+      if (changedKey(e) === STORAGE_KEYS.LAST_BACKUP) return;
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
