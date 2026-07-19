@@ -21,6 +21,7 @@ import { DEFAULT_PROVIDER, PROVIDERS, sanitizeModel } from './config/providers';
 import { useProfile } from './components/ContextProfile';
 import { downloadJson, toFilename } from './utils/download';
 import { I18nProvider } from './i18n/I18nContext';
+import { requestPersistentStorage } from './services/persistence';
 import type { ViewType } from './config/constants';
 
 const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter'];
@@ -83,6 +84,10 @@ export default function App() {
     const onHashChange = () => setView(getViewFromHash());
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    void requestPersistentStorage();
   }, []);
 
   const navigate = useCallback((v: ViewType, opts?: { prefill?: string }) => {
