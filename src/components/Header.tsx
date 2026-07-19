@@ -1,5 +1,6 @@
 import { Icon } from './Icons';
 import { WorkspacePicker } from './WorkspacePicker';
+import { BackupMenu } from './BackupMenu';
 import { useLang } from '../i18n/I18nContext';
 import type { Workspace } from '../types/workspace';
 
@@ -16,6 +17,7 @@ interface HeaderProps {
   onDeleteWorkspace: (id: string) => void;
   onExportWorkspace: (id: string) => void;
   onImportWorkspace: (json: string) => void;
+  onImportLegacyWorkspace: (json: string) => void;
 }
 
 export function Header({
@@ -31,6 +33,7 @@ export function Header({
   onDeleteWorkspace,
   onExportWorkspace,
   onImportWorkspace,
+  onImportLegacyWorkspace,
 }: HeaderProps) {
   const { lang, setLang } = useLang();
 
@@ -52,6 +55,7 @@ export function Header({
           onExport={onExportWorkspace}
           onImport={onImportWorkspace}
         />
+        <BackupMenu onImportLegacyWorkspace={onImportLegacyWorkspace} />
         <span className="model-chip">
           <Icon.spark size={14} />
           {provider !== 'groq' && (<>{provider === 'openrouter' ? 'OR' : 'C'}: </>)}

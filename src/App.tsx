@@ -125,6 +125,7 @@ export default function App() {
         onDeleteWorkspace={workspace.deleteWorkspace}
         onExportWorkspace={exportWorkspaceToFile}
         onImportWorkspace={workspace.importWorkspace}
+        onImportLegacyWorkspace={workspace.importWorkspace}
       />
       <div className="app-layout">
         {view !== 'landing' && (
