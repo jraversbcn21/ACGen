@@ -113,15 +113,18 @@ export async function ensurePermission(handle: FileSystemFileHandle): Promise<bo
 
 /**
  * Writes a snapshot to the given handle. Never throws: permission denial
- * short-circuits to false without attempting a write, and any I/O failure
- * during the write also resolves to false so callers can surface a soft
- * warning instead of crashing.
+ * short-circuits to false without attempting a write, a rejection from the
+ * permission check itself (queryPermission/requestPermission can reject
+ * per spec — e.g. SecurityError without a user gesture, or a revoked
+ * handle) also resolves to false, and any I/O failure during the write
+ * resolves to false too, so callers can surface a soft warning instead of
+ * crashing.
  */
 export async function writeSnapshot(handle: FileSystemFileHandle, contents: string): Promise<boolean> {
-  const allowed = await ensurePermission(handle);
-  if (!allowed) return false;
-
   try {
+    const allowed = await ensurePermission(handle);
+    if (!allowed) return false;
+
     const writable = await handle.createWritable();
     await writable.write(contents);
     await writable.close();

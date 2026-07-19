@@ -290,4 +290,15 @@ describe('writeSnapshot', () => {
 
     await expect(writeSnapshot(handle, '{"data":true}')).resolves.toBe(false);
   });
+
+  it('is false (never throws) when ensurePermission itself rejects (e.g. SecurityError)', async () => {
+    const createWritable = vi.fn();
+    const handle = fakeHandle({
+      queryPermission: vi.fn().mockRejectedValue(new DOMException('denied', 'SecurityError')),
+      createWritable,
+    });
+
+    await expect(writeSnapshot(handle, '{"data":true}')).resolves.toBe(false);
+    expect(createWritable).not.toHaveBeenCalled();
+  });
 });
