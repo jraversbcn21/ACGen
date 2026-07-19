@@ -1,11 +1,13 @@
 // src/services/backup.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   BACKUP_SCHEMA_VERSION,
   isSensitiveKey,
   collectBackupData,
   createBackup,
   parseImportFile,
+  restoreBackup,
+  type BackupFile,
 } from './backup';
 
 beforeEach(() => {
@@ -149,5 +151,106 @@ describe('parseImportFile', () => {
     const json = JSON.stringify({ id: 'ws-1', name: 'Mi workspace', artifacts: [] });
 
     expect(parseImportFile(json)).toEqual({ kind: 'legacyWorkspace', json });
+  });
+});
+
+describe('restoreBackup', () => {
+  it('replaces the full acgen_* state — old keys disappear, new ones appear verbatim', () => {
+    localStorage.setItem('acgen_old_key', 'stale');
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"', acgen_prompt_acceptance: 'raw prompt text' },
+    };
+
+    const result = restoreBackup(backup);
+
+    expect(result).toEqual({ ok: true });
+    expect(localStorage.getItem('acgen_old_key')).toBeNull();
+    expect(localStorage.getItem('acgen_theme')).toBe('"dark"');
+    expect(localStorage.getItem('acgen_prompt_acceptance')).toBe('raw prompt text');
+  });
+
+  it('preserves the local acgen_key_groq when the backup carries no sensitive keys', () => {
+    localStorage.setItem('acgen_key_groq', 'local_secret');
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"' },
+    };
+
+    restoreBackup(backup);
+
+    expect(localStorage.getItem('acgen_key_groq')).toBe('local_secret');
+  });
+
+  it('overwrites local sensitive keys when the backup carries its own', () => {
+    localStorage.setItem('acgen_key_groq', 'local_secret');
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_key_groq: 'backup_secret' },
+    };
+
+    restoreBackup(backup);
+
+    expect(localStorage.getItem('acgen_key_groq')).toBe('backup_secret');
+  });
+
+  it('does not write a data entry whose key does not start with acgen_ (tampered file)', () => {
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"', malicious_key: 'evil' },
+    };
+
+    restoreBackup(backup);
+
+    expect(localStorage.getItem('malicious_key')).toBeNull();
+    expect(localStorage.getItem('acgen_theme')).toBe('"dark"');
+  });
+
+  it('leaves a foreign key untouched', () => {
+    localStorage.setItem('otra_app_x', 'valor ajeno');
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"' },
+    };
+
+    restoreBackup(backup);
+
+    expect(localStorage.getItem('otra_app_x')).toBe('valor ajeno');
+  });
+
+  it('rolls back to the exact previous state when a write hits quota', () => {
+    localStorage.setItem('acgen_theme', '"light"');
+    localStorage.setItem('acgen_key_groq', 'local_secret');
+
+    const backup: BackupFile = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"', acgen_model: '"llama"' },
+    };
+
+    let calls = 0;
+    const originalSetItem = Storage.prototype.setItem;
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(
+      function (this: Storage, key: string, value: string) {
+        calls++;
+        if (calls === 2) {
+          throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        }
+        originalSetItem.call(this, key, value);
+      },
+    );
+
+    const result = restoreBackup(backup);
+    setItemSpy.mockRestore();
+
+    expect(result).toEqual({ ok: false, error: 'quota' });
+    expect(localStorage.getItem('acgen_theme')).toBe('"light"');
+    expect(localStorage.getItem('acgen_key_groq')).toBe('local_secret');
+    expect(localStorage.getItem('acgen_model')).toBeNull();
   });
 });

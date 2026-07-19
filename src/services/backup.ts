@@ -4,10 +4,12 @@
 // No React, no component imports — consumed later by a UI menu and an
 // auto-backup hook.
 
+import { STORAGE_KEYS } from '../config/constants';
+
 export const BACKUP_SCHEMA_VERSION = 1;
 export const STORAGE_PREFIX = 'acgen_';
 
-const LAST_BACKUP_KEY = 'acgen_last_backup';
+const LAST_BACKUP_KEY = STORAGE_KEYS.LAST_BACKUP;
 const SENSITIVE_KEY_PATTERN = /^acgen_key_/;
 const LEGACY_API_KEY = 'acgen_api_key';
 
@@ -115,4 +117,64 @@ export function parseImportFile(json: string): ImportParseResult {
   }
 
   return { kind: 'invalid', reason: 'structure' };
+}
+
+export type RestoreResult = { ok: true } | { ok: false; error: 'quota' };
+
+/** Every current acgen_* entry, keyed by name, values verbatim. */
+function snapshotCurrentState(): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(STORAGE_PREFIX)) {
+      const value = localStorage.getItem(key);
+      if (value !== null) snapshot[key] = value;
+    }
+  }
+  return snapshot;
+}
+
+/** Wipes every current acgen_* entry and rewrites exactly the given snapshot. */
+function applySnapshot(snapshot: Record<string, string>): void {
+  const currentKeys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(STORAGE_PREFIX)) currentKeys.push(key);
+  }
+  for (const key of currentKeys) localStorage.removeItem(key);
+  for (const [key, value] of Object.entries(snapshot)) {
+    localStorage.setItem(key, value);
+  }
+}
+
+/**
+ * Replaces the app's entire acgen_* localStorage state with the contents of
+ * a backup. acgen_last_backup is always preserved (restoring isn't the same
+ * as having just made a backup). If the backup itself carries no sensitive
+ * keys, local API keys are preserved too — restoring on a freshly set-up
+ * machine shouldn't wipe out a key the user just entered. Foreign
+ * (non-acgen_) keys are never touched. On quota failure, the previous state
+ * is fully restored and the app is left exactly as it was.
+ */
+export function restoreBackup(backup: BackupFile): RestoreResult {
+  const snapshot = snapshotCurrentState();
+  const backupHasKeys = Object.keys(backup.data).some(isSensitiveKey);
+
+  for (const key of Object.keys(snapshot)) {
+    if (key === LAST_BACKUP_KEY) continue;
+    if (!backupHasKeys && isSensitiveKey(key)) continue;
+    localStorage.removeItem(key);
+  }
+
+  try {
+    for (const [key, value] of Object.entries(backup.data)) {
+      if (!key.startsWith(STORAGE_PREFIX) || key === LAST_BACKUP_KEY) continue;
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    applySnapshot(snapshot);
+    return { ok: false, error: 'quota' };
+  }
+
+  return { ok: true };
 }
