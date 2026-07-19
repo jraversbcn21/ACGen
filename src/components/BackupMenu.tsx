@@ -57,9 +57,13 @@ export function BackupMenu({ onImportLegacyWorkspace, onRestored }: BackupMenuPr
           setPendingRestore(result.backup);
           break;
         case 'legacyWorkspace':
-          onImportLegacyWorkspace(result.json);
-          alert(t('backup.legacyImported'));
-          setOpen(false);
+          try {
+            onImportLegacyWorkspace(result.json);
+            alert(t('backup.legacyImported'));
+            setOpen(false);
+          } catch {
+            alert(t('backup.importError'));
+          }
           break;
         case 'futureVersion':
           alert(t('backup.futureVersion'));

@@ -234,6 +234,24 @@ describe('BackupMenu', () => {
     expect(window.alert).toHaveBeenCalledWith('Workspace importado (formato antiguo).');
   });
 
+  it('shows the import error alert (not the success alert) when onImportLegacyWorkspace throws, without crashing', async () => {
+    // parseImportFile's shallow check only requires id/name to be strings and
+    // artifacts to be an array — it does not validate that id is non-empty.
+    // useWorkspace.importWorkspace throws on that, e.g. for an empty id.
+    const legacyJson = JSON.stringify({ id: '', name: '', artifacts: [] });
+    const onImportLegacyWorkspace = vi.fn(() => {
+      throw new Error('invalid workspace id');
+    });
+    renderMenu({ onImportLegacyWorkspace });
+    openPanel();
+
+    importJson(legacyJson, 'legacy.json');
+
+    await waitFor(() => expect(onImportLegacyWorkspace).toHaveBeenCalledWith(legacyJson));
+    expect(window.alert).toHaveBeenCalledWith('Archivo de copia inválido.');
+    expect(window.alert).not.toHaveBeenCalledWith('Workspace importado (formato antiguo).');
+  });
+
   it('closes the panel on click-outside', () => {
     renderMenu();
     openPanel();
