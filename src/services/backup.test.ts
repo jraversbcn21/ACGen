@@ -2,11 +2,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   BACKUP_SCHEMA_VERSION,
+  BACKUP_REMINDER_DAYS,
   isSensitiveKey,
   collectBackupData,
   createBackup,
   parseImportFile,
   restoreBackup,
+  getLastBackupAt,
+  markBackupDone,
+  hasSignificantData,
+  isBackupDue,
   type BackupFile,
 } from './backup';
 
@@ -252,5 +257,146 @@ describe('restoreBackup', () => {
     expect(localStorage.getItem('acgen_theme')).toBe('"light"');
     expect(localStorage.getItem('acgen_key_groq')).toBe('local_secret');
     expect(localStorage.getItem('acgen_model')).toBeNull();
+  });
+});
+
+describe('hasSignificantData', () => {
+  it('is false with empty localStorage', () => {
+    expect(hasSignificantData()).toBe(false);
+  });
+
+  it('is false with workspaces that have no artifacts, an all-empty regression board, and empty histories', () => {
+    localStorage.setItem('acgen_workspaces', JSON.stringify([{ id: 'w1', name: 'W', createdAt: 1, artifacts: [] }]));
+    localStorage.setItem(
+      'acgen_regressions',
+      JSON.stringify({
+        board: {
+          ios: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+          android: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+          webDesktop: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+        },
+        archived: [],
+      }),
+    );
+    localStorage.setItem('acgen_criteria_history', JSON.stringify([]));
+    localStorage.setItem('acgen_bug_history', JSON.stringify([]));
+
+    expect(hasSignificantData()).toBe(false);
+  });
+
+  it('is true when a workspace has at least one artifact', () => {
+    localStorage.setItem(
+      'acgen_workspaces',
+      JSON.stringify([{ id: 'w1', name: 'W', createdAt: 1, artifacts: [{ id: 'a1', tool: 'acceptance', input: 'i', output: 'o', timestamp: 1 }] }]),
+    );
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is true when there is at least one sprint', () => {
+    localStorage.setItem('acgen_sprints', JSON.stringify([{ id: 's1', name: 'Sprint 1' }]));
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is true when the regression board has a non-empty cell', () => {
+    const board = {
+      ios: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+      android: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+      webDesktop: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+    };
+    board.ios[0][0] = 'TC-001';
+    localStorage.setItem('acgen_regressions', JSON.stringify({ board, archived: [] }));
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is true when the regression tracker has at least one archived entry', () => {
+    localStorage.setItem(
+      'acgen_regressions',
+      JSON.stringify({
+        board: {
+          ios: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+          android: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+          webDesktop: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
+        },
+        archived: [{ id: 'r1', name: 'Regresión', archivedAt: '2026-01-01', board: {} }],
+      }),
+    );
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is true when a history (criteria or bug) has at least one entry', () => {
+    localStorage.setItem(
+      'acgen_criteria_history',
+      JSON.stringify([{ id: 'h1', timestamp: 1, inputPreview: 'in', output: 'out' }]),
+    );
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('treats corrupted JSON in one key as empty for that source, without throwing', () => {
+    localStorage.setItem('acgen_workspaces', 'not valid json{{');
+    localStorage.setItem('acgen_sprints', 'also not valid json{{');
+    localStorage.setItem('acgen_regressions', 'still not valid json{{');
+    localStorage.setItem('acgen_criteria_history', 'nope{{');
+    localStorage.setItem('acgen_bug_history', 'nope{{');
+
+    expect(() => hasSignificantData()).not.toThrow();
+    expect(hasSignificantData()).toBe(false);
+  });
+});
+
+describe('getLastBackupAt / markBackupDone', () => {
+  it('is null when acgen_last_backup is absent', () => {
+    expect(getLastBackupAt()).toBeNull();
+  });
+
+  it('is null when acgen_last_backup holds unparseable or non-finite content', () => {
+    localStorage.setItem('acgen_last_backup', 'not valid json{{');
+    expect(getLastBackupAt()).toBeNull();
+
+    localStorage.setItem('acgen_last_backup', JSON.stringify('not-a-number'));
+    expect(getLastBackupAt()).toBeNull();
+  });
+
+  it('returns the timestamp written by markBackupDone', () => {
+    markBackupDone(1000);
+    expect(getLastBackupAt()).toBe(1000);
+    expect(localStorage.getItem('acgen_last_backup')).toBe('1000');
+  });
+});
+
+describe('isBackupDue', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  it('is false without significant data, even if a backup has never been made', () => {
+    expect(isBackupDue(null)).toBe(false);
+  });
+
+  it('is true with significant data and lastBackupAt: null', () => {
+    localStorage.setItem('acgen_sprints', JSON.stringify([{ id: 's1' }]));
+    expect(isBackupDue(null)).toBe(true);
+  });
+
+  it('is true with significant data and a backup made 8 days ago', () => {
+    localStorage.setItem('acgen_sprints', JSON.stringify([{ id: 's1' }]));
+    const now = 100 * DAY_MS;
+    const lastBackupAt = now - 8 * DAY_MS;
+
+    expect(isBackupDue(lastBackupAt, now)).toBe(true);
+  });
+
+  it('is false with significant data and a backup made 6 days ago', () => {
+    localStorage.setItem('acgen_sprints', JSON.stringify([{ id: 's1' }]));
+    const now = 100 * DAY_MS;
+    const lastBackupAt = now - 6 * DAY_MS;
+
+    expect(isBackupDue(lastBackupAt, now)).toBe(false);
+  });
+
+  it('exposes the reminder threshold as 7 days', () => {
+    expect(BACKUP_REMINDER_DAYS).toBe(7);
   });
 });

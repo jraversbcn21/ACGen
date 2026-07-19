@@ -8,10 +8,14 @@ import { STORAGE_KEYS } from '../config/constants';
 
 export const BACKUP_SCHEMA_VERSION = 1;
 export const STORAGE_PREFIX = 'acgen_';
+export const BACKUP_REMINDER_DAYS = 7;
 
 const LAST_BACKUP_KEY = STORAGE_KEYS.LAST_BACKUP;
 const SENSITIVE_KEY_PATTERN = /^acgen_key_/;
 const LEGACY_API_KEY = 'acgen_api_key';
+const SPRINTS_KEY = 'acgen_sprints';
+const REGRESSIONS_KEY = 'acgen_regressions';
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** True for the API key family (`acgen_key_*`) and the legacy `acgen_api_key`. */
 export function isSensitiveKey(key: string): boolean {
@@ -177,4 +181,102 @@ export function restoreBackup(backup: BackupFile): RestoreResult {
   }
 
   return { ok: true };
+}
+
+/** Reads acgen_last_backup; null if absent or not parseable to a finite number. */
+export function getLastBackupAt(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_BACKUP_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Records that a backup was just made. */
+export function markBackupDone(now?: number): void {
+  localStorage.setItem(LAST_BACKUP_KEY, JSON.stringify(now ?? Date.now()));
+}
+
+function hasWorkspaceArtifact(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.WORKSPACES);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return false;
+    return parsed.some((ws) => {
+      if (typeof ws !== 'object' || ws === null) return false;
+      const artifacts = (ws as Record<string, unknown>).artifacts;
+      return Array.isArray(artifacts) && artifacts.length > 0;
+    });
+  } catch {
+    return false;
+  }
+}
+
+function hasAnySprint(): boolean {
+  try {
+    const raw = localStorage.getItem(SPRINTS_KEY);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasRegressionData(): boolean {
+  try {
+    const raw = localStorage.getItem(REGRESSIONS_KEY);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return false;
+    const { board, archived } = parsed as Record<string, unknown>;
+
+    if (Array.isArray(archived) && archived.length > 0) return true;
+
+    if (typeof board !== 'object' || board === null) return false;
+    return Object.values(board).some((grid) => {
+      if (!Array.isArray(grid)) return false;
+      return grid.some((row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string' && cell !== ''));
+    });
+  } catch {
+    return false;
+  }
+}
+
+function hasHistoryEntries(key: string): boolean {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True if there's anything a user would regret losing: a workspace artifact,
+ * a sprint, regression-board progress (a filled cell or an archived run), or
+ * a criteria/bug history entry. Corrupt or absent keys count as "no data"
+ * for that source rather than throwing.
+ */
+export function hasSignificantData(): boolean {
+  return (
+    hasWorkspaceArtifact() ||
+    hasAnySprint() ||
+    hasRegressionData() ||
+    hasHistoryEntries(STORAGE_KEYS.CRITERIA_HISTORY) ||
+    hasHistoryEntries(STORAGE_KEYS.BUG_HISTORY)
+  );
+}
+
+/** True when there's significant data and either no backup has ever been made, or the last one is stale. */
+export function isBackupDue(lastBackupAt: number | null, now?: number): boolean {
+  if (!hasSignificantData()) return false;
+  if (lastBackupAt === null) return true;
+  return (now ?? Date.now()) - lastBackupAt > BACKUP_REMINDER_DAYS * MS_PER_DAY;
 }
