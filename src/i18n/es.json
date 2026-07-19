@@ -210,5 +210,7 @@
   "backup.autoTitle": "Auto-backup en disco",
   "backup.autoEnable": "Elegir fichero de auto-backup",
   "backup.autoActive": "Auto-backup activo",
-  "backup.autoDisable": "Desactivar"
+  "backup.autoDisable": "Desactivar",
+  "backup.autoReconnect": "Reconectar fichero",
+  "backup.autoError": "No se pudo escribir el auto-backup."
 }

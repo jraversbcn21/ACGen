@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useT, useLang } from '../i18n/I18nContext';
 import { useBackupReminder } from '../hooks/useBackupReminder';
+import { useAutoBackup } from '../hooks/useAutoBackup';
 import { createBackup, parseImportFile, restoreBackup, type BackupFile } from '../services/backup';
+import { isFileSystemAccessSupported } from '../services/autoBackup';
 import { downloadJson, toFilename } from '../utils/download';
 
 interface BackupMenuProps {
@@ -18,6 +20,7 @@ export function BackupMenu({ onImportLegacyWorkspace, onRestored }: BackupMenuPr
   const t = useT();
   const { lang } = useLang();
   const { due, lastBackupAt, markDone } = useBackupReminder();
+  const autoBackup = useAutoBackup(markDone);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -143,6 +146,38 @@ export function BackupMenu({ onImportLegacyWorkspace, onRestored }: BackupMenuPr
             )}
             <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
           </div>
+
+          {isFileSystemAccessSupported() && (
+            <div className="backup-section">
+              <div className="backup-panel-title">{t('backup.autoTitle')}</div>
+              {autoBackup.status === 'off' && (
+                <button type="button" className="btn-ghost" onClick={() => void autoBackup.enable()}>
+                  {t('backup.autoEnable')}
+                </button>
+              )}
+              {autoBackup.status === 'active' && (
+                <>
+                  <div className="backup-last">{t('backup.autoActive')}</div>
+                  <button type="button" className="btn-ghost" onClick={() => void autoBackup.disable()}>
+                    {t('backup.autoDisable')}
+                  </button>
+                </>
+              )}
+              {autoBackup.status === 'permissionNeeded' && (
+                <button type="button" className="btn-ghost" onClick={() => void autoBackup.reconnect()}>
+                  {t('backup.autoReconnect')}
+                </button>
+              )}
+              {autoBackup.status === 'error' && (
+                <>
+                  <div className="backup-warning">{t('backup.autoError')}</div>
+                  <button type="button" className="btn-ghost" onClick={() => void autoBackup.reconnect()}>
+                    {t('backup.autoReconnect')}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

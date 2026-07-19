@@ -6,11 +6,32 @@ import { I18nProvider } from '../i18n/I18nContext';
 import { downloadJson } from '../utils/download';
 import { STORAGE_KEYS } from '../config/constants';
 import { BACKUP_SCHEMA_VERSION, type BackupFile } from '../services/backup';
+import * as autoBackupService from '../services/autoBackup';
 
 vi.mock('../utils/download', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../utils/download')>();
   return { ...actual, downloadJson: vi.fn() };
 });
+
+vi.mock('../services/autoBackup', () => ({
+  isFileSystemAccessSupported: vi.fn(),
+  loadHandle: vi.fn(),
+  saveHandle: vi.fn(),
+  clearHandle: vi.fn(),
+  chooseBackupFile: vi.fn(),
+  ensurePermission: vi.fn(),
+  writeSnapshot: vi.fn(),
+}));
+
+const mockedAutoBackup = vi.mocked(autoBackupService);
+
+function fakeHandle(overrides: Partial<FileSystemFileHandle> = {}): FileSystemFileHandle {
+  return {
+    kind: 'file',
+    name: 'acgen-auto-backup.json',
+    ...overrides,
+  } as unknown as FileSystemFileHandle;
+}
 
 function seedWorkspaceWithArtifact() {
   localStorage.setItem(
@@ -61,6 +82,9 @@ beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('acgen_lang', JSON.stringify('es'));
   vi.spyOn(window, 'alert').mockImplementation(() => {});
+  vi.clearAllMocks();
+  mockedAutoBackup.isFileSystemAccessSupported.mockReturnValue(false);
+  mockedAutoBackup.loadHandle.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -217,5 +241,41 @@ describe('BackupMenu', () => {
 
     fireEvent.mouseDown(document.body);
     expect(screen.queryByText('Copia de seguridad')).not.toBeInTheDocument();
+  });
+
+  describe('auto-backup section', () => {
+    it('is absent when the File System Access API is unsupported', async () => {
+      mockedAutoBackup.isFileSystemAccessSupported.mockReturnValue(false);
+      renderMenu();
+      openPanel();
+
+      await waitFor(() => expect(mockedAutoBackup.loadHandle).not.toHaveBeenCalled());
+      expect(screen.queryByText('Auto-backup en disco')).not.toBeInTheDocument();
+    });
+
+    it('shows the enable button when supported with no saved handle, and enable() invokes chooseBackupFile', async () => {
+      mockedAutoBackup.isFileSystemAccessSupported.mockReturnValue(true);
+      mockedAutoBackup.loadHandle.mockResolvedValue(null);
+      mockedAutoBackup.chooseBackupFile.mockResolvedValue(null);
+      renderMenu();
+      openPanel();
+
+      const enableBtn = await screen.findByRole('button', { name: /elegir fichero de auto-backup/i });
+      fireEvent.click(enableBtn);
+
+      await waitFor(() => expect(mockedAutoBackup.chooseBackupFile).toHaveBeenCalledTimes(1));
+    });
+
+    it('shows the active state and a disable button when a handle already grants permission', async () => {
+      mockedAutoBackup.isFileSystemAccessSupported.mockReturnValue(true);
+      mockedAutoBackup.loadHandle.mockResolvedValue(
+        fakeHandle({ queryPermission: vi.fn().mockResolvedValue('granted') }),
+      );
+      renderMenu();
+      openPanel();
+
+      expect(await screen.findByText('Auto-backup activo')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /desactivar/i })).toBeInTheDocument();
+    });
   });
 });
