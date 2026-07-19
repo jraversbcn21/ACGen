@@ -1,6 +1,6 @@
 // src/hooks/useAutoBackup.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAutoBackup } from './useAutoBackup';
 import * as autoBackupService from '../services/autoBackup';
 
@@ -24,11 +24,20 @@ function fakeHandle(overrides: Partial<FileSystemFileHandle> = {}): FileSystemFi
   } as unknown as FileSystemFileHandle;
 }
 
-async function mountActive() {
+/** A promise plus its resolver, for controlling exactly when an in-flight write settles. */
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+async function mountActive(onSnapshot?: () => void) {
   const handle = fakeHandle({ queryPermission: vi.fn().mockResolvedValue('granted') });
   mocked.isFileSystemAccessSupported.mockReturnValue(true);
   mocked.loadHandle.mockResolvedValue(handle);
-  const { result } = renderHook(() => useAutoBackup());
+  const { result } = renderHook(() => useAutoBackup(onSnapshot));
   await act(async () => {});
   expect(result.current.status).toBe('active');
   return { result, handle };
@@ -200,5 +209,78 @@ describe('useAutoBackup', () => {
     });
 
     expect(mocked.writeSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('a debounced write still in flight when disable() runs does not resurrect "active" once it resolves', async () => {
+    const onSnapshot = vi.fn();
+    const { result } = await mountActive(onSnapshot);
+    const write = deferred<boolean>();
+    mocked.writeSnapshot.mockReturnValue(write.promise);
+    mocked.clearHandle.mockResolvedValue(undefined);
+    vi.useFakeTimers();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('acgen-local-storage'));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    // The debounce fired and the write started, but it's still pending.
+    expect(mocked.writeSnapshot).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('active');
+
+    await act(async () => {
+      await result.current.disable();
+    });
+    expect(result.current.status).toBe('off');
+
+    // Now the stale write resolves successfully — it must not flip status
+    // back to 'active' or fire onSnapshot for a backup the user disabled.
+    await act(async () => {
+      write.resolve(true);
+      await write.promise;
+    });
+
+    expect(result.current.status).toBe('off');
+    expect(onSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('enable()\'s immediate snapshot settling after a quick disable() does not resurrect "active"', async () => {
+    mocked.loadHandle.mockResolvedValue(null);
+    const handle = fakeHandle();
+    mocked.chooseBackupFile.mockResolvedValue(handle);
+    mocked.saveHandle.mockResolvedValue(undefined);
+    mocked.clearHandle.mockResolvedValue(undefined);
+    const write = deferred<boolean>();
+    mocked.writeSnapshot.mockReturnValue(write.promise);
+    const onSnapshot = vi.fn();
+
+    const { result } = renderHook(() => useAutoBackup(onSnapshot));
+    await act(async () => {});
+    expect(result.current.status).toBe('off');
+
+    let enablePromise!: Promise<void>;
+    act(() => {
+      enablePromise = result.current.enable();
+    });
+
+    // Let enable() run up through chooseBackupFile/saveHandle and reach the
+    // (still-pending) writeSnapshot call, without waiting on the write itself.
+    await waitFor(() => expect(mocked.writeSnapshot).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.disable();
+    });
+    expect(result.current.status).toBe('off');
+
+    await act(async () => {
+      write.resolve(true);
+      await write.promise;
+      await enablePromise;
+    });
+
+    expect(result.current.status).toBe('off');
+    expect(onSnapshot).not.toHaveBeenCalled();
   });
 });

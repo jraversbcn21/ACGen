@@ -78,6 +78,12 @@ export function useAutoBackup(onSnapshot?: () => void): AutoBackupState {
   const snapshotNow = useCallback(
     async (handle: FileSystemFileHandle) => {
       const ok = await writeSnapshot(handle, createBackup({ includeApiKeys: false }));
+      // The handle can change (or be cleared by disable()) while this write
+      // was in flight — e.g. a debounced snapshot or enable()'s immediate
+      // snapshot resolving after the user has already disabled auto-backup.
+      // Applying a stale result would resurrect 'active' (and fire
+      // onSnapshot/markDone) for a backup the user just turned off.
+      if (handleRef.current !== handle) return;
       if (ok) {
         setStatus('active');
         onSnapshot?.();
