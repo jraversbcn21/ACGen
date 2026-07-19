@@ -5,6 +5,7 @@ import {
   isSensitiveKey,
   collectBackupData,
   createBackup,
+  parseImportFile,
 } from './backup';
 
 beforeEach(() => {
@@ -96,5 +97,57 @@ describe('createBackup', () => {
 
     expect(json).toBe(JSON.stringify(JSON.parse(json), null, 2));
     expect(json).toContain('\n  "schemaVersion"');
+  });
+});
+
+describe('parseImportFile', () => {
+  it('recognizes a valid v1 backup', () => {
+    const backup = {
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: '"dark"' },
+    };
+    const json = JSON.stringify(backup);
+
+    expect(parseImportFile(json)).toEqual({ kind: 'backup', backup });
+  });
+
+  it('flags corrupted JSON as invalid/json', () => {
+    expect(parseImportFile('{not valid json')).toEqual({ kind: 'invalid', reason: 'json' });
+  });
+
+  it('flags objects with no recognizable structure, and non-object payloads, as invalid/structure', () => {
+    expect(parseImportFile(JSON.stringify({ foo: 'bar' }))).toEqual({ kind: 'invalid', reason: 'structure' });
+    expect(parseImportFile(JSON.stringify(null))).toEqual({ kind: 'invalid', reason: 'structure' });
+    expect(parseImportFile(JSON.stringify([1, 2, 3]))).toEqual({ kind: 'invalid', reason: 'structure' });
+    expect(parseImportFile(JSON.stringify(42))).toEqual({ kind: 'invalid', reason: 'structure' });
+  });
+
+  it('flags a backup whose data has a non-string value as invalid/structure', () => {
+    const withNumericValue = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { acgen_theme: 123 },
+    });
+    const withNonPlainData = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: ['not', 'an', 'object'],
+    });
+
+    expect(parseImportFile(withNumericValue)).toEqual({ kind: 'invalid', reason: 'structure' });
+    expect(parseImportFile(withNonPlainData)).toEqual({ kind: 'invalid', reason: 'structure' });
+  });
+
+  it('recognizes a schemaVersion ahead of what this app supports as futureVersion', () => {
+    const json = JSON.stringify({ schemaVersion: 2, exportedAt: '2026-01-01T00:00:00.000Z', data: {} });
+
+    expect(parseImportFile(json)).toEqual({ kind: 'futureVersion', schemaVersion: 2 });
+  });
+
+  it('recognizes a legacy single-workspace export and returns the original json', () => {
+    const json = JSON.stringify({ id: 'ws-1', name: 'Mi workspace', artifacts: [] });
+
+    expect(parseImportFile(json)).toEqual({ kind: 'legacyWorkspace', json });
   });
 });

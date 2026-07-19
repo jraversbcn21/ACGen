@@ -61,3 +61,58 @@ export function createBackup(opts?: BackupOptions): string {
   };
   return JSON.stringify(backup, null, 2);
 }
+
+export type ImportParseResult =
+  | { kind: 'backup'; backup: BackupFile }
+  | { kind: 'legacyWorkspace'; json: string } // original string, verbatim
+  | { kind: 'futureVersion'; schemaVersion: number }
+  | { kind: 'invalid'; reason: 'json' | 'structure' };
+
+/** A plain (non-array) object whose own values are all strings. */
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  return Object.values(value).every((v) => typeof v === 'string');
+}
+
+/**
+ * Classifies an imported JSON file: a current-schema backup, a file from a
+ * future (unsupported) schema version, a legacy single-workspace export
+ * (pre-dating the backup feature), or something unreadable/malformed.
+ */
+export function parseImportFile(json: string): ImportParseResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { kind: 'invalid', reason: 'json' };
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { kind: 'invalid', reason: 'structure' };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  if (typeof obj.schemaVersion === 'number') {
+    if (obj.schemaVersion > BACKUP_SCHEMA_VERSION) {
+      return { kind: 'futureVersion', schemaVersion: obj.schemaVersion };
+    }
+    if (!isStringRecord(obj.data)) {
+      return { kind: 'invalid', reason: 'structure' };
+    }
+    return {
+      kind: 'backup',
+      backup: {
+        schemaVersion: obj.schemaVersion,
+        exportedAt: typeof obj.exportedAt === 'string' ? obj.exportedAt : '',
+        data: obj.data,
+      },
+    };
+  }
+
+  if (typeof obj.id === 'string' && typeof obj.name === 'string' && Array.isArray(obj.artifacts)) {
+    return { kind: 'legacyWorkspace', json };
+  }
+
+  return { kind: 'invalid', reason: 'structure' };
+}
