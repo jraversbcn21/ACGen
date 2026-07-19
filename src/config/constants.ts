@@ -67,6 +67,7 @@ export const STORAGE_KEYS = {
   TRACKER_BASE_URL: 'acgen_tracker_base_url',
   WORKSPACES: 'acgen_workspaces',
   ACTIVE_WORKSPACE: 'acgen_active_workspace',
+  LAST_BACKUP: 'acgen_last_backup',
 } as const;
 
 export const TEMPERATURE = 0.2;

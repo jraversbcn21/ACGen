@@ -944,3 +944,53 @@ body {
   width: 100%;
   box-shadow: var(--shadow-lg);
 }
+
+/* === BACKUP MENU === */
+.backup-menu-btn { position: relative; }
+
+.backup-badge {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--warning); border: 1.5px solid var(--surface);
+}
+
+.backup-panel {
+  position: absolute; top: 100%; right: 0; margin-top: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  width: 300px; z-index: 100; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.backup-panel-title { font-size: 14px; font-weight: 700; color: var(--text); }
+
+.backup-last { font-size: 12px; color: var(--text-2); }
+
+.backup-reminder-text {
+  font-size: 12px; color: var(--warning); background: var(--warning-bg);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+}
+
+.backup-section {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.backup-section:first-of-type { border-top: none; padding-top: 0; }
+
+.backup-checkbox-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-2); cursor: pointer;
+}
+
+.backup-warning { font-size: 11px; color: var(--danger); }
+
+.backup-confirm { display: flex; flex-direction: column; gap: 8px; }
+.backup-confirm span { font-size: 12px; color: var(--text-2); }
+.backup-confirm-actions { display: flex; gap: 8px; }
+
+.backup-panel .btn-primary,
+.backup-panel .btn-ghost {
+  min-width: 0; width: 100%; padding: 8px 12px; font-size: 13px;
+}
+.backup-confirm-actions .btn-primary,
+.backup-confirm-actions .btn-ghost { flex: 1; }

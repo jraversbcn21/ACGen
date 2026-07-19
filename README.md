@@ -26,6 +26,7 @@ ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el
 - **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
 - **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
+- **Copia de seguridad**: exporta/importa todo el estado de la app en un único JSON, recordatorio automatico y copia continua a un fichero local (Chromium).
 - **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
 - **PWA**: instalable, con precache offline de los assets estaticos.
 - **Tema oscuro**: Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
@@ -65,6 +66,14 @@ Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tien
 ### Regression Tracker
 Tablero unico y permanente de regresiones ejecutadas, con 3 pestanas por plataforma (iOS, Android, WEB). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
 
+### Copia de seguridad
+Como toda la app vive en el localStorage del navegador, un menu dedicado en la cabecera (icono 💾, junto al selector de workspace) permite protegerse frente a un borrado accidental de datos del navegador:
+
+- **Exportar / importar todo**: descarga un unico fichero JSON con todo el estado de ACGen (workspaces, sprints, regresiones, historiales, perfil de proyecto, prompts personalizados...). Las API keys se excluyen por defecto; hay una casilla opcional "incluir API keys" con aviso de que viajan en texto plano dentro del JSON. Importar un backup es un reemplazo total del estado actual, con confirmacion explicita en dos pasos antes de aplicarlo (y recarga de la app al terminar). Los ficheros de export de workspace antiguos (de antes de esta funcionalidad) se siguen reconociendo e importan solo ese workspace.
+- **Recordatorio automatico**: si hay datos relevantes sin respaldar y la ultima copia tiene mas de 7 dias (o nunca se hizo ninguna), el icono del menu muestra un aviso.
+- **Copia automatica a fichero local (solo Chromium)**: en navegadores con la File System Access API (Chrome, Edge...) se puede enlazar un fichero local al que ACGen escribe una copia de seguridad automaticamente cada vez que cambian los datos (con un pequeno margen de espera para agrupar cambios seguidos). Esa copia sobrevive a un borrado de datos del navegador porque vive en el disco, fuera del almacenamiento del sitio; solo hay que volver a seleccionar el fichero si el navegador olvida el permiso. No disponible en Firefox/Safari.
+- La app tambien solicita almacenamiento persistente al navegador (`navigator.storage.persist()`) al arrancar, para reducir el riesgo de que el sistema operativo purgue el localStorage por falta de espacio.
+
 ---
 
 ## Stack Tecnologico
@@ -74,7 +83,7 @@ Tablero unico y permanente de regresiones ejecutadas, con 3 pestanas por platafo
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (255 tests) |
+| Tests | Vitest + React Testing Library (343 tests) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 
