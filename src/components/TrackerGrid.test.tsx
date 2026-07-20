@@ -173,3 +173,27 @@ describe('TrackerGrid — readOnly', () => {
     expect(handle).toHaveAttribute('draggable', 'false');
   });
 });
+
+describe('TrackerGrid — column resize persistence', () => {
+  function resizeFirstColumn(deltaX: number) {
+    const handle = document.querySelector('thead tr:first-child th:nth-child(2) div') as HTMLElement;
+    fireEvent.mouseDown(handle, { clientX: 100 });
+    fireEvent.mouseMove(document, { clientX: 100 + deltaX });
+    fireEvent.mouseUp(document);
+  }
+
+  it('persists resized widths to localStorage in editable mode', () => {
+    renderGrid();
+    resizeFirstColumn(50);
+    const stored = JSON.parse(localStorage.getItem('test_grid_col_widths')!);
+    expect(stored['one-0']).toBe(170);
+  });
+
+  it('readOnly resize works in memory but never touches the shared widths key', () => {
+    renderGrid({ readOnly: true });
+    resizeFirstColumn(50);
+    const col = document.querySelectorAll('colgroup col')[1] as HTMLElement;
+    expect(col.style.width).toBe('170px');
+    expect(localStorage.getItem('test_grid_col_widths')).toBeNull();
+  });
+});
