@@ -93,9 +93,20 @@ describe('RegressionTracker', () => {
     expect(screen.getByText('07/20/2026')).toBeInTheDocument();
   });
 
+  it('the archive button is disabled while the board is empty', () => {
+    renderTracker();
+    const btn = screen.getByText('Archivar Regresión') as HTMLButtonElement;
+    expect(btn).toBeDisabled();
+    const input = document.querySelector('tbody input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'checkout v9' } });
+    expect(btn).not.toBeDisabled();
+  });
+
   it('deleting an archived snapshot shows the empty state', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderTracker();
+    const firstCell = document.querySelector('tbody input') as HTMLInputElement;
+    fireEvent.change(firstCell, { target: { value: 'checkout v9' } });
     fireEvent.click(screen.getByText('Archivar Regresión'));
     fireEvent.click(screen.getByText(/Archivadas \(1\)/));
     fireEvent.click(screen.getByText('Eliminar'));

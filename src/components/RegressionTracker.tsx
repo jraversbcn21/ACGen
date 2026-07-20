@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { TrackerGrid } from './TrackerGrid';
-import { useRegressions, PLATFORM_IDS } from '../hooks/useRegressions';
+import { useRegressions, PLATFORM_IDS, boardHasContent } from '../hooks/useRegressions';
 import type { PlatformId, ArchivedRegression } from '../hooks/useRegressions';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT, useLang } from '../i18n/I18nContext';
@@ -141,7 +141,7 @@ export function RegressionTracker() {
         onMoveRow={moveRow}
       />
       <div className="actions-bar">
-        <button type="button" className="btn-ghost" onClick={handleArchive}>
+        <button type="button" className="btn-ghost" onClick={handleArchive} disabled={!boardHasContent(board)}>
           {t('regression.archive')}
         </button>
       </div>

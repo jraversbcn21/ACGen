@@ -31,6 +31,10 @@ function emptyBoard(): Record<PlatformId, string[][]> {
   };
 }
 
+export function boardHasContent(board: Record<PlatformId, string[][]>): boolean {
+  return Object.values(board).some((grid) => grid.some((row) => row.some((cell) => cell.trim() !== '')));
+}
+
 function persist(state: RegressionState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -102,6 +106,7 @@ export function useRegressions() {
   const archiveBoard = useCallback(() => {
     const date = localTodayISO();
     setState((prev) => {
+      if (!boardHasContent(prev.board)) return prev;
       const snapshot: ArchivedRegression = {
         id: crypto.randomUUID(),
         name: `Regresión ${date}`,

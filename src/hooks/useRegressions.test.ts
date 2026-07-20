@@ -105,9 +105,29 @@ describe('useRegressions', () => {
     expect(second.result.current.board.ios[0][0]).toBe('');
   });
 
+  it('archiveBoard is a no-op when every cell is empty', () => {
+    const { result } = renderHook(() => useRegressions());
+    act(() => {
+      result.current.archiveBoard();
+    });
+    expect(result.current.archived).toEqual([]);
+  });
+
+  it('archiveBoard ignores whitespace-only cells', () => {
+    const { result } = renderHook(() => useRegressions());
+    act(() => {
+      result.current.updateGridCell('ios', 0, 0, '   ');
+    });
+    act(() => {
+      result.current.archiveBoard();
+    });
+    expect(result.current.archived).toEqual([]);
+  });
+
   it('deleteArchived removes a snapshot', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
+      result.current.updateGridCell('ios', 0, 0, 'algo');
       result.current.archiveBoard();
     });
     const id = result.current.archived[0].id;
