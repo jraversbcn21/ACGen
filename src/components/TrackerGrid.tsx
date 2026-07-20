@@ -118,7 +118,7 @@ export function TrackerGrid<T extends string>({
     document.body.style.userSelect = 'none';
   };
 
-  const grid = tabGrid[activeTab] || [];
+  const grid = useMemo(() => tabGrid[activeTab] || [], [tabGrid, activeTab]);
   const colCount = grid[0]?.length || 6;
 
   const filteredRowIndices = useMemo(() => {
