@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useRegressions, PLATFORM_IDS } from './useRegressions';
@@ -103,6 +104,22 @@ describe('useRegressions', () => {
     const second = renderHook(() => useRegressions());
     expect(second.result.current.archived).toHaveLength(1);
     expect(second.result.current.board.ios[0][0]).toBe('');
+  });
+
+  it('does not rewrite localStorage on mount/hydration', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({ board: {}, archived: [] }));
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(0);
+  });
+
+  it('persists exactly once per update under StrictMode (pure updaters)', () => {
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    act(() => {
+      result.current.updateGridCell('ios', 0, 0, 'una vez');
+    });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(1);
   });
 
   it('archiveBoard is a no-op when every cell is empty', () => {

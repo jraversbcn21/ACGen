@@ -1,12 +1,33 @@
+import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useSprints } from './useSprints';
 
 beforeEach(() => {
   localStorage.clear();
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('useSprints', () => {
+  it('does not rewrite localStorage on mount/hydration', () => {
+    localStorage.setItem('acgen_sprints', JSON.stringify([]));
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    renderHook(() => useSprints(), { wrapper: StrictMode });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_sprints')).toHaveLength(0);
+  });
+
+  it('persists exactly once per update under StrictMode (pure updaters)', () => {
+    const { result } = renderHook(() => useSprints(), { wrapper: StrictMode });
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    act(() => {
+      result.current.addSprint('Sprint 24', '2026-07-08');
+    });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_sprints')).toHaveLength(1);
+  });
+
   it('initializes with an empty array', () => {
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints).toEqual([]);
