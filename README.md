@@ -22,7 +22,7 @@ ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el
 - **Casos Limite**: Genera edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos, red).
 - **Conversor de Formatos**: Convierte texto entre Gherkin, Markdown, Jira wiki, Azure DevOps y texto plano.
 - **Sprint Tracker**: Hoja de calculo offline por sprint con 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico.
-- **Regression Tracker**: Tablero unico de regresiones con 3 pestanas por plataforma (iOS, Android, WEB). Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado con snapshot al historial (solo lectura).
+- **Regression Tracker**: Tablero unico de regresiones con 2 pestanas por plataforma (APPS, WEB). Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado con snapshot al historial (solo lectura).
 - **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
 - **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
@@ -83,7 +83,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (375 tests) |
+| Tests | Vitest + React Testing Library (376 tests) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

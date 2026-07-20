@@ -22,13 +22,12 @@ afterEach(() => {
 });
 
 describe('RegressionTracker', () => {
-  it('renders the 3 platform tabs and the regression headers', () => {
+  it('renders the 2 platform tabs and the regression headers', () => {
     renderTracker();
-    expect(screen.getByText('iOS')).toBeInTheDocument();
-    expect(screen.getByText('Android')).toBeInTheDocument();
+    expect(screen.getByText('APPS')).toBeInTheDocument();
     expect(screen.getByText('WEB')).toBeInTheDocument();
-    expect(screen.queryByText('Web-Desktop')).not.toBeInTheDocument();
-    expect(screen.queryByText('Web-Mobile')).not.toBeInTheDocument();
+    expect(screen.queryByText('iOS')).not.toBeInTheDocument();
+    expect(screen.queryByText('Android')).not.toBeInTheDocument();
     for (const h of ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status']) {
       expect(screen.getByText(h)).toBeInTheDocument();
     }
@@ -50,11 +49,11 @@ describe('RegressionTracker', () => {
   it('each platform keeps its own grid', () => {
     renderTracker();
     const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'solo en iOS' } });
-    fireEvent.click(screen.getByText('Android'));
-    expect(screen.queryByDisplayValue('solo en iOS')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('iOS'));
-    expect(screen.getByDisplayValue('solo en iOS')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'solo en APPS' } });
+    fireEvent.click(screen.getByText('WEB'));
+    expect(screen.queryByDisplayValue('solo en APPS')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('APPS'));
+    expect(screen.getByDisplayValue('solo en APPS')).toBeInTheDocument();
   });
 
   it('archiving snapshots the board, clears it and shows the archived list button', () => {
