@@ -174,6 +174,34 @@ describe('TrackerGrid — readOnly', () => {
   });
 });
 
+describe('TrackerGrid — drag and drop', () => {
+  it('row handles are draggable by default', () => {
+    renderGrid();
+    const handle = document.querySelector('tbody td');
+    expect(handle).toHaveAttribute('draggable', 'true');
+  });
+
+  it('dropping a dragged row on another row calls onMoveRow with source and target', () => {
+    const props = renderGrid();
+    const rows = document.querySelectorAll('tbody tr');
+    const sourceHandle = rows[0].querySelector('td')!;
+    fireEvent.dragStart(sourceHandle, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    fireEvent.dragOver(rows[2], { dataTransfer: { dropEffect: '' } });
+    fireEvent.drop(rows[2]);
+    expect(props.onMoveRow).toHaveBeenCalledWith('one', 0, 2);
+  });
+
+  it('dropping a row on itself does not call onMoveRow', () => {
+    const props = renderGrid();
+    const rows = document.querySelectorAll('tbody tr');
+    const sourceHandle = rows[1].querySelector('td')!;
+    fireEvent.dragStart(sourceHandle, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    fireEvent.dragOver(rows[1], { dataTransfer: { dropEffect: '' } });
+    fireEvent.drop(rows[1]);
+    expect(props.onMoveRow).not.toHaveBeenCalled();
+  });
+});
+
 describe('TrackerGrid — column resize persistence', () => {
   function resizeFirstColumn(deltaX: number) {
     const handle = document.querySelector('thead tr:first-child th:nth-child(2) div') as HTMLElement;
