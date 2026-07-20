@@ -84,3 +84,32 @@ describe('WorkspacePicker — delete confirmation', () => {
     expect(onDelete).toHaveBeenCalledWith('ws-2');
   });
 });
+
+/**
+ * The global .btn-primary rule carries min-width: 240px, which inside the
+ * ~240px dropdown crushed the name input to a sliver next to a giant Crear
+ * button. The create row must neutralize that min-width so the input keeps
+ * the space (jsdom can't measure layout, so we pin the inline overrides).
+ */
+describe('WorkspacePicker — create form layout', () => {
+  beforeEach(() => {
+    localStorage.setItem('acgen_lang', JSON.stringify('es'));
+  });
+
+  it('gives the name input the row space instead of the Crear button', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: /nuevo workspace/i }));
+
+    const input = screen.getByPlaceholderText('Nombre del workspace');
+    const create = screen.getByRole('button', { name: 'Crear' });
+    expect(create).toHaveStyle({ minWidth: '0' });
+    expect(input).toHaveStyle({ flex: '1' });
+  });
+
+  it('keeps the name input at row height, not the 46px form-field height', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: /nuevo workspace/i }));
+
+    expect(screen.getByPlaceholderText('Nombre del workspace')).toHaveStyle({ height: '32px' });
+  });
+});
