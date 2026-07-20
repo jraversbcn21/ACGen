@@ -42,9 +42,12 @@ export function Sidebar({ activeView, onNavigate, activeWorkspaceName }: Sidebar
       <button type="button" className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expandir' : 'Colapsar'}>
         <Icon.chevron style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
       </button>
-      {activeWorkspaceName && (
+      {activeWorkspaceName && !collapsed && (
         <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+          <span
+            title={activeWorkspaceName}
+            style={{ display: 'block', fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          >
             WS: {activeWorkspaceName}
           </span>
         </div>

@@ -186,8 +186,8 @@ export function WorkspacePicker({
             <div style={{ padding: '4px 8px', display: 'flex', gap: 4 }}>
               <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
-                placeholder={t('workspace.namePlaceholder')} className="field-input" style={{ flex: 1, fontSize: 13 }} autoFocus />
-              <button type="button" className="btn-primary" onClick={handleCreate} style={{ fontSize: 12, padding: '2px 8px' }}>{t('workspace.create')}</button>
+                placeholder={t('workspace.namePlaceholder')} className="field-input" style={{ flex: 1, fontSize: 13, height: 32 }} autoFocus />
+              <button type="button" className="btn-primary" onClick={handleCreate} style={{ fontSize: 12, padding: '2px 12px', minWidth: 0 }}>{t('workspace.create')}</button>
             </div>
           ) : (
             <button type="button" onClick={() => setCreating(true)} className="btn-ghost" style={{ width: '100%', textAlign: 'left', fontSize: 13 }}>
