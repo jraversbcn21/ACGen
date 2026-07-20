@@ -14,7 +14,7 @@ afterEach(() => {
 describe('useRegressions', () => {
   it('initializes with an empty 20x6 board per platform and no archived', () => {
     const { result } = renderHook(() => useRegressions());
-    expect(PLATFORM_IDS).toEqual(['ios', 'android', 'webDesktop']);
+    expect(PLATFORM_IDS).toEqual(['ios', 'webDesktop']);
     for (const p of PLATFORM_IDS) {
       expect(result.current.board[p]).toHaveLength(20);
       expect(result.current.board[p][0]).toHaveLength(6);
@@ -26,9 +26,9 @@ describe('useRegressions', () => {
   it('updateGridCell writes a value in the right platform', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
-      result.current.updateGridCell('android', 2, 1, 'v9.1.0');
+      result.current.updateGridCell('webDesktop', 2, 1, 'v9.1.0');
     });
-    expect(result.current.board.android[2][1]).toBe('v9.1.0');
+    expect(result.current.board.webDesktop[2][1]).toBe('v9.1.0');
     expect(result.current.board.ios[2][1]).toBe('');
   });
 
@@ -49,7 +49,7 @@ describe('useRegressions', () => {
       result.current.setTabGrid('webDesktop', newGrid);
     });
     expect(result.current.board.webDesktop).toEqual(newGrid);
-    expect(result.current.board.android).toHaveLength(20);
+    expect(result.current.board.ios).toHaveLength(20);
   });
 
   it('moveRow reorders rows', () => {
@@ -168,8 +168,21 @@ describe('useRegressions', () => {
     }));
     const { result } = renderHook(() => useRegressions());
     expect(result.current.board.ios[0][0]).toBe('x');
-    expect(result.current.board.android).toHaveLength(20);
     expect(result.current.board.webDesktop).toHaveLength(20);
+  });
+
+  it('content only in an orphaned platform key does not count as board content', () => {
+    // Datos de pestañas retiradas (android, webMobile) sobreviven en localStorage
+    // pero no deben habilitar el archivado de un board visualmente vacío.
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      board: { android: [['dato huérfano', '', '', '', '', '']] },
+      archived: [],
+    }));
+    const { result } = renderHook(() => useRegressions());
+    act(() => {
+      result.current.archiveBoard();
+    });
+    expect(result.current.archived).toEqual([]);
   });
 
   it('keeps changes in memory even when localStorage.setItem throws (quota exceeded)', () => {

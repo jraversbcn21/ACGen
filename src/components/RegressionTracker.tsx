@@ -7,8 +7,7 @@ import { useT, useLang } from '../i18n/I18nContext';
 import { formatDate } from '../utils/dates';
 
 const PLATFORM_LABELS: Record<PlatformId, string> = {
-  ios: 'iOS',
-  android: 'Android',
+  ios: 'APPS',
   webDesktop: 'WEB',
 };
 
@@ -16,7 +15,6 @@ const REGRESSION_HEADERS = ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status'
 
 const PLATFORM_HEADERS: Record<PlatformId, string[]> = {
   ios: REGRESSION_HEADERS,
-  android: REGRESSION_HEADERS,
   webDesktop: REGRESSION_HEADERS,
 };
 

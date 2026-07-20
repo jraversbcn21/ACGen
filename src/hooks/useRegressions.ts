@@ -3,9 +3,13 @@ import { localTodayISO } from '../utils/dates';
 
 const STORAGE_KEY = 'acgen_regressions';
 
-export type PlatformId = 'ios' | 'android' | 'webDesktop';
+// 'ios' es el id histórico de la pestaña APPS: se conserva para que los datos
+// existentes en localStorage sobrevivan al renombrado (mismo criterio que
+// 'webDesktop' → "WEB"). Los datos de pestañas retiradas quedan huérfanos en
+// acgen_regressions pero intactos.
+export type PlatformId = 'ios' | 'webDesktop';
 
-export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'android', 'webDesktop'];
+export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'webDesktop'];
 
 export interface ArchivedRegression {
   id: string;
@@ -26,13 +30,14 @@ function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
 function emptyBoard(): Record<PlatformId, string[][]> {
   return {
     ios: createEmptyGrid(),
-    android: createEmptyGrid(),
     webDesktop: createEmptyGrid(),
   };
 }
 
 export function boardHasContent(board: Record<PlatformId, string[][]>): boolean {
-  return Object.values(board).some((grid) => grid.some((row) => row.some((cell) => cell.trim() !== '')));
+  // Solo las pestañas activas: las claves huérfanas de pestañas retiradas no
+  // deben habilitar el archivado de un board visualmente vacío.
+  return PLATFORM_IDS.some((p) => (board[p] || []).some((row) => row.some((cell) => cell.trim() !== '')));
 }
 
 function persist(state: RegressionState): void {
