@@ -173,3 +173,55 @@ describe('TrackerGrid — readOnly', () => {
     expect(handle).toHaveAttribute('draggable', 'false');
   });
 });
+
+describe('TrackerGrid — drag and drop', () => {
+  it('row handles are draggable by default', () => {
+    renderGrid();
+    const handle = document.querySelector('tbody td');
+    expect(handle).toHaveAttribute('draggable', 'true');
+  });
+
+  it('dropping a dragged row on another row calls onMoveRow with source and target', () => {
+    const props = renderGrid();
+    const rows = document.querySelectorAll('tbody tr');
+    const sourceHandle = rows[0].querySelector('td')!;
+    fireEvent.dragStart(sourceHandle, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    fireEvent.dragOver(rows[2], { dataTransfer: { dropEffect: '' } });
+    fireEvent.drop(rows[2]);
+    expect(props.onMoveRow).toHaveBeenCalledWith('one', 0, 2);
+  });
+
+  it('dropping a row on itself does not call onMoveRow', () => {
+    const props = renderGrid();
+    const rows = document.querySelectorAll('tbody tr');
+    const sourceHandle = rows[1].querySelector('td')!;
+    fireEvent.dragStart(sourceHandle, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    fireEvent.dragOver(rows[1], { dataTransfer: { dropEffect: '' } });
+    fireEvent.drop(rows[1]);
+    expect(props.onMoveRow).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackerGrid — column resize persistence', () => {
+  function resizeFirstColumn(deltaX: number) {
+    const handle = document.querySelector('thead tr:first-child th:nth-child(2) div') as HTMLElement;
+    fireEvent.mouseDown(handle, { clientX: 100 });
+    fireEvent.mouseMove(document, { clientX: 100 + deltaX });
+    fireEvent.mouseUp(document);
+  }
+
+  it('persists resized widths to localStorage in editable mode', () => {
+    renderGrid();
+    resizeFirstColumn(50);
+    const stored = JSON.parse(localStorage.getItem('test_grid_col_widths')!);
+    expect(stored['one-0']).toBe(170);
+  });
+
+  it('readOnly resize works in memory but never touches the shared widths key', () => {
+    renderGrid({ readOnly: true });
+    resizeFirstColumn(50);
+    const col = document.querySelectorAll('colgroup col')[1] as HTMLElement;
+    expect(col.style.width).toBe('170px');
+    expect(localStorage.getItem('test_grid_col_widths')).toBeNull();
+  });
+});

@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useRegressions, PLATFORM_IDS } from './useRegressions';
@@ -105,9 +106,45 @@ describe('useRegressions', () => {
     expect(second.result.current.board.ios[0][0]).toBe('');
   });
 
+  it('does not rewrite localStorage on mount/hydration', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({ board: {}, archived: [] }));
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(0);
+  });
+
+  it('persists exactly once per update under StrictMode (pure updaters)', () => {
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    act(() => {
+      result.current.updateGridCell('ios', 0, 0, 'una vez');
+    });
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(1);
+  });
+
+  it('archiveBoard is a no-op when every cell is empty', () => {
+    const { result } = renderHook(() => useRegressions());
+    act(() => {
+      result.current.archiveBoard();
+    });
+    expect(result.current.archived).toEqual([]);
+  });
+
+  it('archiveBoard ignores whitespace-only cells', () => {
+    const { result } = renderHook(() => useRegressions());
+    act(() => {
+      result.current.updateGridCell('ios', 0, 0, '   ');
+    });
+    act(() => {
+      result.current.archiveBoard();
+    });
+    expect(result.current.archived).toEqual([]);
+  });
+
   it('deleteArchived removes a snapshot', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
+      result.current.updateGridCell('ios', 0, 0, 'algo');
       result.current.archiveBoard();
     });
     const id = result.current.archived[0].id;

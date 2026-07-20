@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { localTodayISO } from '../utils/dates';
 
 const STORAGE_KEY = 'acgen_regressions';
 
@@ -30,17 +31,16 @@ function emptyBoard(): Record<PlatformId, string[][]> {
   };
 }
 
+export function boardHasContent(board: Record<PlatformId, string[][]>): boolean {
+  return Object.values(board).some((grid) => grid.some((row) => row.some((cell) => cell.trim() !== '')));
+}
+
 function persist(state: RegressionState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     console.error('No se pudo guardar el regression tracker en localStorage:', err);
   }
-}
-
-function localToday(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
 export function useRegressions() {
@@ -64,6 +64,15 @@ export function useRegressions() {
     }
   });
 
+  // Persistir como efecto mantiene los updaters puros; la identidad del último
+  // estado persistido evita reescribir lo recién hidratado en el mount.
+  const lastPersisted = useRef(state);
+  useEffect(() => {
+    if (lastPersisted.current === state) return;
+    lastPersisted.current = state;
+    persist(state);
+  }, [state]);
+
   const updateGridCell = useCallback((tab: PlatformId, row: number, col: number, value: string) => {
     setState((prev) => {
       const grid = prev.board[tab] || [];
@@ -74,18 +83,12 @@ export function useRegressions() {
         newRow[col] = value;
         return newRow;
       });
-      const updated = { ...prev, board: { ...prev.board, [tab]: newGrid } };
-      persist(updated);
-      return updated;
+      return { ...prev, board: { ...prev.board, [tab]: newGrid } };
     });
   }, []);
 
   const setTabGrid = useCallback((tab: PlatformId, grid: string[][]) => {
-    setState((prev) => {
-      const updated = { ...prev, board: { ...prev.board, [tab]: grid } };
-      persist(updated);
-      return updated;
-    });
+    setState((prev) => ({ ...prev, board: { ...prev.board, [tab]: grid } }));
   }, []);
 
   const moveRow = useCallback((tab: PlatformId, fromRow: number, toRow: number) => {
@@ -97,33 +100,26 @@ export function useRegressions() {
       const [movedRow] = newGrid.splice(fromRow, 1);
       const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
       newGrid.splice(targetIndex, 0, movedRow);
-      const updated = { ...prev, board: { ...prev.board, [tab]: newGrid } };
-      persist(updated);
-      return updated;
+      return { ...prev, board: { ...prev.board, [tab]: newGrid } };
     });
   }, []);
 
   const archiveBoard = useCallback(() => {
-    const date = localToday();
+    const date = localTodayISO();
     setState((prev) => {
+      if (!boardHasContent(prev.board)) return prev;
       const snapshot: ArchivedRegression = {
         id: crypto.randomUUID(),
         name: `Regresión ${date}`,
         archivedAt: date,
         board: prev.board,
       };
-      const updated = { board: emptyBoard(), archived: [snapshot, ...prev.archived] };
-      persist(updated);
-      return updated;
+      return { board: emptyBoard(), archived: [snapshot, ...prev.archived] };
     });
   }, []);
 
   const deleteArchived = useCallback((id: string) => {
-    setState((prev) => {
-      const updated = { ...prev, archived: prev.archived.filter((a) => a.id !== id) };
-      persist(updated);
-      return updated;
-    });
+    setState((prev) => ({ ...prev, archived: prev.archived.filter((a) => a.id !== id) }));
   }, []);
 
   return { board: state.board, archived: state.archived, updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived };

@@ -48,7 +48,12 @@ export function TrackerGrid<T extends string>({
 }: TrackerGridProps<T>) {
   const noDrag = dragDisabled || readOnly;
   const [activeTab, setActiveTab] = useState<T>(tabs[0]);
-  const [colWidths, setColWidths] = useLocalStorage<Record<string, number>>(colWidthsStorageKey, {});
+  const [storedColWidths, setStoredColWidths] = useLocalStorage<Record<string, number>>(colWidthsStorageKey, {});
+  // En readOnly (snapshots) el resize vive solo en memoria: arranca con los
+  // anchos del board vivo pero nunca escribe en su clave compartida.
+  const [ephemeralColWidths, setEphemeralColWidths] = useState<Record<string, number>>(() => storedColWidths);
+  const colWidths = readOnly ? ephemeralColWidths : storedColWidths;
+  const setColWidths = readOnly ? setEphemeralColWidths : setStoredColWidths;
   const [isResizing, setIsResizing] = useState(false);
   const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
   const [dragSourceRow, setDragSourceRow] = useState<number | null>(null);
@@ -113,7 +118,7 @@ export function TrackerGrid<T extends string>({
     document.body.style.userSelect = 'none';
   };
 
-  const grid = tabGrid[activeTab] || [];
+  const grid = useMemo(() => tabGrid[activeTab] || [], [tabGrid, activeTab]);
   const colCount = grid[0]?.length || 6;
 
   const filteredRowIndices = useMemo(() => {

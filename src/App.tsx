@@ -86,6 +86,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Entrar en una herramienta desde el final del landing conservaba el scroll
+  // y dejaba el título fuera de pantalla.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
   useEffect(() => {
     void requestPersistentStorage();
   }, []);

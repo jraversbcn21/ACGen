@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { STORAGE_KEYS } from '../config/constants';
+import { localTodayISO } from '../utils/dates';
 
 const STORAGE_KEY = 'acgen_sprints';
 
@@ -68,6 +69,15 @@ export function useSprints() {
     }
   });
 
+  // Persistir como efecto mantiene los updaters puros; la identidad del último
+  // estado persistido evita reescribir lo recién hidratado en el mount.
+  const lastPersisted = useRef(sprints);
+  useEffect(() => {
+    if (lastPersisted.current === sprints) return;
+    lastPersisted.current = sprints;
+    persistSprints(sprints);
+  }, [sprints]);
+
   const addSprint = useCallback((name: string, startDate: string) => {
     const sprint: Sprint = {
       id: crypto.randomUUID(),
@@ -78,92 +88,62 @@ export function useSprints() {
       jql: { ...EMPTY_JQL },
       tabGrid: emptyTabGrid(),
     };
-    setSprints((prev) => {
-      const updated = [sprint, ...prev];
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => [sprint, ...prev]);
   }, []);
 
   const updateSprint = useCallback((id: string, partial: Partial<Omit<Sprint, 'id'>>) => {
-    setSprints((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, ...partial } : s));
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => prev.map((s) => (s.id === id ? { ...s, ...partial } : s)));
   }, []);
 
   const archiveSprint = useCallback((id: string) => {
-    const today = new Date();
-    const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    updateSprint(id, { archived: true, endDate: localDate });
+    updateSprint(id, { archived: true, endDate: localTodayISO() });
   }, [updateSprint]);
 
   const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
-    setSprints((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id !== id) return s;
-        return { ...s, jql: { ...s.jql, [tabId]: jql } };
-      });
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      return { ...s, jql: { ...s.jql, [tabId]: jql } };
+    }));
   }, []);
 
   const updateGridCell = useCallback((id: string, tabId: TabId, row: number, col: number, value: string) => {
-    setSprints((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id !== id) return s;
-        const grid = s.tabGrid[tabId] || [];
-        const newGrid = grid.map((r, ri) => {
-          if (ri !== row) return r;
-          const newRow = [...r];
-          while (newRow.length <= col) newRow.push('');
-          newRow[col] = value;
-          return newRow;
-        });
-        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
+    setSprints((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      const grid = s.tabGrid[tabId] || [];
+      const newGrid = grid.map((r, ri) => {
+        if (ri !== row) return r;
+        const newRow = [...r];
+        while (newRow.length <= col) newRow.push('');
+        newRow[col] = value;
+        return newRow;
       });
-      persistSprints(updated);
-      return updated;
-    });
+      return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
+    }));
   }, []);
 
   const setTabGrid = useCallback((id: string, tabId: TabId, grid: string[][]) => {
-    setSprints((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id !== id) return s;
-        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: grid } };
-      });
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      return { ...s, tabGrid: { ...s.tabGrid, [tabId]: grid } };
+    }));
   }, []);
 
   const moveRow = useCallback((id: string, tabId: TabId, fromRow: number, toRow: number) => {
-    setSprints((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id !== id) return s;
-        const grid = s.tabGrid[tabId] || [];
-        if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return s;
-        if (fromRow === toRow) return s;
-        const newGrid = [...grid];
-        const [movedRow] = newGrid.splice(fromRow, 1);
-        const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
-        newGrid.splice(targetIndex, 0, movedRow);
-        return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
-      });
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      const grid = s.tabGrid[tabId] || [];
+      if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return s;
+      if (fromRow === toRow) return s;
+      const newGrid = [...grid];
+      const [movedRow] = newGrid.splice(fromRow, 1);
+      const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
+      newGrid.splice(targetIndex, 0, movedRow);
+      return { ...s, tabGrid: { ...s.tabGrid, [tabId]: newGrid } };
+    }));
   }, []);
 
   const deleteSprint = useCallback((id: string) => {
-    setSprints((prev) => {
-      const updated = prev.filter((s) => s.id !== id);
-      persistSprints(updated);
-      return updated;
-    });
+    setSprints((prev) => prev.filter((s) => s.id !== id));
     try {
       localStorage.removeItem(`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${id}`);
     } catch {

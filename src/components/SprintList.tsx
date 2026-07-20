@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Sprint } from '../hooks/useSprints';
-import { useT } from '../i18n/I18nContext';
+import { useT, useLang } from '../i18n/I18nContext';
+import { formatDate, localTodayISO } from '../utils/dates';
 
 interface SprintListProps {
   sprints: Sprint[];
@@ -12,14 +13,14 @@ interface SprintListProps {
 export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint }: SprintListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(localTodayISO);
   const t = useT();
 
   const handleAdd = () => {
     if (!name.trim()) return;
     onAddSprint(name.trim(), startDate);
     setName('');
-    setStartDate(new Date().toISOString().split('T')[0]);
+    setStartDate(localTodayISO());
     setShowForm(false);
   };
 
@@ -104,11 +105,8 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
 }
 
 function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: (s: Sprint) => void; onDelete: (id: string) => void }) {
-  const formatDate = (d: string | null) => {
-    if (!d) return '\u2014';
-    return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
   const t = useT();
+  const { lang } = useLang();
 
   return (
     <div
@@ -132,7 +130,7 @@ function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: 
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{sprint.name}</div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-            {formatDate(sprint.startDate)} &mdash; {sprint.archived ? formatDate(sprint.endDate) : t('sprint.enCurso')}
+            {formatDate(sprint.startDate, lang)} &mdash; {sprint.archived ? formatDate(sprint.endDate, lang) : t('sprint.enCurso')}
           </div>
         </div>
       </div>
