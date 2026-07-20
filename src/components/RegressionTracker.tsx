@@ -3,7 +3,8 @@ import { TrackerGrid } from './TrackerGrid';
 import { useRegressions, PLATFORM_IDS } from '../hooks/useRegressions';
 import type { PlatformId, ArchivedRegression } from '../hooks/useRegressions';
 import { STORAGE_KEYS } from '../config/constants';
-import { useT } from '../i18n/I18nContext';
+import { useT, useLang } from '../i18n/I18nContext';
+import { formatDate } from '../utils/dates';
 
 const PLATFORM_LABELS: Record<PlatformId, string> = {
   ios: 'iOS',
@@ -21,14 +22,11 @@ const PLATFORM_HEADERS: Record<PlatformId, string[]> = {
 
 type Screen = { kind: 'board' } | { kind: 'archivedList' } | { kind: 'snapshot'; id: string };
 
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 export function RegressionTracker() {
   const { board, archived, updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived } = useRegressions();
   const [screen, setScreen] = useState<Screen>({ kind: 'board' });
   const t = useT();
+  const { lang } = useLang();
 
   const handleArchive = useCallback(() => {
     if (!confirm(t('regression.archiveConfirm'))) return;
@@ -98,7 +96,7 @@ export function RegressionTracker() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{a.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-                {formatDate(a.archivedAt)}
+                {formatDate(a.archivedAt, lang)}
               </div>
             </div>
             <button

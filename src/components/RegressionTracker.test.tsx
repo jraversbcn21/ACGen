@@ -82,6 +82,17 @@ describe('RegressionTracker', () => {
     expect(screen.queryByText('Archivar Regresión')).not.toBeInTheDocument();
   });
 
+  it('formats the archived date per the app language without UTC shift', () => {
+    localStorage.setItem('acgen_lang', JSON.stringify('en'));
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      board: {},
+      archived: [{ id: 'a1', name: 'Regresión 2026-07-20', archivedAt: '2026-07-20', board: {} }],
+    }));
+    renderTracker();
+    fireEvent.click(screen.getByText(/Archived \(1\)/));
+    expect(screen.getByText('07/20/2026')).toBeInTheDocument();
+  });
+
   it('deleting an archived snapshot shows the empty state', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderTracker();

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { localTodayISO } from '../utils/dates';
 
 const STORAGE_KEY = 'acgen_regressions';
 
@@ -36,11 +37,6 @@ function persist(state: RegressionState): void {
   } catch (err) {
     console.error('No se pudo guardar el regression tracker en localStorage:', err);
   }
-}
-
-function localToday(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
 export function useRegressions() {
@@ -104,7 +100,7 @@ export function useRegressions() {
   }, []);
 
   const archiveBoard = useCallback(() => {
-    const date = localToday();
+    const date = localTodayISO();
     setState((prev) => {
       const snapshot: ArchivedRegression = {
         id: crypto.randomUUID(),

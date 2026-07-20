@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { STORAGE_KEYS } from '../config/constants';
+import { localTodayISO } from '../utils/dates';
 
 const STORAGE_KEY = 'acgen_sprints';
 
@@ -94,9 +95,7 @@ export function useSprints() {
   }, []);
 
   const archiveSprint = useCallback((id: string) => {
-    const today = new Date();
-    const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    updateSprint(id, { archived: true, endDate: localDate });
+    updateSprint(id, { archived: true, endDate: localTodayISO() });
   }, [updateSprint]);
 
   const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
