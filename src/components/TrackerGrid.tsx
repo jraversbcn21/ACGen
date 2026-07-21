@@ -6,6 +6,20 @@ import { useT } from '../i18n/I18nContext';
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
 const URL_CELL_PATTERN = /^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
+const LEGACY_JIRA_BASE_URL_KEY = 'acgen_jira_base_url';
+
+// La clave antigua se escribió con useLocalStorage (JSON.stringify); se lee
+// igual y se deja intacta — mismo criterio que los datos huérfanos de Android.
+function readLegacyBaseUrl(): string {
+  try {
+    const raw = localStorage.getItem(LEGACY_JIRA_BASE_URL_KEY);
+    if (!raw) return '';
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'string' ? parsed : '';
+  } catch {
+    return '';
+  }
+}
 
 function colToLetter(col: number): string {
   let letter = '';
@@ -146,7 +160,16 @@ export function TrackerGrid<T extends string>({
     return grid[row]?.[col] || '';
   };
 
-  const baseUrl = (useLocalStorage(STORAGE_KEYS.TRACKER_BASE_URL, '')[0] || '').replace(/\/+$/, '');
+  const [storedBaseUrl, setStoredBaseUrl] = useLocalStorage(STORAGE_KEYS.TRACKER_BASE_URL, '');
+  const baseUrl = (storedBaseUrl || '').replace(/\/+$/, '');
+
+  const legacyMigrationTried = useRef(false);
+  useEffect(() => {
+    if (legacyMigrationTried.current || linkMode !== 'jira' || storedBaseUrl) return;
+    legacyMigrationTried.current = true;
+    const legacy = readLegacyBaseUrl();
+    if (legacy) setStoredBaseUrl(legacy);
+  }, [linkMode, storedBaseUrl, setStoredBaseUrl]);
 
   const getLinkUrl = (value: string): string | null => {
     if (linkMode === 'jira') {
