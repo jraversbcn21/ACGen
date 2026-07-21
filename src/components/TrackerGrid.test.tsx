@@ -122,6 +122,63 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
   });
 });
 
+describe('TrackerGrid — hover ↗ icon opens links directly', () => {
+  it('jira mode, base URL configured: the icon has aria-label "Abrir ABC-123" and a plain click opens the ticket URL', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir ABC-123');
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledWith('https://jira.example.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+  });
+
+  it('jira mode, no base URL configured: no icon button is rendered for the ticket cell', () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    expect(screen.queryByLabelText('Abrir ABC-123')).not.toBeInTheDocument();
+  });
+
+  it('jira mode, base URL configured, empty cell: no icon button in that cell', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    renderGrid();
+    const firstDataCell = document.querySelectorAll('tbody tr')[0].querySelectorAll('td')[1];
+    expect(firstDataCell.querySelector('button.cell-open-link')).toBeNull();
+  });
+
+  it('url mode: the icon has aria-label "Abrir el enlace" and a plain click opens the exact URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'Smoke Login - https://zephyr.example.com/plan/9';
+    renderGrid({ linkMode: 'url', tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir el enlace');
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
+  });
+
+  it('ctrl+click on the icon opens exactly one tab (no double-open via the td handler)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir ABC-123');
+    fireEvent.click(button, { ctrlKey: true });
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('the td title for a linked jira cell teaches the ctrl+click gesture', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const td = screen.getByDisplayValue('ABC-123 Login roto').closest('td')!;
+    expect(td).toHaveAttribute('title', 'Ctrl + Click para abrir ABC-123');
+  });
+});
+
 describe('TrackerGrid — url mode', () => {
   function renderUrlGrid(cell0: string, overrides: Partial<TrackerGridProps<Tab>> = {}) {
     const grid = makeGrid();

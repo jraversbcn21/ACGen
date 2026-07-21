@@ -513,6 +513,22 @@ export function TrackerGrid<T extends string>({
                           pointerEvents: 'none',
                         }}>{linkName}</span>
                       )}
+                      {linkUrl && (
+                        <button
+                          type="button"
+                          className="cell-open-link"
+                          tabIndex={-1}
+                          title={ticketKey ? t('sprint.openTicketDirect', { ticket: ticketKey }) : t('regression.openLinkDirect')}
+                          aria-label={ticketKey ? t('sprint.openTicketDirect', { ticket: ticketKey }) : t('regression.openLinkDirect')}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(linkUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          ↗
+                        </button>
+                      )}
                     </td>
                   );
                 })}
