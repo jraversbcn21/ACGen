@@ -1,157 +1,50 @@
-# Task 2 Report: `linkMode: 'url'` y `readOnly` en `TrackerGrid`
+# Task 2 Report — Migración de la clave huérfana `acgen_jira_base_url`
 
 ## Status: DONE
 
-## Implementation Summary
-
-Successfully implemented URL link mode and readOnly support in TrackerGrid as specified in the task brief.
-
-### What Was Implemented
-
-1. **URL Link Mode (`linkMode: 'url'`)**
-   - Added `URL_CELL_PATTERN = /^(?:.+?\s*-\s*)?(https?:\/\/\S+)$/` to extract URLs from cells in format "Name - URL" or bare URLs
-   - Updated `getLinkUrl()` function to handle URL mode: extracts the URL and returns it for Ctrl+Click activation
-   - URL cells render with accent styling (`color: var(--accent)`, `fontWeight: 600`)
-   - Ctrl+Click on a URL cell opens the exact URL in a new tab via `window.open(url, '_blank')`
-   - Added title attribute with `regression.openLink` i18n key for URL cells
-
-2. **ReadOnly Prop**
-   - Added `readOnly?: boolean` to `TrackerGridProps` interface (defaults to false)
-   - When `readOnly=true`:
-     - All input cells get the `readonly` attribute (prevents editing)
-     - "+ Fila" button is hidden
-     - Drag handles are hidden (computed as `noDrag = dragDisabled || readOnly`)
-
-3. **Refactoring**
-   - Unified drag-disable logic: replaced all `dragDisabled` references with computed `noDrag` variable for cleaner code
-   - Ensures readOnly mode also disables row dragging (part of the read-only contract)
-
-4. **Internationalization**
-   - Added `"regression.openLink": "Abrir enlace"` to `src/i18n/es.json`
-   - Added `"regression.openLink": "Open link"` to `src/i18n/en.json`
-   - keyParity test verifies both languages have matching keys
-
-## TDD Evidence
-
-### Step 1: RED (Failing Tests)
-Command: `npm test -- src/components/TrackerGrid.test.tsx`
-
-Expected 4 URL mode tests to fail (window.open not called, styling not applied) + 1 readOnly test to fail:
-
-```
-FAIL — url mode > ctrl+click on "Nombre - URL" opens the exact URL
-  → expected "bound " to be called with arguments: [ …(2) ]
-  Number of calls: 0
-
-FAIL — url mode > a bare URL is also a link
-  → expected "bound " to be called with arguments: [ …(2) ]
-  Number of calls: 0
-
-FAIL — url mode > link cells get the accent styling
-  → expected 'var(--text)' to be 'var(--accent)'
-
-FAIL — readOnly > inputs are readOnly, no "+ Fila", no drag handles
-  → expected element to have attribute: readonly
-```
-
-**Test count before implementation:** 6 jira-mode tests passing, 5 new tests failing = 11 total
-
-### Step 2: GREEN (Passing Tests)
-Command: `npm test -- src/components/TrackerGrid.test.tsx src/i18n/keyParity.test.ts`
-
-All 11 TrackerGrid tests + 2 keyParity tests pass:
-
-```
- ✓ src/i18n/keyParity.test.ts (2 tests)
- ✓ src/components/TrackerGrid.test.tsx (11 tests)
-
-Test Files: 2 passed (2)
-Tests: 13 passed (13)
-```
-
-### Step 3: Full Suite
-Command: `npm test`
-
-**All 236 tests pass** — no regressions introduced:
-
-```
-Test Files: 28 passed (28)
-Tests: 236 passed (236)
-```
-
-## Files Changed
-
-1. **src/components/TrackerGrid.tsx**
-   - Added `URL_CELL_PATTERN` constant
-   - Added `readOnly?: boolean` to `TrackerGridProps` interface
-   - Added `readOnly = false` to function destructuring
-   - Added `noDrag = dragDisabled || readOnly` calculation
-   - Replaced 4 `dragDisabled` references with `noDrag` in JSX (draggable, cursor, span, onDragStart)
-   - Completed `getLinkUrl()` to handle URL mode with regex match
-   - Added `readOnly={readOnly}` attribute to input element
-   - Updated `<td>` title to include `regression.openLink` for URL cells
-   - Updated "+" Fila button condition: `{!searchQuery.trim() && !readOnly && (...)`
-
-2. **src/components/TrackerGrid.test.tsx**
-   - Added test suite: "TrackerGrid — url mode" (4 tests)
-     - ctrl+click on "Nombre - URL" opens the exact URL
-     - bare URL is also a link
-     - plain text is not a link
-     - link cells get the accent styling
-   - Added test suite: "TrackerGrid — readOnly" (1 test)
-     - inputs are readOnly, no "+ Fila", no drag handles
-
-3. **src/i18n/es.json**
-   - Added `"regression.openLink": "Abrir enlace"` (positioned after sprint.openTicket)
-
-4. **src/i18n/en.json**
-   - Added `"regression.openLink": "Open link"` (positioned after sprint.openTicket)
-
-## Self-Review Findings
-
-### Verification Checklist
-
-- ✅ Every step of brief followed in order
-- ✅ Tests initially RED for expected reasons (window.open not called, styling absent, readonly attr missing)
-- ✅ Tests GREEN after implementation
-- ✅ Full suite GREEN (236 tests)
-- ✅ keyParity test GREEN (both i18n files updated)
-- ✅ Test output pristine (no warnings or failures)
-- ✅ No code added beyond the brief (YAGNI principle respected)
-- ✅ Commit message matches brief exactly
-- ✅ All changes align with specified implementation details
-
-### Implementation Quality
-
-1. **URL Pattern Correctness**: Regex pattern `/^(?:.+?\s*-\s*)?(https?:\/\/\S+)$/` correctly:
-   - Accepts "Name - URL" format (optional name capture)
-   - Accepts bare URLs
-   - Captures the URL in group 1 via `m[1]`
-   - Rejects plain text without URLs
-
-2. **ReadOnly Semantics**: 
-   - Correctly combines with `dragDisabled` via `noDrag` variable
-   - Input elements get native HTML `readonly` attribute (browser-enforced)
-   - UI elements (button, drag handles) properly hidden
-
-3. **i18n Coverage**: Both languages updated in parallel; keyParity test ensures consistency
-
-4. **No Side Effects**: 
-   - Jira mode remains unaffected by URL mode changes
-   - No modification to Jira-specific logic
-   - No impact on existing drag/edit functionality when readOnly is false
-
-## Issues and Concerns
-
-**None.** Implementation is complete, tested, and meets all requirements.
-
 ## Commit
+`c932e655ede6a1c84c6b01a65f2534cb0a4ab1fa` — "fix(tracker): migrate orphaned acgen_jira_base_url into acgen_tracker_base_url"
 
-- **SHA:** `34b7941`
-- **Message:** `feat(tracker): url link mode and readOnly support in TrackerGrid`
-- **Files:** 4 changed (TrackerGrid.tsx, TrackerGrid.test.tsx, es.json, en.json)
+## Files changed
 
----
+### `src/components/TrackerGrid.tsx`
+- Added `LEGACY_JIRA_BASE_URL_KEY = 'acgen_jira_base_url'` constant and `readLegacyBaseUrl()` helper right after `MIN_COL_WIDTH` (module-level constants block), exactly as specified in the brief. The helper reads the legacy key via `localStorage.getItem`, JSON-parses it defensively (returns `''` on missing key, non-string parse, or parse error), and never writes/deletes it.
+- Replaced line 149 (`const baseUrl = (useLocalStorage(...)[0] || '').replace(...)`) with:
+  - `const [storedBaseUrl, setStoredBaseUrl] = useLocalStorage(STORAGE_KEYS.TRACKER_BASE_URL, '');`
+  - `const baseUrl = (storedBaseUrl || '').replace(/\/+$/, '');` — same derived value as before, so Task 1's `getLinkUrl` `null`-when-empty guard and the `unconfiguredTicket` flag keep working unchanged.
+  - A `legacyMigrationTried` ref plus a `useEffect` that: bails out if migration was already attempted this mount, if `linkMode !== 'jira'` (Regression Tracker untouched), or if `storedBaseUrl` is already set (never overwrites a real configured value); otherwise reads the legacy key and, if non-empty, calls `setStoredBaseUrl(legacy)` once.
+  - Dependency array `[linkMode, storedBaseUrl, setStoredBaseUrl]` — safe per the brief's note that `useLocalStorage`'s setter is `useCallback`-wrapped and referentially stable.
 
-**Completed:** 2026-07-17  
-**Total Test Count:** 236 tests passing (all green)
+### `src/components/TrackerGrid.test.tsx`
+- Appended the exact 3-test `describe('TrackerGrid — migración de la clave antigua acgen_jira_base_url', ...)` block from the brief, verbatim, after the last existing describe block (column resize persistence).
+
+## TDD evidence
+
+**RED (before implementing)** — ran `npx vitest run src/components/TrackerGrid.test.tsx`:
+```
+✓ ...24 pre-existing + 2 of the 3 new tests passed...
+× TrackerGrid — migración ... > migra la URL huérfana al montar en modo jira y los enlaces funcionan
+  → expected null to be 'https://jira.legacy.com' // Object.is equality
+Tests  1 failed | 24 passed (25)
+```
+Matches the brief's Step 2 prediction exactly: 1st test fails (new key stays empty), 2nd and 3rd pass from the start as regression guards.
+
+**GREEN (after implementing)** — same command:
+```
+✓ src/components/TrackerGrid.test.tsx (25 tests) 1470ms
+Tests  25 passed (25)
+```
+
+**Full suite regression check** — `npx vitest run`:
+```
+Test Files  40 passed (40)
+     Tests  381 passed (381)
+```
+No other suite affected.
+
+## Decisions / notes
+- Nothing in the brief was ambiguous; implemented verbatim as given (helper, effect, hook destructuring), no deviations.
+- Confirmed `readLegacyBaseUrl` never writes/deletes `acgen_jira_base_url` — only `localStorage.getItem` is called on it anywhere in the new code.
+- Confirmed the `useEffect` fires the migration at most once per mount (via the `legacyMigrationTried` ref) and does nothing in `linkMode: 'url'` (Regression Tracker), satisfying the "shared component, must not affect url mode" constraint.
+- `storedBaseUrl` / `setStoredBaseUrl` are exposed under exactly those names in the component body, ready for Task 3's config UI to consume.
+- Note: this report path (`task-2-report.md`) previously held a stale report from an unrelated earlier "Task 2" (URL mode/readOnly work, dated 2026-07-17, commit `34b7941`). It has been overwritten here with this task's report, per instructions to write the report to this exact path.

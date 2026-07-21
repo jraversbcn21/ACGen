@@ -1,180 +1,52 @@
-# Task 1: Extract TrackerGrid from SprintDashboard — Report
+# Task 1 Report — Guardia: sin URL base no hay enlace (ni URL relativa)
 
-**Status:** DONE
+## Status: DONE
+## Commit: 94bcda3
 
-**Commit:** `b8f6fd9` refactor(tracker): extract shared TrackerGrid from SprintDashboard
+## Changes per file
 
-## What I Implemented
+### `src/components/TrackerGrid.tsx`
+- `getLinkUrl` (line ~151): in the `linkMode === 'jira'` branch, added an early `if (!baseUrl) return null;` guard before the `TICKET_KEY_PATTERN` match, so no relative `/browse/KEY` URL is ever built when the base URL is unconfigured.
+- Cell render (line ~322): added `unconfiguredTicket = ci === 0 && linkMode === 'jira' && !baseUrl && TICKET_KEY_PATTERN.test(value)`.
+- `<td title=...>` (line ~336): extended the ternary chain to fall through to `t('sprint.trackerUrlMissing')` when `unconfiguredTicket` is true, `undefined` otherwise.
 
-### Files Created
+### `src/components/TrackerGrid.test.tsx`
+- Adjusted the existing test `'jira cells keep showing the full value (no name overlay)'`: added `localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));` as its first line, since after the guard an unconfigured base URL would make the cell non-linked (`var(--text)` instead of `var(--accent)`).
+- Added `'sin URL base, la celda de ticket no es enlace ni abre nada con ctrl+click'`: renders a ticket cell with no base URL configured, ctrl+clicks it, asserts `window.open` is never called and the input color is `var(--text)`.
+- Added `'sin URL base, la celda de ticket muestra el hint de configuración en el title'`: asserts the `<td>` has `title="Configura la URL del tracker (⚙) para abrir tickets"`.
 
-1. **`src/components/TrackerGrid.tsx`** (552 lines)
-   - Generic reusable grid component with type parameter `T extends string`
-   - Exports `TrackerGridProps<T>` interface with 10 properties matching the brief exactly
-   - Encapsulates all grid state: activeTab, colWidths, search, focus, drag state
-   - Handles: cell editing, row dragging, column resizing, search filtering
-   - Supports link modes: `'jira'` (implemented) and `'url'` (declared but not implemented per spec)
-   - SnapLink integration for Jira URL paste handling
-   - `dragDisabled` prop replaces `sprint.archived` for disabling drag operations
+### `src/i18n/es.json` / `src/i18n/en.json`
+- Added `"sprint.trackerUrlMissing"` right after `"sprint.openTicket"` in both files (es: "Configura la URL del tracker (⚙) para abrir tickets", en: "Set the tracker URL (⚙) to open tickets"), keeping key parity between the two dictionaries.
 
-2. **`src/components/TrackerGrid.test.tsx`** (134 lines)
-   - 6 tests covering grid functionality (tab rendering, switching, link opening, paste, add row, drag disabled)
-   - Uses localStorage to pin language to Spanish as required
-   - All callback props mocked (onUpdateGridCell, onSetTabGrid, onMoveRow)
+## TDD evidence
 
-### Files Modified
-
-1. **`src/components/SprintDashboard.tsx`** (407 lines → 62 lines)
-   - Removed all grid logic, state hooks, event handlers, render logic
-   - Now a pure wrapper passing Sprint data to TrackerGrid
-   - Defines TABS, TAB_LABELS, TAB_HEADERS constants (Sprint-specific)
-   - Passes sprint.archived as dragDisabled prop
-   - Retains archive button UI (when not archived)
-   - All grid callbacks delegated directly to TrackerGrid
-
-## TDD Evidence
-
-### RED Phase
-
-**Command:** `npm test -- src/components/TrackerGrid.test.tsx` (after test file creation, before TrackerGrid.tsx implementation)
-
-**Output:**
+**RED** — `npx vitest run src/components/TrackerGrid.test.tsx` before implementing (Step 3):
 ```
-FAIL src/components/TrackerGrid.test.tsx
-Error: Failed to resolve import "./TrackerGrid" from "src/components/TrackerGrid.test.tsx". 
-Does the file exist?
-Plugin: vite:import-analysis
-File: C:/repositorio/ACGen/acgen/src/components/TrackerGrid.test.tsx:5:28
+✓ jira cells keep showing the full value (no name overlay)   <- passed after test adjustment
+× sin URL base, la celda de ticket no es enlace ni abre nada con ctrl+click
+  → expected "bound " to not be called at all, but actually been called 1 times
+  Received: 1st call: ["/browse/ABC-123", "_blank", "noopener,noreferrer"]
+× sin URL base, la celda de ticket muestra el hint de configuración en el title
+  → Expected title="Configura la URL del tracker (⚙) para abrir tickets"
+    Received title="Abrir ABC-123 en el tracker"
 
-Test Files 1 failed (1)
-Tests: no tests
+Test Files  1 failed (1)
+     Tests  2 failed | 20 passed (22)
+```
+Both failures matched the brief's predicted reasons exactly: `getLinkUrl` still returned `/browse/ABC-123` (so `window.open` fired) and the title still resolved to `sprint.openTicket` (not the missing-hint key) because `ticketKey` was truthy without the guard.
+
+**GREEN** — after implementing Steps 4-5, `npx vitest run src/components/TrackerGrid.test.tsx src/i18n/keyParity.test.ts`:
+```
+✓ src/i18n/keyParity.test.ts (2 tests)
+✓ src/components/TrackerGrid.test.tsx (22 tests)
+
+Test Files  2 passed (2)
+     Tests  24 passed (24)
 ```
 
-Expected RED: module didn't exist yet.
+Full suite sanity check — `npx vitest run` (all files): **40 files passed, 378 tests passed**, no regressions.
 
-### GREEN Phase
-
-**Command:** `npm test -- src/components/TrackerGrid.test.tsx` (after TrackerGrid.tsx implementation)
-
-**Output:**
-```
-✓ src/components/TrackerGrid.test.tsx (6 tests) 330ms
-
-Test Files 1 passed (1)
-Tests: 6 passed (6)
-```
-
-All 6 tests passing:
-- renders tab labels and the active tab headers
-- switching tab shows that tab headers
-- ctrl+click on a ticket cell opens baseUrl/browse/KEY
-- pasting a SnapLink transforms it to "KEY Nombre"
-- "+ Fila" appends an empty row via onSetTabGrid
-- dragDisabled removes the drag handles
-
-## Full Suite + Lint Verification
-
-**Command:** `npm test` (full suite on commit b8f6fd9)
-
-**Output:**
-```
-✓ Test Files: 28 passed (28)
-✓ Tests: 231 passed (231)
-Duration: 31.21s
-```
-
-Breakdown:
-- 225 baseline tests (all passing, no regressions)
-- 6 new TrackerGrid tests (all passing)
-- 28 test files (27 original + TrackerGrid.test.tsx)
-
-**Command:** `npm run lint`
-
-**Output:**
-```
-✖ 15 problems (0 errors, 15 warnings)
-```
-
-- 0 lint errors introduced
-- 15 pre-existing warnings (unrelated to this task: tool components, Icons.tsx, I18nContext.tsx)
-- TrackerGrid has one inherited warning about grid dependency (pre-existing pattern in codebase)
-
-## Files Changed
-
-- **Created:** `src/components/TrackerGrid.tsx` (552 lines)
-- **Created:** `src/components/TrackerGrid.test.tsx` (134 lines)  
-- **Modified:** `src/components/SprintDashboard.tsx` (407 → 62 lines, net -345 lines)
-
-Total: +341 net lines of code (517 new, 176 removed)
-
-## Self-Review Findings
-
-✓ **Completeness:** All 8 brief steps followed exactly
-  1. Baseline suite ✓ (225 tests)
-  2. Test file creation ✓ (exact code from brief)
-  3. RED verification ✓ (module missing)
-  4. TrackerGrid implementation ✓ (exact code from brief)
-  5. GREEN verification ✓ (6/6 passing)
-  6. SprintDashboard rewrite ✓ (exact code from brief)
-  7. Full suite + lint ✓ (231 tests, 0 errors)
-  8. Commit ✓ (exact message from brief)
-
-✓ **Quality:** Transcription faithful to brief
-  - All prop names and types match exactly
-  - All logic replicated without modification
-  - Only structural reorganization (grid logic → TrackerGrid, wrapper → SprintDashboard)
-
-✓ **Discipline:** No scope creep
-  - Did not implement linkMode:'url' (that's Task 2)
-  - Did not refactor patterns or fix warnings (stays true to extraction)
-  - Only modified the three named files
-
-✓ **Testing:** All assertions passing
-  - RED: confirmed expected failure (module missing)
-  - GREEN: confirmed all new tests pass (6/6)
-  - Full suite: 231/231 passing
-  - Lint: 0 errors
-
-## Behavior Preservation
-
-No behavioral changes observed. The refactoring is purely organizational:
-- Grid rendering: identical
-- Cell editing: identical
-- Row dragging: identical
-- Column resizing: identical
-- Search filtering: identical
-- Jira link opening: identical
-- SnapLink paste handling: identical
-- Archive button placement: identical
-
-## Interface Export Verification
-
-The `TrackerGridProps<T extends string>` interface matches requirements exactly and is ready for Tasks 2, 4, 5:
-
-```typescript
-export interface TrackerGridProps<T extends string> {
-  tabs: readonly T[];
-  tabLabels: Record<T, string>;
-  tabHeaders: Record<T, string[]>;
-  tabGrid: Record<T, string[][]>;
-  linkMode: 'jira' | 'url';
-  dragDisabled?: boolean;
-  colWidthsStorageKey: string;
-  searchPlaceholder: string;
-  onUpdateGridCell: (tab: T, row: number, col: number, value: string) => void;
-  onSetTabGrid: (tab: T, grid: string[][]) => void;
-  onMoveRow: (tab: T, fromRow: number, toRow: number) => void;
-}
-```
-
-## Notes
-
-- Grid dependency warning in useMemo (line 126) is a pre-existing pattern inherited from original code
-- All locale-specific text handled through useT() hook (i18n context)
-- Test file correctly sets localStorage language to 'es' for Spanish test expectations
-- Row number display (1-indexed) preserved correctly
-- Drag handles visibility correctly tied to dragDisabled prop
-
----
-
-**Ready for Task 2:** LinkMode 'url' implementation via TDD
+## Decisions made
+- Ran the full test suite (`npx vitest run`, 378 tests / 40 files) in addition to the brief's targeted command, as a pre-commit sanity check — no code outside the brief's scope was touched as a result.
+- `.superpowers/sdd/task-1-brief.md` shows as modified in `git status` — a large diff against the committed HEAD version, pre-existing before this session started (it looks like an earlier/different "Task 1" — an extraction refactor — was renumbered or superseded by this guard task). Not touched by me; correctly excluded from the commit since Step 7's `git add` list names only the 4 implementation/test/i18n files.
+- This report file (`task-1-report.md`) also contained a stale report from that earlier extraction-refactor task; overwritten with this task's report per the current instructions.

@@ -1,346 +1,167 @@
-### Task 3: Hook `useRegressions`
+### Task 3: Botón ⚙ + input inline de configuración
 
 **Files:**
-- Create: `src/hooks/useRegressions.ts`
-- Create: `src/hooks/useRegressions.test.ts`
+- Modify: `src/components/TrackerGrid.tsx` (estado nuevo, botón en la barra de pestañas línea ~205, input bajo la barra)
+- Modify: `src/components/TrackerGrid.test.tsx` (4 tests nuevos)
+- Modify: `src/i18n/es.json`, `src/i18n/en.json` (claves `sprint.trackerUrlSettings`, `sprint.trackerUrlPlaceholder`)
 
 **Interfaces:**
-- Consumes: nada del resto de tareas (hook autocontenido; persiste en la clave literal `'acgen_regressions'`).
-- Produces (lo consume la Task 4):
+- Consumes: `storedBaseUrl` / `setStoredBaseUrl` (Task 2), `baseUrl` normalizado, `t()`.
+- Produces: botón `⚙` con `title={t('sprint.trackerUrlSettings')}` visible solo en modo jira; input con `placeholder={t('sprint.trackerUrlPlaceholder')}`; guardar normaliza barras finales.
 
-```ts
-export type PlatformId = 'ios' | 'android' | 'webDesktop' | 'webMobile';
-export const PLATFORM_IDS: readonly PlatformId[];
-export interface ArchivedRegression {
-  id: string;
-  name: string;        // "Regresión YYYY-MM-DD"
-  archivedAt: string;  // YYYY-MM-DD local
-  board: Record<PlatformId, string[][]>;
-}
-export function useRegressions(): {
-  board: Record<PlatformId, string[][]>;
-  archived: ArchivedRegression[];
-  updateGridCell: (tab: PlatformId, row: number, col: number, value: string) => void;
-  setTabGrid: (tab: PlatformId, grid: string[][]) => void;
-  moveRow: (tab: PlatformId, fromRow: number, toRow: number) => void;
-  archiveBoard: () => void;
-  deleteArchived: (id: string) => void;
-};
-```
+- [ ] **Step 1: Escribir los 4 tests (fallarán)**
 
-- [ ] **Step 1: Escribir el test (falla)**
+Nuevo describe al final de `TrackerGrid.test.tsx`:
 
-Crear `src/hooks/useRegressions.test.ts`:
-
-```ts
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useRegressions, PLATFORM_IDS } from './useRegressions';
-
-beforeEach(() => {
-  localStorage.clear();
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-describe('useRegressions', () => {
-  it('initializes with an empty 20x6 board per platform and no archived', () => {
-    const { result } = renderHook(() => useRegressions());
-    expect(PLATFORM_IDS).toEqual(['ios', 'android', 'webDesktop', 'webMobile']);
-    for (const p of PLATFORM_IDS) {
-      expect(result.current.board[p]).toHaveLength(20);
-      expect(result.current.board[p][0]).toHaveLength(6);
-      expect(result.current.board[p][0][0]).toBe('');
-    }
-    expect(result.current.archived).toEqual([]);
+```tsx
+describe('TrackerGrid — configuración de URL base (⚙)', () => {
+  it('el botón ⚙ no aparece en modo url', () => {
+    renderGrid({ linkMode: 'url' });
+    expect(screen.queryByTitle('Configurar URL del tracker')).not.toBeInTheDocument();
   });
 
-  it('updateGridCell writes a value in the right platform', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('android', 2, 1, 'v9.1.0');
-    });
-    expect(result.current.board.android[2][1]).toBe('v9.1.0');
-    expect(result.current.board.ios[2][1]).toBe('');
+  it('⚙ abre el input y Enter guarda normalizando la barra final', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com/' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.miempresa.com');
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
   });
 
-  it('persists to localStorage and hydrates on a fresh mount', () => {
-    const first = renderHook(() => useRegressions());
-    act(() => {
-      first.result.current.updateGridCell('ios', 0, 0, 'Smoke - https://z.example/p/1');
-    });
-    first.unmount();
-    const second = renderHook(() => useRegressions());
-    expect(second.result.current.board.ios[0][0]).toBe('Smoke - https://z.example/p/1');
+  it('guardar la URL activa los enlaces de ticket al momento', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
   });
 
-  it('setTabGrid replaces the whole grid of one platform', () => {
-    const { result } = renderHook(() => useRegressions());
-    const newGrid = [['a', 'b', 'c', 'd', 'e', 'f']];
-    act(() => {
-      result.current.setTabGrid('webDesktop', newGrid);
-    });
-    expect(result.current.board.webDesktop).toEqual(newGrid);
-    expect(result.current.board.webMobile).toHaveLength(20);
-  });
-
-  it('moveRow reorders rows', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'primera');
-      result.current.updateGridCell('ios', 1, 0, 'segunda');
-    });
-    act(() => {
-      result.current.moveRow('ios', 0, 2);
-    });
-    expect(result.current.board.ios[0][0]).toBe('segunda');
-    expect(result.current.board.ios[1][0]).toBe('primera');
-  });
-
-  it('moveRow ignores out-of-range indices', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'fija');
-    });
-    act(() => {
-      result.current.moveRow('ios', -1, 5);
-      result.current.moveRow('ios', 0, 99);
-    });
-    expect(result.current.board.ios[0][0]).toBe('fija');
-  });
-
-  it('archiveBoard snapshots the board, clears it and names it with today', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('webMobile', 0, 0, 'Regresión checkout');
-    });
-    act(() => {
-      result.current.archiveBoard();
-    });
-    expect(result.current.archived).toHaveLength(1);
-    const snap = result.current.archived[0];
-    expect(snap.id).toBeTruthy();
-    expect(snap.name).toMatch(/^Regresión \d{4}-\d{2}-\d{2}$/);
-    expect(snap.archivedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(snap.board.webMobile[0][0]).toBe('Regresión checkout');
-    expect(result.current.board.webMobile[0][0]).toBe('');
-  });
-
-  it('archiveBoard persists snapshot and cleared board', () => {
-    const first = renderHook(() => useRegressions());
-    act(() => {
-      first.result.current.updateGridCell('ios', 0, 0, 'algo');
-      first.result.current.archiveBoard();
-    });
-    first.unmount();
-    const second = renderHook(() => useRegressions());
-    expect(second.result.current.archived).toHaveLength(1);
-    expect(second.result.current.board.ios[0][0]).toBe('');
-  });
-
-  it('deleteArchived removes a snapshot', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.archiveBoard();
-    });
-    const id = result.current.archived[0].id;
-    act(() => {
-      result.current.deleteArchived(id);
-    });
-    expect(result.current.archived).toEqual([]);
-  });
-
-  it('recovers from corrupt JSON in localStorage', () => {
-    localStorage.setItem('acgen_regressions', '{no es json');
-    const { result } = renderHook(() => useRegressions());
-    expect(result.current.board.ios).toHaveLength(20);
-    expect(result.current.archived).toEqual([]);
-  });
-
-  it('merges missing platforms when hydrating old data', () => {
-    localStorage.setItem('acgen_regressions', JSON.stringify({
-      board: { ios: [['x', '', '', '', '', '']] },
-      archived: [],
-    }));
-    const { result } = renderHook(() => useRegressions());
-    expect(result.current.board.ios[0][0]).toBe('x');
-    expect(result.current.board.android).toHaveLength(20);
-    expect(result.current.board.webDesktop).toHaveLength(20);
-    expect(result.current.board.webMobile).toHaveLength(20);
-  });
-
-  it('keeps changes in memory even when localStorage.setItem throws (quota exceeded)', () => {
-    const { result } = renderHook(() => useRegressions());
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'sobrevive');
-    });
-    expect(result.current.board.ios[0][0]).toBe('sobrevive');
-    expect(errSpy).toHaveBeenCalled();
+  it('Escape cierra sin guardar', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://no-guardar.com' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.blur(input);
+    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
   });
 });
 ```
 
-- [ ] **Step 2: Ejecutar para verificar que falla**
+- [ ] **Step 2: Verificar que fallan**
 
-Run: `npm test -- src/hooks/useRegressions.test.ts`
-Expected: FAIL — `Failed to resolve import "./useRegressions"`.
+Run: `npx vitest run src/components/TrackerGrid.test.tsx`
+Expected: FAIL — 3 de los 4 (el de modo url pasa de serie; protege el alcance).
 
-- [ ] **Step 3: Crear `src/hooks/useRegressions.ts`**
+- [ ] **Step 3: Implementar botón, input y guardado**
 
-Contenido completo:
+Estado nuevo en el cuerpo del componente (junto al resto de `useState`, línea ~61):
 
-```ts
-import { useState, useCallback } from 'react';
+```tsx
+  const [showUrlConfig, setShowUrlConfig] = useState(false);
+  const [draftBaseUrl, setDraftBaseUrl] = useState('');
+  const urlConfigCancelled = useRef(false);
+```
 
-const STORAGE_KEY = 'acgen_regressions';
+Handlers (tras el efecto de migración de Task 2):
 
-export type PlatformId = 'ios' | 'android' | 'webDesktop' | 'webMobile';
-
-export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'android', 'webDesktop', 'webMobile'];
-
-export interface ArchivedRegression {
-  id: string;
-  name: string;
-  archivedAt: string;
-  board: Record<PlatformId, string[][]>;
-}
-
-interface RegressionState {
-  board: Record<PlatformId, string[][]>;
-  archived: ArchivedRegression[];
-}
-
-function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
-  return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
-}
-
-function emptyBoard(): Record<PlatformId, string[][]> {
-  return {
-    ios: createEmptyGrid(),
-    android: createEmptyGrid(),
-    webDesktop: createEmptyGrid(),
-    webMobile: createEmptyGrid(),
+```tsx
+  const saveBaseUrl = () => {
+    setStoredBaseUrl(draftBaseUrl.trim().replace(/\/+$/, ''));
+    setShowUrlConfig(false);
   };
-}
-
-function persist(state: RegressionState): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (err) {
-    console.error('No se pudo guardar el regression tracker en localStorage:', err);
-  }
-}
-
-function localToday(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-}
-
-export function useRegressions() {
-  const [state, setState] = useState<RegressionState>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { board: emptyBoard(), archived: [] };
-      const parsed = JSON.parse(raw);
-      const archived: ArchivedRegression[] = Array.isArray(parsed.archived)
-        ? parsed.archived.map((a: ArchivedRegression) => ({
-            ...a,
-            board: { ...emptyBoard(), ...(a.board || {}) },
-          }))
-        : [];
-      return {
-        board: { ...emptyBoard(), ...(parsed.board || {}) },
-        archived,
-      };
-    } catch {
-      return { board: emptyBoard(), archived: [] };
-    }
-  });
-
-  const updateGridCell = useCallback((tab: PlatformId, row: number, col: number, value: string) => {
-    setState((prev) => {
-      const grid = prev.board[tab] || [];
-      const newGrid = grid.map((r, ri) => {
-        if (ri !== row) return r;
-        const newRow = [...r];
-        while (newRow.length <= col) newRow.push('');
-        newRow[col] = value;
-        return newRow;
-      });
-      const updated = { ...prev, board: { ...prev.board, [tab]: newGrid } };
-      persist(updated);
-      return updated;
-    });
-  }, []);
-
-  const setTabGrid = useCallback((tab: PlatformId, grid: string[][]) => {
-    setState((prev) => {
-      const updated = { ...prev, board: { ...prev.board, [tab]: grid } };
-      persist(updated);
-      return updated;
-    });
-  }, []);
-
-  const moveRow = useCallback((tab: PlatformId, fromRow: number, toRow: number) => {
-    setState((prev) => {
-      const grid = prev.board[tab] || [];
-      if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return prev;
-      if (fromRow === toRow) return prev;
-      const newGrid = [...grid];
-      const [movedRow] = newGrid.splice(fromRow, 1);
-      const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
-      newGrid.splice(targetIndex, 0, movedRow);
-      const updated = { ...prev, board: { ...prev.board, [tab]: newGrid } };
-      persist(updated);
-      return updated;
-    });
-  }, []);
-
-  const archiveBoard = useCallback(() => {
-    const date = localToday();
-    setState((prev) => {
-      const snapshot: ArchivedRegression = {
-        id: crypto.randomUUID(),
-        name: `Regresión ${date}`,
-        archivedAt: date,
-        board: prev.board,
-      };
-      const updated = { board: emptyBoard(), archived: [snapshot, ...prev.archived] };
-      persist(updated);
-      return updated;
-    });
-  }, []);
-
-  const deleteArchived = useCallback((id: string) => {
-    setState((prev) => {
-      const updated = { ...prev, archived: prev.archived.filter((a) => a.id !== id) };
-      persist(updated);
-      return updated;
-    });
-  }, []);
-
-  return { board: state.board, archived: state.archived, updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived };
-}
 ```
 
-- [ ] **Step 4: Ejecutar los tests**
+Botón ⚙ en la barra de pestañas, inmediatamente después del `<a>` de SnapLink (línea ~214, dentro del div `.sprint-tabs`). Ámbar (`--warning`) cuando falta configuración, gris (`--text-3`) cuando ya está:
 
-Run: `npm test -- src/hooks/useRegressions.test.ts`
-Expected: PASS (12 tests).
+```tsx
+        {linkMode === 'jira' && (
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              urlConfigCancelled.current = false;
+              setDraftBaseUrl(storedBaseUrl);
+              setShowUrlConfig((v) => !v);
+            }}
+            title={t('sprint.trackerUrlSettings')}
+            aria-label={t('sprint.trackerUrlSettings')}
+            style={{ padding: '6px 10px', fontSize: 14, color: baseUrl ? 'var(--text-3)' : 'var(--warning)' }}
+          >
+            ⚙
+          </button>
+        )}
+```
 
-- [ ] **Step 5: Commit**
+Input inline, inmediatamente después del cierre del div `.sprint-tabs` (antes del div de búsqueda, línea ~217):
+
+```tsx
+      {linkMode === 'jira' && showUrlConfig && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          <input
+            type="text"
+            autoFocus
+            placeholder={t('sprint.trackerUrlPlaceholder')}
+            value={draftBaseUrl}
+            onChange={(e) => setDraftBaseUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveBaseUrl();
+              if (e.key === 'Escape') {
+                urlConfigCancelled.current = true;
+                setShowUrlConfig(false);
+              }
+            }}
+            onBlur={() => {
+              if (urlConfigCancelled.current) {
+                urlConfigCancelled.current = false;
+                return;
+              }
+              saveBaseUrl();
+            }}
+            style={{
+              width: 320, height: 30, padding: '0 10px', fontSize: 12,
+              fontFamily: 'var(--font-ui)', background: 'var(--surface-2)',
+              color: 'var(--text)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', outline: 'none',
+            }}
+          />
+        </div>
+      )}
+```
+
+- [ ] **Step 4: Añadir las claves i18n en ambos diccionarios**
+
+`src/i18n/es.json`, tras `"sprint.trackerUrlMissing"`:
+
+```json
+  "sprint.trackerUrlSettings": "Configurar URL del tracker",
+  "sprint.trackerUrlPlaceholder": "https://jira.example.com",
+```
+
+`src/i18n/en.json`, misma posición:
+
+```json
+  "sprint.trackerUrlSettings": "Configure tracker URL",
+  "sprint.trackerUrlPlaceholder": "https://jira.example.com",
+```
+
+- [ ] **Step 5: Verificar que pasan**
+
+Run: `npx vitest run src/components/TrackerGrid.test.tsx src/i18n/keyParity.test.ts`
+Expected: PASS (todos).
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/hooks/useRegressions.ts src/hooks/useRegressions.test.ts
-git commit -m "feat(regression): useRegressions hook with single board + archived snapshots
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git add src/components/TrackerGrid.tsx src/components/TrackerGrid.test.tsx src/i18n/es.json src/i18n/en.json
+git commit -m "feat(tracker): gear button + inline input to configure the Jira base URL"
 ```
 
 ---

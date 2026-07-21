@@ -1,100 +1,141 @@
-# Task 4 Report: Componente `RegressionTracker` + claves i18n + constante de anchos
+# Task 4 report: Verificación completa + sync de docs
 
-## Implementation Summary
+## Correction applied
 
-Successfully implemented the `RegressionTracker` component with full i18n support and storage key constant. The component provides three screens: active board (with 4 platform tabs), archived regressions list (with snapshots in read-only mode), and individual snapshot viewers.
+The brief predicted 385 tests. Per instruction from the requester, the real
+verified count after Task 3's fix round is **389 tests across 40 files**.
+Step 1 below re-confirms 389 independently — matches exactly, no discrepancy.
 
-## What Was Implemented
+## Step 1: Suite completa, lint y build
 
-### 1. Storage Key Constant
-- Added `REGRESSION_COL_WIDTHS: 'acgen_regression_col_widths'` to `STORAGE_KEYS` in `src/config/constants.ts` (line 75)
+### `npm test` (verbatim tail)
 
-### 2. Internationalization Keys
-Added 12 new i18n keys to both `src/i18n/es.json` and `src/i18n/en.json`:
-- `landing.tool.regressiontracker` / `landing.tool.regressiontrackerDesc` (tool listing)
-- `sidebar.regression` (sidebar label)
-- `regression.title` (component header)
-- `regression.archive` (archive button)
-- `regression.archiveConfirm` (confirmation dialog)
-- `regression.archivedList` (archived screen header)
-- `regression.archivedBadge` (badge label)
-- `regression.deleteConfirm` (delete confirmation)
-- `regression.noArchived` (empty state)
-- `regression.searchPlaceholder` (grid search hint)
-
-Note: `regression.openLink` already existed from Task 2 — not duplicated.
-
-### 3. Component: RegressionTracker
-- Created `src/components/RegressionTracker.tsx` (141 lines)
-- Manages three screens via `Screen` union type:
-  - **Board screen** (default): Shows active regression board with 4 platform tabs (iOS, Android, Web-Desktop, Web-Mobile), archive button, and conditional "Archived" button when snapshots exist
-  - **Archived List screen**: Displays all archived snapshots as clickable cards with delete option and empty state
-  - **Snapshot screen** (read-only): Opens individual archive with back button, badge, and non-editable grid
-
-- Key features:
-  - Integrates `TrackerGrid` with `linkMode="url"` and `colWidthsStorageKey={STORAGE_KEYS.REGRESSION_COL_WIDTHS}`
-  - Archive functionality: prompts user, snapshots the current board (with timestamp name), clears active board, updates archived list
-  - Delete archived snapshots with confirmation
-  - Uses `useRegressions()` hook for state management
-  - Uses `useT()` for i18n
-  - Formatted date display for archived snapshots (dd/mm/yyyy format via `es-ES` locale)
-
-### 4. Component Tests
-- Created `src/components/RegressionTracker.test.tsx` with 6 tests covering all scenarios
-
-## Test Results
-
-### RED Phase
 ```
-npm test -- src/components/RegressionTracker.test.tsx
-Failed to resolve import "./RegressionTracker" from "src/components/RegressionTracker.test.tsx"
-Expected: Component file did not exist yet ✓
+ ✓ src/hooks/useLocalStorage.test.ts (14 tests) 137ms
+ ✓ src/utils/dates.test.ts (7 tests) 71ms
+ ✓ src/hooks/useRegressions.test.ts (17 tests) 162ms
+ ✓ src/hooks/useSprints.test.ts (22 tests) 200ms
+ ✓ src/hooks/useWorkspace.test.ts (15 tests) 192ms
+ ✓ src/services/autoBackup.test.ts (18 tests) 55ms
+ ✓ src/hooks/useHistory.test.ts (11 tests) 131ms
+ ✓ src/hooks/useStreamingResponse.test.ts (4 tests) 81ms
+ ✓ src/utils/download.test.ts (7 tests) 135ms
+ ✓ src/services/backup.test.ts (36 tests) 47ms
+ ✓ src/services/anonymizer.test.ts (29 tests) 41ms
+ ✓ src/config/providers.test.ts (17 tests) 32ms
+ ✓ src/hooks/useBackupReminder.test.ts (2 tests) 74ms
+ ✓ src/services/persistence.test.ts (3 tests) 13ms
+ ✓ src/config/promptTemplates.test.ts (5 tests) 9ms
+ ✓ src/i18n/keyParity.test.ts (2 tests) 22ms
+ ✓ src/test/pwaIcons.test.ts (2 tests) 5ms
+
+ Test Files  40 passed (40)
+      Tests  389 passed (389)
+   Start at  15:10:34
+   Duration  47.12s (transform 6.38s, setup 42.32s, collect 38.58s, tests 23.73s, environment 101.98s, prepare 15.41s)
 ```
 
-### i18n Parity Test
-```
-npm test -- src/i18n/keyParity.test.ts
-✓ 2 tests passed (verifying es.json and en.json have matching keys)
-```
+Result: **PASS** — 389 tests / 40 files, matching the corrected expectation.
 
-### GREEN Phase (Component Tests)
-```
-npm test -- src/components/RegressionTracker.test.tsx
-✓ 6 tests passed ✓
-Test Files: 1 passed
-Tests: 6 passed
-```
+### `npm run lint` (verbatim tail)
 
-### Full Test Suite
 ```
-npm test
-✓ Test Files: 30 passed (30)
-✓ Tests: 254 passed (254)
-Expected total: 254 ✓
+C:\repositorio\ACGen\acgen\src\i18n\I18nContext.tsx
+  16:14  warning  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
+  52:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  58:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+✖ 14 problems (0 errors, 14 warnings)
 ```
 
-## Files Changed
+Result: **PASS** — 0 errors (14 pre-existing warnings, all in files untouched by this branch).
 
-1. src/config/constants.ts (1 line added)
-2. src/i18n/es.json (12 lines added)
-3. src/i18n/en.json (12 lines added)
-4. src/components/RegressionTracker.tsx (141 lines, NEW)
-5. src/components/RegressionTracker.test.tsx (79 lines, NEW)
+### `npm run build` (verbatim tail)
 
-## Commit
+```
+> acgen@0.0.0 build
+> tsc -b && vite build
 
-aa497f9 feat(regression): RegressionTracker board, archived snapshots UI and i18n
+vite v5.4.21 building for production...
+transforming...
+✓ 469 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/registerSW.js                         0.13 kB
+dist/manifest.webmanifest                  0.31 kB
+dist/index.html                            1.12 kB │ gzip:   0.57 kB
+dist/assets/index-DW4LnFvE.css             23.43 kB │ gzip:   5.13 kB
+dist/assets/purify.es-BSKMTLSQ.js          26.41 kB │ gzip:   9.94 kB
+dist/assets/index.es-AXJz6uST.js          150.89 kB │ gzip:  51.61 kB
+dist/assets/html2canvas.esm-CBrSDip1.js   201.42 kB │ gzip:  48.03 kB
+dist/assets/index-BwD4QPG-.js             731.72 kB │ gzip: 234.32 kB
 
-## Self-Review Findings
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 9.52s
 
-- [x] Every step from brief followed in order
-- [x] RED phase: Tests fail with expected error
-- [x] i18n keyParity: Both files pass, no duplicated regression.openLink
-- [x] GREEN phase: All 6 component tests pass
-- [x] Full test suite: All 254 tests pass
-- [x] Output pristine: No linting issues
-- [x] YAGNI: Only brief's exact code used
-- [x] Files touched: Only those specified
-- [x] Commit message follows brief exactly
+PWA v0.17.5
+mode      generateSW
+precache  14 entries (1322.09 KiB)
+files generated
+  dist\sw.js
+  dist\workbox-5ffe50d4.js
+```
 
-Status: DONE
+Result: **PASS** — `tsc -b` reported no type errors, vite build succeeded (the
+chunk-size note is a pre-existing informational warning, not an error, unrelated
+to this branch).
+
+## Step 2: AGENTS.md changes
+
+Line 62:
+
+```diff
+-**Total: 376 tests across 40 files.**
++**Total: 389 tests across 40 files.**
+```
+
+New history-table row appended after "Regression Tracker: 2 platform tabs" (2026-07-20):
+
+```
+| Sprint Tracker: enlaces de ticket rotos | 2026-07-21 | Los tickets abrían la propia app: `acgen_tracker_base_url` no tenía escritores desde la eliminación de Jira (`4c258a3`) y el enlace salía relativo (`/browse/KEY` → rewrite SPA). Fix en `TrackerGrid`: guardia (`getLinkUrl` → `null` sin base URL, celdas sin estilo de enlace + title de aviso), migración one-shot de la clave huérfana `acgen_jira_base_url` (intacta, criterio datos-Android), y botón ⚙ (solo modo jira) con input inline que persiste normalizando barras finales. Un draft vacío al guardar se trata como no-cambio (el ⚙ puede fijar una URL pero nunca borrarla) para no pelear con la migración, y el flag de cancelación se arma en `mousedown` para que el propio click del ⚙ cierre el panel en vez de guardar-y-reabrir. 376 → 389 tests. |
+```
+
+## Step 3: README.md changes
+
+Line 86:
+
+```diff
+-| Tests | Vitest + React Testing Library (376 tests) |
++| Tests | Vitest + React Testing Library (389 tests) |
+```
+
+## Step 4: Commit
+
+```
+git add AGENTS.md README.md
+git commit -m "docs: sync test counts and the tracker base URL fix into AGENTS.md/README"
+```
+
+Commit SHA: **b3eed1f**
+
+```
+[fix/tracker-base-url b3eed1f] docs: sync test counts and the tracker base URL fix into AGENTS.md/README
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+```
+
+## Note on untouched files
+
+`docs/superpowers/` and `.superpowers/` were left untouched per instructions.
+`git status` before and after the commit showed pre-existing unstaged
+modifications to several `.superpowers/sdd/*.md` files (progress.md,
+task-1/2/3 briefs/reports, task-4-brief.md) — these predate this task, were
+not created or touched by this step, and were deliberately excluded from the
+commit (only `AGENTS.md` and `README.md` were staged and committed).
+
+This file itself (`task-4-report.md`) previously held a stale report from an
+unrelated earlier feature (RegressionTracker component work, commit `aa497f9`,
+254-test era) — it has been overwritten with this task's report, per the
+brief's requirement to write the full report here.
