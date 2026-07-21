@@ -324,7 +324,11 @@ Botón ⚙ en la barra de pestañas, inmediatamente después del `<a>` de SnapLi
           <button
             type="button"
             className="btn-ghost"
-            onClick={() => { setDraftBaseUrl(storedBaseUrl); setShowUrlConfig((v) => !v); }}
+            onClick={() => {
+              urlConfigCancelled.current = false;
+              setDraftBaseUrl(storedBaseUrl);
+              setShowUrlConfig((v) => !v);
+            }}
             title={t('sprint.trackerUrlSettings')}
             aria-label={t('sprint.trackerUrlSettings')}
             style={{ padding: '6px 10px', fontSize: 14, color: baseUrl ? 'var(--text-3)' : 'var(--warning)' }}
