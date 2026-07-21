@@ -74,6 +74,9 @@ export function TrackerGrid<T extends string>({
   const [dragTargetRow, setDragTargetRow] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [showUrlConfig, setShowUrlConfig] = useState(false);
+  const [draftBaseUrl, setDraftBaseUrl] = useState('');
+  const urlConfigCancelled = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const t = useT();
 
@@ -171,6 +174,11 @@ export function TrackerGrid<T extends string>({
     if (legacy) setStoredBaseUrl(legacy);
   }, [linkMode, storedBaseUrl, setStoredBaseUrl]);
 
+  const saveBaseUrl = () => {
+    setStoredBaseUrl(draftBaseUrl.trim().replace(/\/+$/, ''));
+    setShowUrlConfig(false);
+  };
+
   const getLinkUrl = (value: string): string | null => {
     if (linkMode === 'jira') {
       if (!baseUrl) return null;
@@ -236,7 +244,55 @@ export function TrackerGrid<T extends string>({
         >
           + SnapLink
         </a>
+        {linkMode === 'jira' && (
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              urlConfigCancelled.current = false;
+              setDraftBaseUrl(storedBaseUrl);
+              setShowUrlConfig((v) => !v);
+            }}
+            title={t('sprint.trackerUrlSettings')}
+            aria-label={t('sprint.trackerUrlSettings')}
+            style={{ padding: '6px 10px', fontSize: 14, color: baseUrl ? 'var(--text-3)' : 'var(--warning)' }}
+          >
+            ⚙
+          </button>
+        )}
       </div>
+
+      {linkMode === 'jira' && showUrlConfig && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          <input
+            type="text"
+            autoFocus
+            placeholder={t('sprint.trackerUrlPlaceholder')}
+            value={draftBaseUrl}
+            onChange={(e) => setDraftBaseUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveBaseUrl();
+              if (e.key === 'Escape') {
+                urlConfigCancelled.current = true;
+                setShowUrlConfig(false);
+              }
+            }}
+            onBlur={() => {
+              if (urlConfigCancelled.current) {
+                urlConfigCancelled.current = false;
+                return;
+              }
+              saveBaseUrl();
+            }}
+            style={{
+              width: 320, height: 30, padding: '0 10px', fontSize: 12,
+              fontFamily: 'var(--font-ui)', background: 'var(--surface-2)',
+              color: 'var(--text)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', outline: 'none',
+            }}
+          />
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
         {searchQuery.trim() && (

@@ -168,6 +168,8 @@
   "sprint.enCurso": "In progress",
   "sprint.openTicket": "Open {ticket} in tracker",
   "sprint.trackerUrlMissing": "Set the tracker URL (⚙) to open tickets",
+  "sprint.trackerUrlSettings": "Configure tracker URL",
+  "sprint.trackerUrlPlaceholder": "https://jira.example.com",
   "regression.openLink": "Open link",
   "landing.tool.regressiontracker": "Regression Tracker",
   "landing.tool.regressiontrackerDesc": "Regression tracking by platform",

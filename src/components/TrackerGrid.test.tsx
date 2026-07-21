@@ -272,3 +272,43 @@ describe('TrackerGrid — migración de la clave antigua acgen_jira_base_url', (
     expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
   });
 });
+
+describe('TrackerGrid — configuración de URL base (⚙)', () => {
+  it('el botón ⚙ no aparece en modo url', () => {
+    renderGrid({ linkMode: 'url' });
+    expect(screen.queryByTitle('Configurar URL del tracker')).not.toBeInTheDocument();
+  });
+
+  it('⚙ abre el input y Enter guarda normalizando la barra final', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com/' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.miempresa.com');
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('guardar la URL activa los enlaces de ticket al momento', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+  });
+
+  it('Escape cierra sin guardar', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://no-guardar.com' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.blur(input);
+    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
+  });
+});
