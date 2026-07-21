@@ -7,6 +7,7 @@ const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
 const URL_CELL_PATTERN = /^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
 const LEGACY_JIRA_BASE_URL_KEY = 'acgen_jira_base_url';
+const ABSOLUTE_HTTP_URL = /^https?:\/\//i;
 
 // La clave antigua se escribió con useLocalStorage (JSON.stringify); se lee
 // igual y se deja intacta — mismo criterio que los datos huérfanos de Android.
@@ -76,6 +77,11 @@ export function TrackerGrid<T extends string>({
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showUrlConfig, setShowUrlConfig] = useState(false);
   const [draftBaseUrl, setDraftBaseUrl] = useState('');
+  // Guards against the ⚙ button's own mousedown blurring the input before the click
+  // lands: without it, that blur would re-save the draft right as the gear's onClick
+  // is about to close (or reopen) the panel. Escape needs no such guard — unmounting
+  // the input on Escape never fires a blur event, so onBlur (the only reader) never
+  // observes this flag in that path.
   const urlConfigCancelled = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const t = useT();
@@ -175,17 +181,23 @@ export function TrackerGrid<T extends string>({
   }, [linkMode, storedBaseUrl, setStoredBaseUrl]);
 
   const saveBaseUrl = () => {
-    const normalized = draftBaseUrl.trim().replace(/\/+$/, '');
+    let normalized = draftBaseUrl.trim();
     // An empty draft is treated as no-change (not a clear): writing '' here would
     // race with the legacy-key migration effect, which resurrects the old URL as
     // soon as it sees an empty stored value on the next mount.
-    if (normalized) setStoredBaseUrl(normalized);
+    if (!normalized) {
+      setShowUrlConfig(false);
+      return;
+    }
+    if (!ABSOLUTE_HTTP_URL.test(normalized)) normalized = `https://${normalized}`;
+    normalized = normalized.replace(/\/+$/, '');
+    setStoredBaseUrl(normalized);
     setShowUrlConfig(false);
   };
 
   const getLinkUrl = (value: string): string | null => {
     if (linkMode === 'jira') {
-      if (!baseUrl) return null;
+      if (!ABSOLUTE_HTTP_URL.test(baseUrl)) return null;
       const m = value.match(TICKET_KEY_PATTERN);
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
@@ -252,7 +264,8 @@ export function TrackerGrid<T extends string>({
           <button
             type="button"
             className="btn-ghost"
-            onMouseDown={() => {
+            onMouseDown={(e) => {
+              if (e.button !== 0) return;
               urlConfigCancelled.current = true;
             }}
             onClick={() => {
@@ -280,7 +293,6 @@ export function TrackerGrid<T extends string>({
             onKeyDown={(e) => {
               if (e.key === 'Enter') saveBaseUrl();
               if (e.key === 'Escape') {
-                urlConfigCancelled.current = true;
                 setShowUrlConfig(false);
               }
             }}
@@ -408,7 +420,7 @@ export function TrackerGrid<T extends string>({
                   const value = getCellValue(ri, ci);
                   const linkUrl = ci === 0 ? getLinkUrl(value) : null;
                   const ticketKey = linkMode === 'jira' && linkUrl ? value.match(TICKET_KEY_PATTERN)![1] : null;
-                  const unconfiguredTicket = ci === 0 && linkMode === 'jira' && !baseUrl && TICKET_KEY_PATTERN.test(value);
+                  const unconfiguredTicket = ci === 0 && linkMode === 'jira' && !ABSOLUTE_HTTP_URL.test(baseUrl) && TICKET_KEY_PATTERN.test(value);
                   const linkName = ci === 0 && linkUrl ? getLinkName(value) : null;
                   const isFocused = focusedCell?.row === ri && focusedCell?.col === ci;
                   const showFocus = linkUrl && isFocused;

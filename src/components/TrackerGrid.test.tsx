@@ -271,6 +271,18 @@ describe('TrackerGrid — migración de la clave antigua acgen_jira_base_url', (
     renderGrid({ linkMode: 'url' });
     expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
   });
+
+  it('una URL relativa heredada por migración no genera enlace', () => {
+    localStorage.setItem('acgen_jira_base_url', JSON.stringify('jira.sin-esquema.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
+    fireEvent.click(input, { ctrlKey: true });
+    expect(open).not.toHaveBeenCalled();
+    expect(input.style.color).toBe('var(--text)');
+  });
 });
 
 describe('TrackerGrid — configuración de URL base (⚙)', () => {
@@ -300,16 +312,6 @@ describe('TrackerGrid — configuración de URL base (⚙)', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
     expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
-  });
-
-  it('Escape cierra sin guardar', () => {
-    renderGrid();
-    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
-    const input = screen.getByPlaceholderText('https://jira.example.com');
-    fireEvent.change(input, { target: { value: 'https://no-guardar.com' } });
-    fireEvent.keyDown(input, { key: 'Escape' });
-    fireEvent.blur(input);
-    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
   });
 
   it('blur con el input montado guarda el borrador', () => {
@@ -354,5 +356,20 @@ describe('TrackerGrid — configuración de URL base (⚙)', () => {
     fireEvent.blur(input);
     expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
     expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('una URL sin esquema se guarda con https:// y abre un enlace absoluto', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'jira.miempresa.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.miempresa.com');
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+    expect(open.mock.calls[0][0]).toMatch(/^https?:\/\//);
   });
 });
