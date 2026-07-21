@@ -275,7 +275,7 @@ export function TrackerGrid<T extends string>({
             }}
             title={t('sprint.trackerUrlSettings')}
             aria-label={t('sprint.trackerUrlSettings')}
-            style={{ padding: '6px 10px', fontSize: 14, color: baseUrl ? 'var(--text-3)' : 'var(--warning)' }}
+            style={{ padding: '6px 10px', fontSize: 14, color: ABSOLUTE_HTTP_URL.test(baseUrl) ? 'var(--text-3)' : 'var(--warning)' }}
           >
             ⚙
           </button>
