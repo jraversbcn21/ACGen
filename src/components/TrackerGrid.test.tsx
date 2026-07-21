@@ -87,6 +87,7 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
   });
 
   it('jira cells keep showing the full value (no name overlay)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
     const grid = makeGrid();
     grid[0][0] = 'ABC-123 Login roto';
     renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
@@ -95,10 +96,86 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
     expect(input.closest('td')!.querySelector('span')).toBeNull();
   });
 
+  it('sin URL base, la celda de ticket no es enlace ni abre nada con ctrl+click', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
+    fireEvent.click(input, { ctrlKey: true });
+    expect(open).not.toHaveBeenCalled();
+    expect(input.style.color).toBe('var(--text)');
+  });
+
+  it('sin URL base, la celda de ticket muestra el hint de configuración en el title', () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const td = screen.getByDisplayValue('ABC-123 Login roto').closest('td')!;
+    expect(td).toHaveAttribute('title', 'Configura la URL del tracker (⚙) para abrir tickets');
+  });
+
   it('dragDisabled removes the drag handles', () => {
     renderGrid({ dragDisabled: true });
     const handle = document.querySelector('tbody td');
     expect(handle).toHaveAttribute('draggable', 'false');
+  });
+});
+
+describe('TrackerGrid — hover ↗ icon opens links directly', () => {
+  it('jira mode, base URL configured: the icon has aria-label "Abrir ABC-123" and a plain click opens the ticket URL', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir ABC-123');
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledWith('https://jira.example.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+  });
+
+  it('jira mode, no base URL configured: no icon button is rendered for the ticket cell', () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    expect(screen.queryByLabelText('Abrir ABC-123')).not.toBeInTheDocument();
+  });
+
+  it('jira mode, base URL configured, empty cell: no icon button in that cell', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    renderGrid();
+    const firstDataCell = document.querySelectorAll('tbody tr')[0].querySelectorAll('td')[1];
+    expect(firstDataCell.querySelector('button.cell-open-link')).toBeNull();
+  });
+
+  it('url mode: the icon has aria-label "Abrir el enlace" and a plain click opens the exact URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'Smoke Login - https://zephyr.example.com/plan/9';
+    renderGrid({ linkMode: 'url', tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir el enlace');
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
+  });
+
+  it('ctrl+click on the icon opens exactly one tab (no double-open via the td handler)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const button = screen.getByLabelText('Abrir ABC-123');
+    fireEvent.click(button, { ctrlKey: true });
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('the td title for a linked jira cell teaches the ctrl+click gesture', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const td = screen.getByDisplayValue('ABC-123 Login roto').closest('td')!;
+    expect(td).toHaveAttribute('title', 'Ctrl + Click para abrir ABC-123');
   });
 });
 
@@ -223,5 +300,133 @@ describe('TrackerGrid — column resize persistence', () => {
     const col = document.querySelectorAll('colgroup col')[1] as HTMLElement;
     expect(col.style.width).toBe('170px');
     expect(localStorage.getItem('test_grid_col_widths')).toBeNull();
+  });
+});
+
+describe('TrackerGrid — migración de la clave antigua acgen_jira_base_url', () => {
+  it('migra la URL huérfana al montar en modo jira y los enlaces funcionan', () => {
+    localStorage.setItem('acgen_jira_base_url', JSON.stringify('https://jira.legacy.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.legacy.com');
+    expect(localStorage.getItem('acgen_jira_base_url')).toBe(JSON.stringify('https://jira.legacy.com'));
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.legacy.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+  });
+
+  it('no sobrescribe una URL base ya configurada en la clave nueva', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.nueva.com'));
+    localStorage.setItem('acgen_jira_base_url', JSON.stringify('https://jira.legacy.com'));
+    renderGrid();
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.nueva.com');
+  });
+
+  it('en modo url no migra nada', () => {
+    localStorage.setItem('acgen_jira_base_url', JSON.stringify('https://jira.legacy.com'));
+    renderGrid({ linkMode: 'url' });
+    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
+  });
+
+  it('una URL relativa heredada por migración no genera enlace', () => {
+    localStorage.setItem('acgen_jira_base_url', JSON.stringify('jira.sin-esquema.com'));
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
+    fireEvent.click(input, { ctrlKey: true });
+    expect(open).not.toHaveBeenCalled();
+    expect(input.style.color).toBe('var(--text)');
+  });
+});
+
+describe('TrackerGrid — configuración de URL base (⚙)', () => {
+  it('el botón ⚙ no aparece en modo url', () => {
+    renderGrid({ linkMode: 'url' });
+    expect(screen.queryByTitle('Configurar URL del tracker')).not.toBeInTheDocument();
+  });
+
+  it('⚙ abre el input y Enter guarda normalizando la barra final', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com/' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.miempresa.com');
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('guardar la URL activa los enlaces de ticket al momento', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.miempresa.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+  });
+
+  it('blur con el input montado guarda el borrador', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.blur.com/' } });
+    fireEvent.blur(input);
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.blur.com');
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('tras Escape y reabrir, un blur posterior vuelve a guardar', () => {
+    renderGrid();
+    const gear = screen.getByTitle('Configurar URL del tracker');
+    fireEvent.click(gear);
+    fireEvent.keyDown(screen.getByPlaceholderText('https://jira.example.com'), { key: 'Escape' });
+    fireEvent.click(gear);
+    const reopened = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(reopened, { target: { value: 'https://jira.segunda.com' } });
+    fireEvent.blur(reopened);
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.segunda.com');
+  });
+
+  it('el ⚙ cierra el panel en la secuencia real del navegador (mousedown, blur, click)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.previa.com'));
+    renderGrid();
+    const gear = screen.getByTitle('Configurar URL del tracker');
+    fireEvent.click(gear);
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.mouseDown(gear);
+    fireEvent.blur(input);
+    fireEvent.click(gear);
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('guardar un borrador vacío no escribe en storage', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.blur(input);
+    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('una URL sin esquema se guarda con https:// y abre un enlace absoluto', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'jira.miempresa.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.miempresa.com');
+    fireEvent.click(screen.getByDisplayValue('ABC-123 Login roto'), { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('https://jira.miempresa.com/browse/ABC-123', '_blank', 'noopener,noreferrer');
+    expect(open.mock.calls[0][0]).toMatch(/^https?:\/\//);
   });
 });
