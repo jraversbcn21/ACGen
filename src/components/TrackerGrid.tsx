@@ -175,7 +175,11 @@ export function TrackerGrid<T extends string>({
   }, [linkMode, storedBaseUrl, setStoredBaseUrl]);
 
   const saveBaseUrl = () => {
-    setStoredBaseUrl(draftBaseUrl.trim().replace(/\/+$/, ''));
+    const normalized = draftBaseUrl.trim().replace(/\/+$/, '');
+    // An empty draft is treated as no-change (not a clear): writing '' here would
+    // race with the legacy-key migration effect, which resurrects the old URL as
+    // soon as it sees an empty stored value on the next mount.
+    if (normalized) setStoredBaseUrl(normalized);
     setShowUrlConfig(false);
   };
 
@@ -248,6 +252,9 @@ export function TrackerGrid<T extends string>({
           <button
             type="button"
             className="btn-ghost"
+            onMouseDown={() => {
+              urlConfigCancelled.current = true;
+            }}
             onClick={() => {
               urlConfigCancelled.current = false;
               setDraftBaseUrl(storedBaseUrl);

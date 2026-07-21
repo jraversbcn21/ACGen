@@ -1,103 +1,84 @@
-# Task 3: Hook `useRegressions` - Implementation Report
+# Task 3 report: Botón ⚙ + input inline de configuración
 
-## Summary
-Successfully implemented the `useRegressions` hook and comprehensive test suite following TDD methodology. All 12 tests passing, code committed.
+## Status: DONE
 
-## What Was Implemented
+Commit: `fae8f03` — "feat(tracker): gear button + inline input to configure the Jira base URL"
 
-Created two new files:
-1. **`src/hooks/useRegressions.ts`** - State management hook for regression tracking
-2. **`src/hooks/useRegressions.test.ts`** - Comprehensive test suite with 12 test cases
+## Files changed
 
-### Hook Exports
-- `PlatformId` type: Union of 'ios' | 'android' | 'webDesktop' | 'webMobile'
-- `PLATFORM_IDS` const: Readonly array of valid platform IDs
-- `ArchivedRegression` interface: Structure for archived board snapshots
-- `useRegressions()` function: Returns object with state and 7 action methods
+- `src/components/TrackerGrid.tsx`
+  - Added state: `showUrlConfig`, `draftBaseUrl`, `urlConfigCancelled` (ref), placed with the existing `useState` block.
+  - Added `saveBaseUrl()` handler right after the Task 2 legacy-migration `useEffect`.
+  - Added the `⚙` button inside `.sprint-tabs`, immediately after the SnapLink `<a>`, gated on `linkMode === 'jira'`. Color is `var(--warning)` when `baseUrl` is empty, `var(--text-3)` once configured. `onClick` resets `urlConfigCancelled.current = false`, seeds `draftBaseUrl` from `storedBaseUrl`, and toggles `showUrlConfig`.
+  - Added the inline input directly after `.sprint-tabs` closes (before the search-row div), gated on `linkMode === 'jira' && showUrlConfig`. Enter saves via `saveBaseUrl()`; Escape sets the cancel flag and hides the input; `onBlur` saves unless the cancel flag is set (and clears it either way).
+- `src/components/TrackerGrid.test.tsx` — added the 4 tests verbatim from the brief in a new `describe('TrackerGrid — configuración de URL base (⚙)')` block at the end of the file.
+- `src/i18n/es.json` / `src/i18n/en.json` — added `sprint.trackerUrlSettings` and `sprint.trackerUrlPlaceholder` immediately after `sprint.trackerUrlMissing` in both files, exact strings from the brief.
 
-### State Management
-- **Active Board**: 4 platforms × 20 rows × 6 columns grid (empty strings by default)
-- **Archived Snapshots**: Array of timestamped board copies with unique IDs
-- **Persistence**: localStorage key `'acgen_regressions'` with error recovery
-- **Actions**: updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived
+## TDD evidence
 
-## TDD Evidence
+**RED** (`npx vitest run src/components/TrackerGrid.test.tsx` before implementing):
+- 29 tests total, 3 failed, 26 passed.
+- Failures: the ⚙-opens-input/Enter-saves test, the save-activates-links test, and the Escape-cancels test — all failed with `Unable to find an element with the title: Configurar URL del tracker.` (button didn't exist yet), confirming they failed for the expected reason (feature missing, not a typo).
+- The url-mode scope-guard test (`el botón ⚙ no aparece en modo url`) passed immediately, as called out in the brief — no `⚙` button existed anywhere yet, so `queryByTitle` correctly found nothing in either mode. This is the expected/intended pass-from-the-start case, not a red flag.
 
-### Step 1: RED Test (Expected Failure)
-**Command:**
-```bash
-npm test -- src/hooks/useRegressions.test.ts
-```
+**GREEN** (`npx vitest run src/components/TrackerGrid.test.tsx src/i18n/keyParity.test.ts` after implementing):
+- All 31 tests passed (29 in TrackerGrid.test.tsx + 2 in keyParity.test.ts).
 
-**Output:**
-```
-FAIL src/hooks/useRegressions.test.ts
-Error: Failed to resolve import "./useRegressions" from "src/hooks/useRegressions.test.ts". Does the file exist?
-```
+**Full suite** (`npx vitest run`): 40 files, 385 tests, all passed — no regressions.
 
-**Why Expected:** Test file imports the hook module which doesn't exist yet.
+## Decisions / notes
 
-### Step 2: GREEN Test (All Passing)
-**Command:**
-```bash
-npm test -- src/hooks/useRegressions.test.ts
-```
+- Nothing in the brief was ambiguous; implemented exactly as specified, including keeping the `urlConfigCancelled` reset on the ⚙ `onClick` per the explicit instruction not to remove it.
+- i18n keys inserted at the exact position specified (right after `sprint.trackerUrlMissing`), keeping both dictionaries in lockstep so `keyParity.test.ts` stays green.
+- No other files needed changes; `storedBaseUrl`/`setStoredBaseUrl`/`baseUrl` from Tasks 1–2 were consumed as-is, not redeclared.
 
-**Output:**
-```
-✓ src/hooks/useRegressions.test.ts (12 tests) 192ms
+## Note on this file
 
-Test Files  1 passed (1)
-      Tests  12 passed (12)
-```
-
-**Test Coverage:**
-1. ✓ initializes with an empty 20x6 board per platform and no archived
-2. ✓ updateGridCell writes a value in the right platform
-3. ✓ persists to localStorage and hydrates on a fresh mount
-4. ✓ setTabGrid replaces the whole grid of one platform
-5. ✓ moveRow reorders rows
-6. ✓ moveRow ignores out-of-range indices
-7. ✓ archiveBoard snapshots the board, clears it and names it with today
-8. ✓ archiveBoard persists snapshot and cleared board
-9. ✓ deleteArchived removes a snapshot
-10. ✓ recovers from corrupt JSON in localStorage
-11. ✓ merges missing platforms when hydrating old data
-12. ✓ keeps changes in memory even when localStorage.setItem throws (quota exceeded)
-
-## Files Changed
-- **Created:** `src/hooks/useRegressions.ts` (130 lines)
-- **Created:** `src/hooks/useRegressions.test.ts` (186 lines)
-
-## Commit
-```
-fce1c1b feat(regression): useRegressions hook with single board + archived snapshots
-```
-
-## Self-Review Findings
-
-✓ All steps followed in order (RED → GREEN → COMMIT)
-✓ RED test failed for expected reason (module not found)
-✓ GREEN shows exactly 12/12 tests passing
-✓ Test output pristine (quota error mocked and suppressed)
-✓ No extraneous code (YAGNI principle observed)
-✓ Exports match brief exactly:
-  - PlatformId type ✓
-  - PLATFORM_IDS const (readonly array) ✓
-  - ArchivedRegression interface ✓
-  - useRegressions function ✓
-✓ Code transcribed faithfully from brief
-✓ localStorage error handling implemented
-✓ hydration with missing platforms handled
-✓ Date formatting uses local time (YYYY-MM-DD)
-✓ UUID generation via crypto.randomUUID()
-✓ All callbacks use useCallback for stability
-
-## Issues or Concerns
-None. Task completed successfully per specification.
+This report file previously contained a stale report for an unrelated "Task 3" (a `useRegressions` hook, commit `fce1c1b`) from a different/older numbering scheme. It has been overwritten with the correct report for this task (tracker base URL config, Task 3 of 4).
 
 ---
 
-**Status:** DONE
-**Test Results:** 12/12 passing
-**Duration:** ~20 minutes
+# Fix report: 3 review findings on Task 3 (⚙ URL config)
+
+## Status: DONE
+
+Commit: `fix(tracker): close on gear click, ignore empty drafts, cover the cancel flag`
+
+## Finding 1 — ⚙ reopened instead of closing (mousedown-before-click race)
+
+`src/components/TrackerGrid.tsx`: added an `onMouseDown` handler to the ⚙ button that sets `urlConfigCancelled.current = true`. This runs before the browser's implicit blur-on-mousedown, so when the input's `onBlur` fires next it sees the cancel flag and skips `saveBaseUrl()`. The subsequent `onClick` still resets the flag to `false` and toggles `showUrlConfig` unchanged — toggle semantics untouched, only the flag priming changed.
+
+## Finding 2 — empty draft could resurrect a deleted URL via legacy migration
+
+`src/components/TrackerGrid.tsx`, `saveBaseUrl()`: now only calls `setStoredBaseUrl(normalized)` when `normalized` is non-empty; otherwise it just closes the panel (`setShowUrlConfig(false)`) without touching storage. Added a comment explaining this is deliberate: an empty draft is "no-change", not a clear, because writing `''` would race with the Task 2 legacy-migration effect that repopulates the key from `acgen_jira_base_url` whenever it sees an empty stored value on mount. The legacy key itself is never read/written by this function.
+
+## Finding 3 — missing test coverage for the cancel flag / save-on-blur
+
+`src/components/TrackerGrid.test.tsx`: added 4 tests to the existing `describe('TrackerGrid — configuración de URL base (⚙)')` block (verbatim from the brief, with the `??` fallback in the mousedown test simplified to a single `getByPlaceholderText` call since the placeholder is static):
+- `blur con el input montado guarda el borrador`
+- `tras Escape y reabrir, un blur posterior vuelve a guardar`
+- `el ⚙ cierra el panel en la secuencia real del navegador (mousedown, blur, click)`
+- `guardar un borrador vacío no escribe en storage`
+
+## TDD evidence
+
+**RED** (tests added before the fix, `npx vitest run src/components/TrackerGrid.test.tsx`): 33 tests, 2 failed — `el ⚙ cierra el panel...` failed with the input still in the document (proving the reopen bug), and `guardar un borrador vacío...` failed with `localStorage` holding `'""'` instead of `null` (proving the resurrection bug). The other two new tests passed immediately since they don't touch the buggy paths, matching the brief's expectation that only 2 of the 4 new tests should fail pre-fix.
+
+**GREEN** (after both fixes):
+```
+npx vitest run src/components/TrackerGrid.test.tsx src/i18n/keyParity.test.ts
+```
+```
+ ✓ src/i18n/keyParity.test.ts (2 tests) 24ms
+ ✓ src/components/TrackerGrid.test.tsx (33 tests) 1994ms
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+```
+
+## Constraints honored
+
+- Zero new dependencies; `fireEvent` only, no `user-event`.
+- No new UI/behavior reaches `linkMode === 'url'` (all changes are inside the `linkMode === 'jira'` gated button/input).
+- `acgen_jira_base_url` (legacy key) is never written or deleted by any of these changes.
+- i18n files untouched — no new strings needed.

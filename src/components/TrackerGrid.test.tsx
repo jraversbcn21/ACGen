@@ -311,4 +311,48 @@ describe('TrackerGrid — configuración de URL base (⚙)', () => {
     fireEvent.blur(input);
     expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
   });
+
+  it('blur con el input montado guarda el borrador', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: 'https://jira.blur.com/' } });
+    fireEvent.blur(input);
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.blur.com');
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('tras Escape y reabrir, un blur posterior vuelve a guardar', () => {
+    renderGrid();
+    const gear = screen.getByTitle('Configurar URL del tracker');
+    fireEvent.click(gear);
+    fireEvent.keyDown(screen.getByPlaceholderText('https://jira.example.com'), { key: 'Escape' });
+    fireEvent.click(gear);
+    const reopened = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(reopened, { target: { value: 'https://jira.segunda.com' } });
+    fireEvent.blur(reopened);
+    expect(JSON.parse(localStorage.getItem('acgen_tracker_base_url')!)).toBe('https://jira.segunda.com');
+  });
+
+  it('el ⚙ cierra el panel en la secuencia real del navegador (mousedown, blur, click)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.previa.com'));
+    renderGrid();
+    const gear = screen.getByTitle('Configurar URL del tracker');
+    fireEvent.click(gear);
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.mouseDown(gear);
+    fireEvent.blur(input);
+    fireEvent.click(gear);
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
+
+  it('guardar un borrador vacío no escribe en storage', () => {
+    renderGrid();
+    fireEvent.click(screen.getByTitle('Configurar URL del tracker'));
+    const input = screen.getByPlaceholderText('https://jira.example.com');
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.blur(input);
+    expect(localStorage.getItem('acgen_tracker_base_url')).toBeNull();
+    expect(screen.queryByPlaceholderText('https://jira.example.com')).not.toBeInTheDocument();
+  });
 });
