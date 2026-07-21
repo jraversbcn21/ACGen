@@ -150,6 +150,7 @@ export function TrackerGrid<T extends string>({
 
   const getLinkUrl = (value: string): string | null => {
     if (linkMode === 'jira') {
+      if (!baseUrl) return null;
       const m = value.match(TICKET_KEY_PATTERN);
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
@@ -321,6 +322,7 @@ export function TrackerGrid<T extends string>({
                   const value = getCellValue(ri, ci);
                   const linkUrl = ci === 0 ? getLinkUrl(value) : null;
                   const ticketKey = linkMode === 'jira' && linkUrl ? value.match(TICKET_KEY_PATTERN)![1] : null;
+                  const unconfiguredTicket = ci === 0 && linkMode === 'jira' && !baseUrl && TICKET_KEY_PATTERN.test(value);
                   const linkName = ci === 0 && linkUrl ? getLinkName(value) : null;
                   const isFocused = focusedCell?.row === ri && focusedCell?.col === ci;
                   const showFocus = linkUrl && isFocused;
@@ -333,7 +335,7 @@ export function TrackerGrid<T extends string>({
                           window.open(linkUrl, '_blank', 'noopener,noreferrer');
                         }
                       }}
-                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : linkUrl ? t('regression.openLink') : undefined}
+                      title={ticketKey ? t('sprint.openTicket', { ticket: ticketKey }) : linkUrl ? t('regression.openLink') : unconfiguredTicket ? t('sprint.trackerUrlMissing') : undefined}
                       style={{
                         border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                         cursor: linkUrl ? 'pointer' : undefined,

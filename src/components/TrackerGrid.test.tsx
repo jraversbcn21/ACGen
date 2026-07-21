@@ -87,12 +87,32 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
   });
 
   it('jira cells keep showing the full value (no name overlay)', () => {
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
     const grid = makeGrid();
     grid[0][0] = 'ABC-123 Login roto';
     renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
     const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
     expect(input.style.color).toBe('var(--accent)');
     expect(input.closest('td')!.querySelector('span')).toBeNull();
+  });
+
+  it('sin URL base, la celda de ticket no es enlace ni abre nada con ctrl+click', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const input = screen.getByDisplayValue('ABC-123 Login roto') as HTMLInputElement;
+    fireEvent.click(input, { ctrlKey: true });
+    expect(open).not.toHaveBeenCalled();
+    expect(input.style.color).toBe('var(--text)');
+  });
+
+  it('sin URL base, la celda de ticket muestra el hint de configuración en el title', () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-123 Login roto';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    const td = screen.getByDisplayValue('ABC-123 Login roto').closest('td')!;
+    expect(td).toHaveAttribute('title', 'Configura la URL del tracker (⚙) para abrir tickets');
   });
 
   it('dragDisabled removes the drag handles', () => {

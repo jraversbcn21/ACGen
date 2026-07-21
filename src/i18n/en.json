@@ -167,6 +167,7 @@
   "sprint.namePlaceholder": "Sprint 25",
   "sprint.enCurso": "In progress",
   "sprint.openTicket": "Open {ticket} in tracker",
+  "sprint.trackerUrlMissing": "Set the tracker URL (⚙) to open tickets",
   "regression.openLink": "Open link",
   "landing.tool.regressiontracker": "Regression Tracker",
   "landing.tool.regressiontrackerDesc": "Regression tracking by platform",
