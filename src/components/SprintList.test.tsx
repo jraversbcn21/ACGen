@@ -24,6 +24,7 @@ function renderList(sprints: Sprint[], overrides: Partial<{
   onSelectSprint: (sprint: Sprint) => void;
   onDeleteSprint: (id: string) => void;
   onRenameSprint: (id: string, name: string) => void;
+  onArchiveSprint: (id: string) => void;
 }> = {}) {
   return render(
     <I18nProvider>
@@ -33,6 +34,7 @@ function renderList(sprints: Sprint[], overrides: Partial<{
         onSelectSprint={overrides.onSelectSprint ?? vi.fn()}
         onDeleteSprint={overrides.onDeleteSprint ?? vi.fn()}
         onRenameSprint={overrides.onRenameSprint ?? vi.fn()}
+        onArchiveSprint={overrides.onArchiveSprint ?? vi.fn()}
       />
     </I18nProvider>
   );
@@ -145,5 +147,50 @@ describe('SprintList renaming', () => {
     renderList([makeSprint({ name: 'Sprint 1' })], { onSelectSprint });
     fireEvent.click(screen.getByText('Editar'));
     expect(onSelectSprint).not.toHaveBeenCalled();
+  });
+});
+
+describe('SprintList archiving', () => {
+  it('shows an Archivar button only for active sprints, not archived ones', () => {
+    renderList([
+      makeSprint({ id: 'active', name: 'Sprint activo', archived: false }),
+      makeSprint({ id: 'archived', name: 'Sprint archivado', archived: true, endDate: '2026-07-21' }),
+    ]);
+    expect(screen.getAllByText('Archivar')).toHaveLength(1);
+  });
+
+  it('archives the sprint when the confirm dialog is accepted', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onArchiveSprint = vi.fn();
+    renderList([makeSprint({ id: 's1' })], { onArchiveSprint });
+    fireEvent.click(screen.getByText('Archivar'));
+    expect(onArchiveSprint).toHaveBeenCalledWith('s1');
+  });
+
+  it('does not archive when the confirm dialog is cancelled', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const onArchiveSprint = vi.fn();
+    renderList([makeSprint({ id: 's1' })], { onArchiveSprint });
+    fireEvent.click(screen.getByText('Archivar'));
+    expect(onArchiveSprint).not.toHaveBeenCalled();
+  });
+
+  it('clicking Archivar does not navigate into the sprint', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onSelectSprint = vi.fn();
+    renderList([makeSprint({ id: 's1' })], { onSelectSprint });
+    fireEvent.click(screen.getByText('Archivar'));
+    expect(onSelectSprint).not.toHaveBeenCalled();
+  });
+
+  it('archived sprints show a red circle icon and the singular Archivado badge', () => {
+    renderList([makeSprint({ id: 'a1', name: 'Sprint viejo', archived: true, endDate: '2026-07-21' })]);
+    expect(screen.getByText('🔴')).toBeInTheDocument();
+    expect(screen.getByText('Archivado')).toBeInTheDocument();
+  });
+
+  it('active sprints keep the green circle icon', () => {
+    renderList([makeSprint({ archived: false })]);
+    expect(screen.getByText('🟢')).toBeInTheDocument();
   });
 });

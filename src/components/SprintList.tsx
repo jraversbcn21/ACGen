@@ -9,9 +9,10 @@ interface SprintListProps {
   onSelectSprint: (sprint: Sprint) => void;
   onDeleteSprint: (id: string) => void;
   onRenameSprint: (id: string, name: string) => void;
+  onArchiveSprint: (id: string) => void;
 }
 
-export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint }: SprintListProps) {
+export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint, onArchiveSprint }: SprintListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(localTodayISO);
@@ -80,7 +81,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.active')}
           </h3>
           {active.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} />
           ))}
         </>
       )}
@@ -91,7 +92,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.archived')}
           </h3>
           {archived.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} />
           ))}
         </>
       )}
@@ -105,11 +106,12 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   );
 }
 
-function SprintCard({ sprint, onSelect, onDelete, onRename }: {
+function SprintCard({ sprint, onSelect, onDelete, onRename, onArchive }: {
   sprint: Sprint;
   onSelect: (s: Sprint) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  onArchive: (id: string) => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -138,7 +140,7 @@ function SprintCard({ sprint, onSelect, onDelete, onRename }: {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-          {sprint.archived ? '\uD83D\uDCE6' : '\uD83D\uDFE2'}
+          {sprint.archived ? '\uD83D\uDD34' : '\uD83D\uDFE2'}
         </span>
         <div>
           {isEditing ? (
@@ -166,17 +168,27 @@ function SprintCard({ sprint, onSelect, onDelete, onRename }: {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
           {sprint.archived && (
-            <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archived')}</span>
+            <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archivedBadge')}</span>
           )}
           {!sprint.archived && (
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={(e) => { e.stopPropagation(); setEditName(sprint.name); setIsEditing(true); }}
-              style={{ padding: '4px 10px', fontSize: 12 }}
-            >
-              {t('common.edit')}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={(e) => { e.stopPropagation(); setEditName(sprint.name); setIsEditing(true); }}
+                style={{ padding: '4px 10px', fontSize: 12 }}
+              >
+                {t('common.edit')}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={(e) => { e.stopPropagation(); if (confirm(t('sprint.archiveConfirm'))) onArchive(sprint.id); }}
+                style={{ padding: '4px 10px', fontSize: 12 }}
+              >
+                {t('common.archive')}
+              </button>
+            </>
           )}
           <button
             type="button"

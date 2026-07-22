@@ -61,7 +61,7 @@ Genera una lista de edge cases agrupados por categoria (valores frontera, estado
 Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido.
 
 ### Sprint Tracker
-Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints activos se pueden renombrar en linea (boton Editar) y se archivan con fecha de cierre, permaneciendo consultables. Funciona completamente offline. Los datos viven en localStorage.
+Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints activos se pueden renombrar en linea (boton Editar) y archivar directamente desde la lista (boton Archivar, con confirmacion): el sprint pasa a Archivado con su fecha de cierre y permanece consultable. Funciona completamente offline. Los datos viven en localStorage.
 
 ### Regression Tracker
 Tablero unico y permanente de regresiones ejecutadas, con 3 pestanas por plataforma (iOS, Android, WEB). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
@@ -83,7 +83,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (408 tests) |
+| Tests | Vitest + React Testing Library (414 tests) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

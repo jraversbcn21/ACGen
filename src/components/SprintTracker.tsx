@@ -80,6 +80,7 @@ export function SprintTracker() {
         onSelectSprint={handleSelectSprint}
         onDeleteSprint={deleteSprint}
         onRenameSprint={handleRenameSprint}
+        onArchiveSprint={archiveSprint}
       />
     </div>
   );
