@@ -850,6 +850,32 @@ td:hover .cell-open-link {
   pointer-events: auto;
 }
 
+/* Update banner */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.875rem;
+}
+.update-banner-reload {
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, .18);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 14px;
+  cursor: pointer;
+}
+
 /* Toast */
 .toast {
   position: fixed;

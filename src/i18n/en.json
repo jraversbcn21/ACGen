@@ -111,6 +111,8 @@
   "sprint.startDate": "Start",
   "sprint.archive": "Archive Sprint",
   "sprint.archived": "Archived",
+  "update.available": "A new version is available",
+  "update.reload": "Update",
   "sprint.active": "Active",
   "sprint.rowsOf": "of",
   "chain.sendTo": "Send to...",

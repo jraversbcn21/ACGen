@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 import { Header } from './components/Header';
+import { UpdateBanner } from './components/UpdateBanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LandingScreen } from './components/LandingScreen';
 import { AcceptanceCriteriaTool } from './components/AcceptanceCriteriaTool';
@@ -22,6 +23,7 @@ import { useProfile } from './components/ContextProfile';
 import { downloadJson, toFilename } from './utils/download';
 import { I18nProvider } from './i18n/I18nContext';
 import { requestPersistentStorage } from './services/persistence';
+import { useAppUpdate } from './hooks/useAppUpdate';
 import type { ViewType } from './config/constants';
 
 const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter'];
@@ -52,6 +54,7 @@ export default function App() {
   const [view, setView] = useState<ViewType>(getViewFromHash);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>(STORAGE_KEYS.THEME, 'light');
   const workspace = useWorkspace();
+  const { needRefresh, reload } = useAppUpdate();
 
   const [prefill, setPrefill] = useState<{ view: ViewType; text: string } | null>(null);
 
@@ -123,6 +126,7 @@ export default function App() {
   return (
     <I18nProvider>
     <div className="page">
+      <UpdateBanner visible={needRefresh} onReload={reload} />
       <Header
         provider={provider}
         model={model}
