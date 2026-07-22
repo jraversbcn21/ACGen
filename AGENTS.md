@@ -353,7 +353,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ## Known issues
 
-None outstanding as of 2026-07-16. The Fase 3 audit findings were fixed across PRs #2–#7 plus the PHONE-regex fix — the full trail is in "Evolution history" below and in each PR's description on GitHub. (The audit's meta-lesson stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
+None outstanding as of 2026-07-22. The full fix trail is in "Evolution history" below and in each PR's / commit's description on GitHub. Two deliberate, non-blocking caveats worth knowing: (1) the Regression Tracker's hover ↗ icon can capture the last ~22px of a long cell, and touch devices without `:hover` never see it; a configured tracker base URL can't be cleared from the UI (all deliberate — see the 2026-07-21 row). (2) The PWA update banner's very first appearance for a given user is a one-time transition: a browser still running the old `autoUpdate`-era service worker won't show the banner until one hard refresh (or closing every tab) swaps it for the current `prompt`-based worker; from then on the banner + "Actualizar" button work on every deploy. (The Fase 3 audit's meta-lesson still stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
 
 ## Evolution history
 

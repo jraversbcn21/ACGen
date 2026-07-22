@@ -28,7 +28,7 @@ ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
 - **Copia de seguridad**: exporta/importa todo el estado de la app en un único JSON, recordatorio automatico y copia continua a un fichero local (Chromium).
 - **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
-- **PWA**: instalable, con precache offline de los assets estaticos.
+- **PWA**: instalable, con precache offline de los assets estaticos. Cuando hay un nuevo despliegue, un aviso "Hay una nueva version disponible" permite recargar a la ultima version con un clic.
 - **Tema oscuro**: Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
 - **Text-to-speech**: Lectura en voz alta del razonamiento del modelo en Criterios y Bug Report.
 
@@ -64,7 +64,7 @@ Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/The
 Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints activos se pueden renombrar en linea (boton Editar) y archivar directamente desde la lista (boton Archivar, con confirmacion): el sprint pasa a Archivado con su fecha de cierre y permanece consultable. Funciona completamente offline. Los datos viven en localStorage.
 
 ### Regression Tracker
-Tablero unico y permanente de regresiones ejecutadas, con 3 pestanas por plataforma (iOS, Android, WEB). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
+Tablero unico y permanente de regresiones ejecutadas, con 2 pestanas por plataforma (APPS, WEB). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
 
 ### Copia de seguridad
 Como toda la app vive en el localStorage del navegador, un menu dedicado en la cabecera (icono 💾, junto al selector de workspace) permite protegerse frente a un borrado accidental de datos del navegador:
