@@ -8,9 +8,10 @@ interface SprintListProps {
   onAddSprint: (name: string, startDate: string) => void;
   onSelectSprint: (sprint: Sprint) => void;
   onDeleteSprint: (id: string) => void;
+  onRenameSprint: (id: string, name: string) => void;
 }
 
-export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint }: SprintListProps) {
+export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint }: SprintListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(localTodayISO);
@@ -79,7 +80,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.active')}
           </h3>
           {active.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} />
           ))}
         </>
       )}
@@ -90,7 +91,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.archived')}
           </h3>
           {archived.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} />
           ))}
         </>
       )}
@@ -104,9 +105,21 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   );
 }
 
-function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: (s: Sprint) => void; onDelete: (id: string) => void }) {
+function SprintCard({ sprint, onSelect, onDelete, onRename }: {
+  sprint: Sprint;
+  onSelect: (s: Sprint) => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+}) {
   const t = useT();
   const { lang } = useLang();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(sprint.name);
+
+  const saveRename = () => {
+    if (editName.trim()) onRename(sprint.id, editName.trim());
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -128,7 +141,24 @@ function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: 
           {sprint.archived ? '\uD83D\uDCE6' : '\uD83D\uDFE2'}
         </span>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{sprint.name}</div>
+          {isEditing ? (
+            <input
+              type="text"
+              className="field-input"
+              value={editName}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveRename();
+                if (e.key === 'Escape') setIsEditing(false);
+              }}
+              onBlur={saveRename}
+              style={{ fontSize: 15, fontWeight: 700, padding: '2px 6px' }}
+            />
+          ) : (
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{sprint.name}</div>
+          )}
           <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
             {formatDate(sprint.startDate, lang)} &mdash; {sprint.archived ? formatDate(sprint.endDate, lang) : t('sprint.enCurso')}
           </div>
@@ -137,6 +167,16 @@ function SprintCard({ sprint, onSelect, onDelete }: { sprint: Sprint; onSelect: 
       <div style={{ display: 'flex', gap: 8 }}>
           {sprint.archived && (
             <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archived')}</span>
+          )}
+          {!sprint.archived && (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={(e) => { e.stopPropagation(); setEditName(sprint.name); setIsEditing(true); }}
+              style={{ padding: '4px 10px', fontSize: 12 }}
+            >
+              {t('common.edit')}
+            </button>
           )}
           <button
             type="button"

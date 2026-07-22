@@ -6,7 +6,7 @@ import { useT } from '../i18n/I18nContext';
 import type { Sprint, TabId } from '../hooks/useSprints';
 
 export function SprintTracker() {
-  const { sprints, addSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
+  const { sprints, addSprint, updateSprint, archiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint } = useSprints();
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const selectedSprint = selectedSprintId ? sprints.find(s => s.id === selectedSprintId) ?? null : null;
   const t = useT();
@@ -40,6 +40,10 @@ export function SprintTracker() {
     if (!selectedSprint) return;
     moveRow(selectedSprint.id, tabId, fromRow, toRow);
   }, [selectedSprint, moveRow]);
+
+  const handleRenameSprint = useCallback((id: string, name: string) => {
+    updateSprint(id, { name });
+  }, [updateSprint]);
 
   if (selectedSprint) {
     return (
@@ -75,6 +79,7 @@ export function SprintTracker() {
         onAddSprint={addSprint}
         onSelectSprint={handleSelectSprint}
         onDeleteSprint={deleteSprint}
+        onRenameSprint={handleRenameSprint}
       />
     </div>
   );

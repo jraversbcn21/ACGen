@@ -19,10 +19,21 @@ function makeSprint(partial: Partial<Sprint>): Sprint {
   };
 }
 
-function renderList(sprints: Sprint[]) {
+function renderList(sprints: Sprint[], overrides: Partial<{
+  onAddSprint: (name: string, startDate: string) => void;
+  onSelectSprint: (sprint: Sprint) => void;
+  onDeleteSprint: (id: string) => void;
+  onRenameSprint: (id: string, name: string) => void;
+}> = {}) {
   return render(
     <I18nProvider>
-      <SprintList sprints={sprints} onAddSprint={vi.fn()} onSelectSprint={vi.fn()} onDeleteSprint={vi.fn()} />
+      <SprintList
+        sprints={sprints}
+        onAddSprint={overrides.onAddSprint ?? vi.fn()}
+        onSelectSprint={overrides.onSelectSprint ?? vi.fn()}
+        onDeleteSprint={overrides.onDeleteSprint ?? vi.fn()}
+        onRenameSprint={overrides.onRenameSprint ?? vi.fn()}
+      />
     </I18nProvider>
   );
 }
@@ -68,5 +79,71 @@ describe('SprintList dates', () => {
     fireEvent.click(screen.getByText('Nuevo Sprint'));
     const dateInput = document.getElementById('sprint-start') as HTMLInputElement;
     expect(dateInput.value).toBe('2026-07-20');
+  });
+});
+
+describe('SprintList renaming', () => {
+  it('shows an Editar button only for active sprints, not archived ones', () => {
+    renderList([
+      makeSprint({ id: 'active', name: 'Sprint activo', archived: false }),
+      makeSprint({ id: 'archived', name: 'Sprint archivado', archived: true }),
+    ]);
+    expect(screen.getAllByText('Editar')).toHaveLength(1);
+  });
+
+  it('clicking Editar reveals an input pre-filled with the current name', () => {
+    renderList([makeSprint({ name: 'Sprint 1' })]);
+    fireEvent.click(screen.getByText('Editar'));
+    const input = screen.getByDisplayValue('Sprint 1') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+  });
+
+  it('saves the new name on Enter', () => {
+    const onRenameSprint = vi.fn();
+    renderList([makeSprint({ id: 's1', name: 'Sprint 1' })], { onRenameSprint });
+    fireEvent.click(screen.getByText('Editar'));
+    const input = screen.getByDisplayValue('Sprint 1');
+    fireEvent.change(input, { target: { value: 'Sprint renombrado' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onRenameSprint).toHaveBeenCalledWith('s1', 'Sprint renombrado');
+  });
+
+  it('saves the new name on blur', () => {
+    const onRenameSprint = vi.fn();
+    renderList([makeSprint({ id: 's1', name: 'Sprint 1' })], { onRenameSprint });
+    fireEvent.click(screen.getByText('Editar'));
+    const input = screen.getByDisplayValue('Sprint 1');
+    fireEvent.change(input, { target: { value: 'Sprint renombrado' } });
+    fireEvent.blur(input);
+    expect(onRenameSprint).toHaveBeenCalledWith('s1', 'Sprint renombrado');
+  });
+
+  it('cancels without saving on Escape', () => {
+    const onRenameSprint = vi.fn();
+    renderList([makeSprint({ id: 's1', name: 'Sprint 1' })], { onRenameSprint });
+    fireEvent.click(screen.getByText('Editar'));
+    const input = screen.getByDisplayValue('Sprint 1');
+    fireEvent.change(input, { target: { value: 'Sprint renombrado' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(onRenameSprint).not.toHaveBeenCalled();
+    expect(screen.getByText('Sprint 1')).toBeInTheDocument();
+  });
+
+  it('does not save an empty name', () => {
+    const onRenameSprint = vi.fn();
+    renderList([makeSprint({ id: 's1', name: 'Sprint 1' })], { onRenameSprint });
+    fireEvent.click(screen.getByText('Editar'));
+    const input = screen.getByDisplayValue('Sprint 1');
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.blur(input);
+    expect(onRenameSprint).not.toHaveBeenCalled();
+    expect(screen.getByText('Sprint 1')).toBeInTheDocument();
+  });
+
+  it('clicking Editar does not navigate into the sprint', () => {
+    const onSelectSprint = vi.fn();
+    renderList([makeSprint({ name: 'Sprint 1' })], { onSelectSprint });
+    fireEvent.click(screen.getByText('Editar'));
+    expect(onSelectSprint).not.toHaveBeenCalled();
   });
 });
