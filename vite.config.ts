@@ -21,6 +21,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // El SW nuevo espera al click en "Actualizar" (skipWaiting gateado por
+        // mensaje), pero al activarse debe reclamar TODAS las páginas —
+        // incluidas las descontroladas tras un hard refresh — o controllerchange
+        // nunca dispara y el botón no recarga.
+        clientsClaim: true,
+        skipWaiting: false,
       },
     }),
   ],
