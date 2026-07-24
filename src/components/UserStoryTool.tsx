@@ -100,6 +100,9 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
           className="field-textarea"
           style={{ minHeight: 200 }}
         />
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+          {t('userstory.inputHint')}
+        </div>
         <div className="actions-bar">
           <ConfidentialToggle
             view="userstory"
