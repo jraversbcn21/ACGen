@@ -233,9 +233,16 @@ function hasRegressionData(): boolean {
     if (!raw) return false;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return false;
-    const { board, archived } = parsed as Record<string, unknown>;
+    const { board, archived, regressions } = parsed as Record<string, unknown>;
 
     if (Array.isArray(archived) && archived.length > 0) return true;
+
+    if (typeof regressions === 'object' && regressions !== null) {
+      const hasVersionedRegression = Object.values(regressions).some(
+        (list) => Array.isArray(list) && list.length > 0
+      );
+      if (hasVersionedRegression) return true;
+    }
 
     if (typeof board !== 'object' || board === null) return false;
     return Object.values(board).some((grid) => {

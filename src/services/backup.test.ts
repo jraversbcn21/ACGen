@@ -265,7 +265,7 @@ describe('hasSignificantData', () => {
     expect(hasSignificantData()).toBe(false);
   });
 
-  it('is false with workspaces that have no artifacts, an all-empty regression board, and empty histories', () => {
+  it('is false with workspaces that have no artifacts, an all-empty regression board (legacy shape), and empty histories', () => {
     localStorage.setItem('acgen_workspaces', JSON.stringify([{ id: 'w1', name: 'W', createdAt: 1, artifacts: [] }]));
     localStorage.setItem(
       'acgen_regressions',
@@ -299,7 +299,7 @@ describe('hasSignificantData', () => {
     expect(hasSignificantData()).toBe(true);
   });
 
-  it('is true when the regression board has a non-empty cell', () => {
+  it('is true when the regression board has a non-empty cell (legacy shape — still counts)', () => {
     const board = {
       ios: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
       android: Array.from({ length: 20 }, () => Array.from({ length: 6 }, () => '')),
@@ -311,7 +311,7 @@ describe('hasSignificantData', () => {
     expect(hasSignificantData()).toBe(true);
   });
 
-  it('is true when the regression tracker has at least one archived entry', () => {
+  it('is true when the regression tracker has at least one archived entry (legacy shape — still counts)', () => {
     localStorage.setItem(
       'acgen_regressions',
       JSON.stringify({
@@ -325,6 +325,33 @@ describe('hasSignificantData', () => {
     );
 
     expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is true when there is at least one versioned regression (new shape, no legacy board)', () => {
+    localStorage.setItem(
+      'acgen_regressions',
+      JSON.stringify({
+        regressions: {
+          ios: [{ id: 'r1', version: '1.0.0', url: '', fecha: '2026-08-10', tickets: [] }],
+          webDesktop: [],
+        },
+        archived: [],
+      }),
+    );
+
+    expect(hasSignificantData()).toBe(true);
+  });
+
+  it('is false with empty versioned-regression lists and no legacy board/archived (new shape)', () => {
+    localStorage.setItem(
+      'acgen_regressions',
+      JSON.stringify({
+        regressions: { ios: [], webDesktop: [] },
+        archived: [],
+      }),
+    );
+
+    expect(hasSignificantData()).toBe(false);
   });
 
   it('is true when a history (criteria or bug) has at least one entry', () => {
