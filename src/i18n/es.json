@@ -183,8 +183,6 @@
   "landing.tool.regressiontrackerDesc": "Seguimiento de regresiones por plataforma",
   "sidebar.regression": "Regression",
   "regression.title": "Regression Tracker",
-  "regression.archive": "Archivar Regresión",
-  "regression.archiveConfirm": "¿Archivar la regresión actual? Se guardará en el historial y el tablero se vaciará.",
   "regression.archivedList": "Archivadas",
   "regression.archivedBadge": "Archivada",
   "regression.deleteConfirm": "¿Eliminar esta regresión archivada?",

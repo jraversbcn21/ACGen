@@ -183,8 +183,6 @@
   "landing.tool.regressiontrackerDesc": "Regression tracking by platform",
   "sidebar.regression": "Regression",
   "regression.title": "Regression Tracker",
-  "regression.archive": "Archive Regression",
-  "regression.archiveConfirm": "Archive the current regression? It will be saved to history and the board will be cleared.",
   "regression.archivedList": "Archived",
   "regression.archivedBadge": "Archived",
   "regression.deleteConfirm": "Delete this archived regression?",
