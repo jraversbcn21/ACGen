@@ -48,7 +48,7 @@ export interface ArchivedRegressionEntry {
 export type ArchivedItem = ArchivedRegression | ArchivedRegressionEntry;
 
 export function isLegacyArchived(item: ArchivedItem): item is ArchivedRegression {
-  return 'board' in item;
+  return typeof item === 'object' && item !== null && 'board' in item;
 }
 
 interface RegressionState {
@@ -100,9 +100,11 @@ export function useRegressions() {
       if (!raw) return { regressions: emptyRegressions(), archived: [] };
       const parsed = JSON.parse(raw);
       const archived: ArchivedItem[] = Array.isArray(parsed.archived)
-        ? parsed.archived.map((a: ArchivedItem) =>
-            isLegacyArchived(a) ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } } : a
-          )
+        ? parsed.archived
+            .filter((a: unknown) => typeof a === 'object' && a !== null)
+            .map((a: ArchivedItem) =>
+              isLegacyArchived(a) ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } } : a
+            )
         : [];
       return {
         ...(parsed.board ? { board: parsed.board } : {}),

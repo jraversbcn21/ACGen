@@ -5,7 +5,7 @@ import {
   useRegressions, PLATFORM_IDS, INITIAL_TICKET_ROWS,
   ticketRowHasContent, filledTicketCount, isLegacyArchived,
 } from './useRegressions';
-import type { Regression, ArchivedRegressionEntry } from './useRegressions';
+import type { Regression, ArchivedRegression, ArchivedRegressionEntry } from './useRegressions';
 
 beforeEach(() => {
   localStorage.clear();
@@ -160,6 +160,19 @@ describe('useRegressions (versioned)', () => {
     expect(stored.board).toEqual(legacyBoard);
     expect(stored.archived[0].name).toBe('Regresión 2026-07-18');
     expect(stored.regressions.ios).toHaveLength(1);
+  });
+
+  it('hydration survives a malformed entry (null) in archived without wiping the legacy board or the other entries', () => {
+    const legacyBoard = { ios: [['celda vieja']], webDesktop: [] };
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      board: legacyBoard,
+      archived: [null, { id: 'old-1', name: 'Regresión 2026-07-18', archivedAt: '2026-07-18', board: { ios: [['x']] } }],
+    }));
+    const { result } = renderHook(() => useRegressions());
+    // La entrada basura no debe tumbar la hidratación ni borrar el board legacy
+    expect(result.current.archived).toHaveLength(1);
+    expect(isLegacyArchived(result.current.archived[0])).toBe(true);
+    expect((result.current.archived[0] as ArchivedRegression).name).toBe('Regresión 2026-07-18');
   });
 
   it('recovers from corrupt JSON with an empty state', () => {
