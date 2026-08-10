@@ -22,7 +22,7 @@ ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el
 - **Casos Limite**: Genera edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos, red).
 - **Conversor de Formatos**: Convierte texto entre Gherkin, Markdown, Jira wiki, Azure DevOps y texto plano.
 - **Sprint Tracker**: Hoja de calculo offline por sprint con 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico.
-- **Regression Tracker**: Tablero unico de regresiones con 2 pestanas por plataforma (APPS, WEB). Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado con snapshot al historial (solo lectura).
+- **Regression Tracker**: Lista de regresiones versionadas (Version + URL + Fecha) por plataforma (APPS, WEB), cada una desplegable en una tabla de tickets (Ticket, Fecha, Prioridad, Creador, Squad, Status) con columnas redimensionables. Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado individual por regresion, con historial mixto (los snapshots antiguos del tablero libre se siguen abriendo en solo lectura).
 - **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
 - **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
@@ -64,7 +64,7 @@ Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/The
 Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints activos se pueden renombrar en linea (boton Editar) y archivar directamente desde la lista (boton Archivar, con confirmacion): el sprint pasa a Archivado con su fecha de cierre y permanece consultable. Funciona completamente offline. Los datos viven en localStorage.
 
 ### Regression Tracker
-Tablero unico y permanente de regresiones ejecutadas, con 2 pestanas por plataforma (APPS, WEB). Cada fila registra una regresion: enlace, version, fecha, notas y status. La columna de enlace acepta cualquier URL (SharePoint, Zephyr, Confluence...) pegada junto a un nombre — en reposo se muestra solo el nombre, y al hacer clic para editar aparece el valor completo; Ctrl+click abre siempre la URL exacta. "Archivar Regresion" guarda una copia del tablero en el historial y lo vacia; el historial se consulta en modo solo lectura. Comparte el componente de hoja de calculo (`TrackerGrid`) con el Sprint Tracker. Funciona completamente offline.
+Lista de regresiones versionadas por plataforma (APPS, WEB): cada regresion se da de alta con Version, URL y Fecha, y se despliega en una tabla de tickets (Ticket, Fecha, Prioridad, Creador, Squad, Status) que se pueden anadir o borrar (con confirmacion solo si la fila tiene contenido); las columnas se redimensionan arrastrando el borde de la cabecera y el ancho elegido se recuerda. La columna de enlace acepta "Nombre - URL" o una URL suelta — en reposo se muestra solo el nombre, y al enfocar la celda aparece el valor completo; Ctrl+click (o el icono ↗) abre siempre la URL exacta. Cada regresion se archiva de forma individual a un historial de solo lectura, independiente por pestana; el historial es mixto y conserva ademas los snapshots del antiguo tablero libre 20×6, que se siguen abriendo en modo solo lectura. Funciona completamente offline.
 
 ### Copia de seguridad
 Como toda la app vive en el localStorage del navegador, un menu dedicado en la cabecera (icono 💾, junto al selector de workspace) permite protegerse frente a un borrado accidental de datos del navegador:
@@ -83,7 +83,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (421 tests) |
+| Tests | Vitest + React Testing Library (439 tests) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

@@ -5,12 +5,33 @@ const STORAGE_KEY = 'acgen_regressions';
 
 // 'ios' es el id histórico de la pestaña APPS: se conserva para que los datos
 // existentes en localStorage sobrevivan al renombrado (mismo criterio que
-// 'webDesktop' → "WEB"). Los datos de pestañas retiradas quedan huérfanos en
-// acgen_regressions pero intactos.
+// 'webDesktop' → "WEB").
 export type PlatformId = 'ios' | 'webDesktop';
 
 export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'webDesktop'];
 
+export type TicketField = 'ticket' | 'fecha' | 'prioridad' | 'creador' | 'squad' | 'status';
+
+export interface RegressionTicket {
+  id: string;
+  ticket: string;
+  fecha: string;
+  prioridad: string;
+  creador: string;
+  squad: string;
+  status: string;
+}
+
+export interface Regression {
+  id: string;
+  version: string;
+  url: string;
+  fecha: string;
+  tickets: RegressionTicket[];
+}
+
+// Formato antiguo del historial (snapshot de tablero completo): se conserva
+// para que las entradas pre-existentes sigan abriéndose con el grid readonly.
 export interface ArchivedRegression {
   id: string;
   name: string;
@@ -18,9 +39,57 @@ export interface ArchivedRegression {
   board: Record<PlatformId, string[][]>;
 }
 
+export interface ArchivedRegressionEntry {
+  id: string;
+  archivedAt: string;
+  platform: PlatformId;
+  regression: Regression;
+}
+
+export type ArchivedItem = ArchivedRegression | ArchivedRegressionEntry;
+
+export function isLegacyArchived(item: ArchivedItem): item is ArchivedRegression {
+  return typeof item === 'object' && item !== null && 'board' in item;
+}
+
 interface RegressionState {
-  board: Record<PlatformId, string[][]>;
-  archived: ArchivedRegression[];
+  // LEGACY: el grid libre pre-versionado. Se hidrata y re-persiste intacto
+  // (huérfano-pero-intacto) pero nunca se renderiza.
+  board?: Record<PlatformId, string[][]>;
+  regressions: Record<PlatformId, Regression[]>;
+  archived: ArchivedItem[];
+}
+
+export const INITIAL_TICKET_ROWS = 3;
+
+function emptyTicket(): RegressionTicket {
+  return { id: crypto.randomUUID(), ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' };
+}
+
+// Rellena campos añadidos después de que existieran datos guardados (p.ej.
+// `status`, incorporado tras el primer despliegue del modelo versionado).
+function normalizeTicket(t: Partial<RegressionTicket>): RegressionTicket {
+  return {
+    id: t.id ?? crypto.randomUUID(),
+    ticket: t.ticket ?? '',
+    fecha: t.fecha ?? '',
+    prioridad: t.prioridad ?? '',
+    creador: t.creador ?? '',
+    squad: t.squad ?? '',
+    status: t.status ?? '',
+  };
+}
+
+// Tolerante a entradas malformadas: nunca lanza (una excepción aquí caería en
+// el catch de hidratación y vaciaría TODO el estado — ver el guard de archived).
+function normalizeRegression(r: Partial<Regression> | null | undefined): Regression {
+  return {
+    id: r?.id ?? crypto.randomUUID(),
+    version: r?.version ?? '',
+    url: r?.url ?? '',
+    fecha: r?.fecha ?? '',
+    tickets: Array.isArray(r?.tickets) ? r.tickets.map(normalizeTicket) : [],
+  };
 }
 
 function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
@@ -28,16 +97,19 @@ function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
 }
 
 function emptyBoard(): Record<PlatformId, string[][]> {
-  return {
-    ios: createEmptyGrid(),
-    webDesktop: createEmptyGrid(),
-  };
+  return { ios: createEmptyGrid(), webDesktop: createEmptyGrid() };
 }
 
-export function boardHasContent(board: Record<PlatformId, string[][]>): boolean {
-  // Solo las pestañas activas: las claves huérfanas de pestañas retiradas no
-  // deben habilitar el archivado de un board visualmente vacío.
-  return PLATFORM_IDS.some((p) => (board[p] || []).some((row) => row.some((cell) => cell.trim() !== '')));
+function emptyRegressions(): Record<PlatformId, Regression[]> {
+  return { ios: [], webDesktop: [] };
+}
+
+export function ticketRowHasContent(t: RegressionTicket): boolean {
+  return [t.ticket, t.fecha, t.prioridad, t.creador, t.squad, t.status].some((v) => v.trim() !== '');
+}
+
+export function filledTicketCount(r: Regression): number {
+  return r.tickets.filter(ticketRowHasContent).length;
 }
 
 function persist(state: RegressionState): void {
@@ -52,20 +124,28 @@ export function useRegressions() {
   const [state, setState] = useState<RegressionState>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { board: emptyBoard(), archived: [] };
+      if (!raw) return { regressions: emptyRegressions(), archived: [] };
       const parsed = JSON.parse(raw);
-      const archived: ArchivedRegression[] = Array.isArray(parsed.archived)
-        ? parsed.archived.map((a: ArchivedRegression) => ({
-            ...a,
-            board: { ...emptyBoard(), ...(a.board || {}) },
-          }))
+      const archived: ArchivedItem[] = Array.isArray(parsed.archived)
+        ? parsed.archived
+            .filter((a: unknown) => typeof a === 'object' && a !== null)
+            .map((a: ArchivedItem) =>
+              isLegacyArchived(a)
+                ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } }
+                : { ...a, regression: normalizeRegression(a.regression) }
+            )
         : [];
+      const regressions = { ...emptyRegressions(), ...(parsed.regressions || {}) };
+      for (const p of PLATFORM_IDS) {
+        regressions[p] = (regressions[p] || []).map(normalizeRegression);
+      }
       return {
-        board: { ...emptyBoard(), ...(parsed.board || {}) },
+        ...(parsed.board ? { board: parsed.board } : {}),
+        regressions,
         archived,
       };
     } catch {
-      return { board: emptyBoard(), archived: [] };
+      return { regressions: emptyRegressions(), archived: [] };
     }
   });
 
@@ -78,48 +158,98 @@ export function useRegressions() {
     persist(state);
   }, [state]);
 
-  const updateGridCell = useCallback((tab: PlatformId, row: number, col: number, value: string) => {
-    setState((prev) => {
-      const grid = prev.board[tab] || [];
-      const newGrid = grid.map((r, ri) => {
-        if (ri !== row) return r;
-        const newRow = [...r];
-        while (newRow.length <= col) newRow.push('');
-        newRow[col] = value;
-        return newRow;
-      });
-      return { ...prev, board: { ...prev.board, [tab]: newGrid } };
-    });
+  const mapPlatform = (
+    prev: RegressionState,
+    platform: PlatformId,
+    fn: (list: Regression[]) => Regression[]
+  ): RegressionState => ({
+    ...prev,
+    regressions: { ...prev.regressions, [platform]: fn(prev.regressions[platform] || []) },
+  });
+
+  const addRegression = useCallback((platform: PlatformId, data: { version: string; url: string; fecha: string }) => {
+    const version = data.version.trim();
+    if (!version) return;
+    const regression: Regression = {
+      id: crypto.randomUUID(),
+      version,
+      url: data.url.trim(),
+      fecha: data.fecha,
+      tickets: Array.from({ length: INITIAL_TICKET_ROWS }, () => emptyTicket()),
+    };
+    setState((prev) => mapPlatform(prev, platform, (list) => [regression, ...list]));
   }, []);
 
-  const setTabGrid = useCallback((tab: PlatformId, grid: string[][]) => {
-    setState((prev) => ({ ...prev, board: { ...prev.board, [tab]: grid } }));
+  const updateRegression = useCallback(
+    (platform: PlatformId, id: string, patch: Partial<Pick<Regression, 'version' | 'url' | 'fecha'>>) => {
+      setState((prev) =>
+        mapPlatform(prev, platform, (list) =>
+          list.map((r) => {
+            if (r.id !== id) return r;
+            const next = { ...r, ...patch };
+            // Una versión en blanco al editar no borra la existente
+            if (patch.version !== undefined && !patch.version.trim()) next.version = r.version;
+            else next.version = next.version.trim();
+            if (patch.url !== undefined) next.url = patch.url.trim();
+            return next;
+          })
+        )
+      );
+    },
+    []
+  );
+
+  const deleteRegression = useCallback((platform: PlatformId, id: string) => {
+    setState((prev) => mapPlatform(prev, platform, (list) => list.filter((r) => r.id !== id)));
   }, []);
 
-  const moveRow = useCallback((tab: PlatformId, fromRow: number, toRow: number) => {
-    setState((prev) => {
-      const grid = prev.board[tab] || [];
-      if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return prev;
-      if (fromRow === toRow) return prev;
-      const newGrid = [...grid];
-      const [movedRow] = newGrid.splice(fromRow, 1);
-      const targetIndex = fromRow < toRow ? toRow - 1 : toRow;
-      newGrid.splice(targetIndex, 0, movedRow);
-      return { ...prev, board: { ...prev.board, [tab]: newGrid } };
-    });
+  const addTicket = useCallback((platform: PlatformId, regressionId: string) => {
+    setState((prev) =>
+      mapPlatform(prev, platform, (list) =>
+        list.map((r) => (r.id === regressionId ? { ...r, tickets: [...r.tickets, emptyTicket()] } : r))
+      )
+    );
   }, []);
 
-  const archiveBoard = useCallback(() => {
-    const date = localTodayISO();
+  const updateTicket = useCallback(
+    (platform: PlatformId, regressionId: string, ticketId: string, field: TicketField, value: string) => {
+      setState((prev) =>
+        mapPlatform(prev, platform, (list) =>
+          list.map((r) =>
+            r.id === regressionId
+              ? { ...r, tickets: r.tickets.map((t) => (t.id === ticketId ? { ...t, [field]: value } : t)) }
+              : r
+          )
+        )
+      );
+    },
+    []
+  );
+
+  const deleteTicket = useCallback((platform: PlatformId, regressionId: string, ticketId: string) => {
+    setState((prev) =>
+      mapPlatform(prev, platform, (list) =>
+        list.map((r) =>
+          r.id === regressionId ? { ...r, tickets: r.tickets.filter((t) => t.id !== ticketId) } : r
+        )
+      )
+    );
+  }, []);
+
+  const archiveRegression = useCallback((platform: PlatformId, id: string) => {
+    const archivedAt = localTodayISO();
     setState((prev) => {
-      if (!boardHasContent(prev.board)) return prev;
-      const snapshot: ArchivedRegression = {
-        id: crypto.randomUUID(),
-        name: `Regresión ${date}`,
-        archivedAt: date,
-        board: prev.board,
+      const regression = (prev.regressions[platform] || []).find((r) => r.id === id);
+      if (!regression) return prev;
+      const entry: ArchivedRegressionEntry = { id: crypto.randomUUID(), archivedAt, platform, regression };
+      return {
+        ...prev,
+        regressions: {
+          ...prev.regressions,
+          [platform]: prev.regressions[platform].filter((r) => r.id !== id),
+        },
+        archived: [entry, ...prev.archived],
       };
-      return { board: emptyBoard(), archived: [snapshot, ...prev.archived] };
     });
   }, []);
 
@@ -127,5 +257,16 @@ export function useRegressions() {
     setState((prev) => ({ ...prev, archived: prev.archived.filter((a) => a.id !== id) }));
   }, []);
 
-  return { board: state.board, archived: state.archived, updateGridCell, setTabGrid, moveRow, archiveBoard, deleteArchived };
+  return {
+    regressions: state.regressions,
+    archived: state.archived,
+    addRegression,
+    updateRegression,
+    deleteRegression,
+    addTicket,
+    updateTicket,
+    deleteTicket,
+    archiveRegression,
+    deleteArchived,
+  };
 }

@@ -11,9 +11,15 @@ function renderTracker() {
   );
 }
 
+function createRegression(version = '1.0.0', url = 'Excel - https://sheets.example.com/r/1') {
+  fireEvent.click(screen.getByText('+ Nueva regresión'));
+  fireEvent.change(screen.getByLabelText('Versión'), { target: { value: version } });
+  fireEvent.change(screen.getByLabelText('URL'), { target: { value: url } });
+  fireEvent.click(screen.getByText('Crear'));
+}
+
 beforeEach(() => {
   localStorage.clear();
-  // Fija el idioma: jsdom arranca con navigator.language en-US y los textos asertados son en español
   localStorage.setItem('acgen_lang', JSON.stringify('es'));
 });
 
@@ -21,94 +27,100 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('RegressionTracker', () => {
-  it('renders the 2 platform tabs and the regression headers', () => {
+describe('RegressionTracker (versioned)', () => {
+  it('renders the 2 platform tabs and the empty state', () => {
     renderTracker();
     expect(screen.getByText('APPS')).toBeInTheDocument();
     expect(screen.getByText('WEB')).toBeInTheDocument();
-    expect(screen.queryByText('iOS')).not.toBeInTheDocument();
-    expect(screen.queryByText('Android')).not.toBeInTheDocument();
-    for (const h of ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status']) {
-      expect(screen.getByText(h)).toBeInTheDocument();
-    }
+    expect(screen.getByText(/No hay regresiones/)).toBeInTheDocument();
   });
 
-  it('a "Nombre - URL" cell becomes a link that ctrl+click opens', () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+  it('creates a regression from the inline form (Crear disabled without version)', () => {
     renderTracker();
-    const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Smoke Login - https://zephyr.example.com/plan/9' } });
-    const cell = screen.getByDisplayValue('Smoke Login - https://zephyr.example.com/plan/9');
-    // En reposo la celda muestra solo el nombre; el valor completo sigue en el input
-    expect(screen.getByText('Smoke Login')).toBeInTheDocument();
-    expect((cell as HTMLInputElement).style.color).toBe('transparent');
-    fireEvent.click(cell, { ctrlKey: true });
-    expect(open).toHaveBeenCalledWith('https://zephyr.example.com/plan/9', '_blank', 'noopener,noreferrer');
+    fireEvent.click(screen.getByText('+ Nueva regresión'));
+    const createBtn = screen.getByText('Crear') as HTMLButtonElement;
+    expect(createBtn.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Versión'), { target: { value: '1.0.0' } });
+    expect(createBtn.disabled).toBe(false);
+    fireEvent.click(createBtn);
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    expect(screen.getByText('0 tickets')).toBeInTheDocument();
+    // El formulario se cierra tras crear
+    expect(screen.queryByLabelText('Versión')).not.toBeInTheDocument();
   });
 
-  it('each platform keeps its own grid', () => {
+  it('each platform keeps its own regression list', () => {
     renderTracker();
-    const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'solo en APPS' } });
+    createRegression('1.0.0');
     fireEvent.click(screen.getByText('WEB'));
-    expect(screen.queryByDisplayValue('solo en APPS')).not.toBeInTheDocument();
+    expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
+    expect(screen.getByText(/No hay regresiones/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('APPS'));
-    expect(screen.getByDisplayValue('solo en APPS')).toBeInTheDocument();
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
   });
 
-  it('archiving snapshots the board, clears it and shows the archived list button', () => {
+  it('archiving a card (with confirm) moves it to the mixed history labeled PLATFORM · version', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderTracker();
-    const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'checkout v9' } });
-    fireEvent.click(screen.getByText('Archivar Regresión'));
-    expect(screen.queryByDisplayValue('checkout v9')).not.toBeInTheDocument();
-    const listButton = screen.getByText(/Archivadas \(1\)/);
-    fireEvent.click(listButton);
-    expect(screen.getByText(/^Regresión \d{4}-\d{2}-\d{2}$/)).toBeInTheDocument();
-  });
-
-  it('an archived snapshot opens read-only with its data', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderTracker();
-    const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'checkout v9' } });
-    fireEvent.click(screen.getByText('Archivar Regresión'));
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByText('Archivar'));
+    expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText(/Archivadas \(1\)/));
-    fireEvent.click(screen.getByText(/^Regresión \d{4}-\d{2}-\d{2}$/));
-    const cell = screen.getByDisplayValue('checkout v9');
-    expect(cell).toHaveAttribute('readonly');
-    expect(screen.queryByText('Archivar Regresión')).not.toBeInTheDocument();
+    expect(screen.getByText('APPS · 1.0.0')).toBeInTheDocument();
   });
 
-  it('formats the archived date per the app language without UTC shift', () => {
-    localStorage.setItem('acgen_lang', JSON.stringify('en'));
+  it('cancelling the archive confirm keeps the card', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderTracker();
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByText('Archivar'));
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    expect(screen.queryByText(/Archivadas/)).not.toBeInTheDocument();
+  });
+
+  it('deleting a card (with confirm) removes it', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderTracker();
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByText('Eliminar'));
+    expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
+  });
+
+  it('a new-format archived entry opens as a read-only expanded card', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderTracker();
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByText('Archivar'));
+    fireEvent.click(screen.getByText(/Archivadas \(1\)/));
+    fireEvent.click(screen.getByText('APPS · 1.0.0'));
+    expect(screen.getByText('Prioridad')).toBeInTheDocument(); // tabla desplegada
+    expect(screen.queryByText('Archivar')).not.toBeInTheDocument(); // readOnly
+    expect(screen.getByText('Archivada')).toBeInTheDocument(); // badge
+  });
+
+  it('expanding a card and editing a ticket cell round-trips through the real hook to localStorage', () => {
+    renderTracker();
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    const firstRowInputs = document.querySelectorAll('tbody tr:first-child input');
+    fireEvent.change(firstRowInputs[0], { target: { value: 'PROJ-42' } });
+
+    const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+    expect(stored.regressions.ios[0].tickets[0].ticket).toBe('PROJ-42');
+  });
+
+  it('a legacy archived snapshot still opens with the read-only grid', () => {
     localStorage.setItem('acgen_regressions', JSON.stringify({
-      board: {},
-      archived: [{ id: 'a1', name: 'Regresión 2026-07-20', archivedAt: '2026-07-20', board: {} }],
+      archived: [{
+        id: 'old-1', name: 'Regresión 2026-07-18', archivedAt: '2026-07-18',
+        board: { ios: [['Smoke - https://z.example/p/1', 'v9', '', '', '', '']], webDesktop: [] },
+      }],
     }));
     renderTracker();
-    fireEvent.click(screen.getByText(/Archived \(1\)/));
-    expect(screen.getByText('07/20/2026')).toBeInTheDocument();
-  });
-
-  it('the archive button is disabled while the board is empty', () => {
-    renderTracker();
-    const btn = screen.getByText('Archivar Regresión') as HTMLButtonElement;
-    expect(btn).toBeDisabled();
-    const input = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'checkout v9' } });
-    expect(btn).not.toBeDisabled();
-  });
-
-  it('deleting an archived snapshot shows the empty state', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderTracker();
-    const firstCell = document.querySelector('tbody input') as HTMLInputElement;
-    fireEvent.change(firstCell, { target: { value: 'checkout v9' } });
-    fireEvent.click(screen.getByText('Archivar Regresión'));
     fireEvent.click(screen.getByText(/Archivadas \(1\)/));
-    fireEvent.click(screen.getByText('Eliminar'));
-    expect(screen.getByText('No hay regresiones archivadas.')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Regresión 2026-07-18'));
+    // El grid legacy readonly renderiza sus cabeceras hardcodeadas
+    expect(screen.getByText('Notas')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Smoke - https://z.example/p/1')).toBeInTheDocument();
   });
 });

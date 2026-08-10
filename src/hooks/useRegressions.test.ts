@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useRegressions, PLATFORM_IDS } from './useRegressions';
+import {
+  useRegressions, PLATFORM_IDS, INITIAL_TICKET_ROWS,
+  ticketRowHasContent, filledTicketCount, isLegacyArchived,
+} from './useRegressions';
+import type { Regression, ArchivedRegression, ArchivedRegressionEntry } from './useRegressions';
 
 beforeEach(() => {
   localStorage.clear();
@@ -11,190 +15,234 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('useRegressions', () => {
-  it('initializes with an empty 20x6 board per platform and no archived', () => {
+function addOne(result: { current: ReturnType<typeof useRegressions> }, version = '1.0.0') {
+  act(() => {
+    result.current.addRegression('ios', { version, url: 'https://excel.example/reg', fecha: '2026-08-10' });
+  });
+  return result.current.regressions.ios[0];
+}
+
+describe('useRegressions (versioned)', () => {
+  it('initializes with empty lists per platform and no archived', () => {
     const { result } = renderHook(() => useRegressions());
     expect(PLATFORM_IDS).toEqual(['ios', 'webDesktop']);
-    for (const p of PLATFORM_IDS) {
-      expect(result.current.board[p]).toHaveLength(20);
-      expect(result.current.board[p][0]).toHaveLength(6);
-      expect(result.current.board[p][0][0]).toBe('');
-    }
+    expect(result.current.regressions.ios).toEqual([]);
+    expect(result.current.regressions.webDesktop).toEqual([]);
     expect(result.current.archived).toEqual([]);
   });
 
-  it('updateGridCell writes a value in the right platform', () => {
+  it('addRegression prepends a regression with 3 empty tickets, trimming version and url', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
-      result.current.updateGridCell('webDesktop', 2, 1, 'v9.1.0');
+      result.current.addRegression('ios', { version: ' 1.0.0 ', url: ' https://x.example ', fecha: '2026-08-10' });
+      result.current.addRegression('ios', { version: '2.0.0', url: '', fecha: '2026-08-17' });
     });
-    expect(result.current.board.webDesktop[2][1]).toBe('v9.1.0');
-    expect(result.current.board.ios[2][1]).toBe('');
+    const list = result.current.regressions.ios;
+    expect(list.map((r) => r.version)).toEqual(['2.0.0', '1.0.0']);
+    expect(list[1].url).toBe('https://x.example');
+    expect(list[0].tickets).toHaveLength(INITIAL_TICKET_ROWS);
+    expect(list[0].tickets.every((t) => t.ticket === '' && t.squad === '')).toBe(true);
+    expect(result.current.regressions.webDesktop).toEqual([]);
   });
 
-  it('persists to localStorage and hydrates on a fresh mount', () => {
-    const first = renderHook(() => useRegressions());
-    act(() => {
-      first.result.current.updateGridCell('ios', 0, 0, 'Smoke - https://z.example/p/1');
-    });
-    first.unmount();
-    const second = renderHook(() => useRegressions());
-    expect(second.result.current.board.ios[0][0]).toBe('Smoke - https://z.example/p/1');
-  });
-
-  it('setTabGrid replaces the whole grid of one platform', () => {
-    const { result } = renderHook(() => useRegressions());
-    const newGrid = [['a', 'b', 'c', 'd', 'e', 'f']];
-    act(() => {
-      result.current.setTabGrid('webDesktop', newGrid);
-    });
-    expect(result.current.board.webDesktop).toEqual(newGrid);
-    expect(result.current.board.ios).toHaveLength(20);
-  });
-
-  it('moveRow reorders rows', () => {
+  it('addRegression without a non-blank version is a no-op', () => {
     const { result } = renderHook(() => useRegressions());
     act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'primera');
-      result.current.updateGridCell('ios', 1, 0, 'segunda');
+      result.current.addRegression('ios', { version: '   ', url: 'https://x.example', fecha: '2026-08-10' });
     });
-    act(() => {
-      result.current.moveRow('ios', 0, 2);
-    });
-    expect(result.current.board.ios[0][0]).toBe('segunda');
-    expect(result.current.board.ios[1][0]).toBe('primera');
+    expect(result.current.regressions.ios).toEqual([]);
   });
 
-  it('moveRow ignores out-of-range indices', () => {
+  it('updateRegression patches version/url/fecha; a blank version keeps the old one', () => {
     const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
     act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'fija');
+      result.current.updateRegression('ios', reg.id, { url: 'https://nueva.example', fecha: '2026-08-11' });
     });
+    expect(result.current.regressions.ios[0].url).toBe('https://nueva.example');
+    expect(result.current.regressions.ios[0].fecha).toBe('2026-08-11');
     act(() => {
-      result.current.moveRow('ios', -1, 5);
-      result.current.moveRow('ios', 0, 99);
+      result.current.updateRegression('ios', reg.id, { version: '  ' });
     });
-    expect(result.current.board.ios[0][0]).toBe('fija');
+    expect(result.current.regressions.ios[0].version).toBe('1.0.0');
   });
 
-  it('archiveBoard snapshots the board, clears it and names it with today', () => {
+  it('deleteRegression removes only the given id in its platform', () => {
     const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
     act(() => {
-      result.current.updateGridCell('webDesktop', 0, 0, 'Regresión checkout');
+      result.current.addRegression('webDesktop', { version: '9.9.9', url: '', fecha: '2026-08-10' });
     });
     act(() => {
-      result.current.archiveBoard();
+      result.current.deleteRegression('ios', reg.id);
+    });
+    expect(result.current.regressions.ios).toEqual([]);
+    expect(result.current.regressions.webDesktop).toHaveLength(1);
+  });
+
+  it('addTicket appends an empty row; updateTicket writes one field; deleteTicket can empty the table', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    act(() => {
+      result.current.addTicket('ios', reg.id);
+    });
+    expect(result.current.regressions.ios[0].tickets).toHaveLength(4);
+    const ticket = result.current.regressions.ios[0].tickets[0];
+    act(() => {
+      result.current.updateTicket('ios', reg.id, ticket.id, 'prioridad', 'Alta');
+      result.current.updateTicket('ios', reg.id, ticket.id, 'ticket', 'PROJ-1 - https://j.example/browse/PROJ-1');
+    });
+    expect(result.current.regressions.ios[0].tickets[0].prioridad).toBe('Alta');
+    expect(result.current.regressions.ios[0].tickets[0].ticket).toContain('PROJ-1');
+    act(() => {
+      for (const tk of result.current.regressions.ios[0].tickets) {
+        result.current.deleteTicket('ios', reg.id, tk.id);
+      }
+    });
+    expect(result.current.regressions.ios[0].tickets).toEqual([]);
+  });
+
+  it('archiveRegression moves the regression to the front of archived with platform and today', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    act(() => {
+      result.current.archiveRegression('ios', reg.id);
+    });
+    expect(result.current.regressions.ios).toEqual([]);
+    const entry = result.current.archived[0] as ArchivedRegressionEntry;
+    expect(isLegacyArchived(entry)).toBe(false);
+    expect(entry.platform).toBe('ios');
+    expect(entry.regression.version).toBe('1.0.0');
+    expect(entry.archivedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    act(() => {
+      result.current.archiveRegression('ios', 'no-existe');
     });
     expect(result.current.archived).toHaveLength(1);
-    const snap = result.current.archived[0];
-    expect(snap.id).toBeTruthy();
-    expect(snap.name).toMatch(/^Regresión \d{4}-\d{2}-\d{2}$/);
-    expect(snap.archivedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(snap.board.webDesktop[0][0]).toBe('Regresión checkout');
-    expect(result.current.board.webDesktop[0][0]).toBe('');
   });
 
-  it('archiveBoard persists snapshot and cleared board', () => {
+  it('deleteArchived removes an entry', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    act(() => {
+      result.current.archiveRegression('ios', reg.id);
+    });
+    act(() => {
+      result.current.deleteArchived(result.current.archived[0].id);
+    });
+    expect(result.current.archived).toEqual([]);
+  });
+
+  it('persists and hydrates on a fresh mount', () => {
     const first = renderHook(() => useRegressions());
     act(() => {
-      first.result.current.updateGridCell('ios', 0, 0, 'algo');
-      first.result.current.archiveBoard();
+      first.result.current.addRegression('webDesktop', { version: '3.1.4', url: 'https://x.example', fecha: '2026-08-10' });
     });
     first.unmount();
     const second = renderHook(() => useRegressions());
-    expect(second.result.current.archived).toHaveLength(1);
-    expect(second.result.current.board.ios[0][0]).toBe('');
+    expect(second.result.current.regressions.webDesktop[0].version).toBe('3.1.4');
   });
 
-  it('does not rewrite localStorage on mount/hydration', () => {
-    localStorage.setItem('acgen_regressions', JSON.stringify({ board: {}, archived: [] }));
-    const spy = vi.spyOn(Storage.prototype, 'setItem');
-    renderHook(() => useRegressions(), { wrapper: StrictMode });
-    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(0);
-  });
-
-  it('persists exactly once per update under StrictMode (pure updaters)', () => {
-    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
-    const spy = vi.spyOn(Storage.prototype, 'setItem');
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'una vez');
-    });
-    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(1);
-  });
-
-  it('archiveBoard is a no-op when every cell is empty', () => {
+  it('hydration keeps the legacy board opaque-but-intact and legacy archived snapshots visible', () => {
+    const legacyBoard = { ios: [['celda vieja']], webDesktop: [] };
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      board: legacyBoard,
+      archived: [{ id: 'old-1', name: 'Regresión 2026-07-18', archivedAt: '2026-07-18', board: { ios: [['x']] } }],
+    }));
     const { result } = renderHook(() => useRegressions());
+    expect(result.current.regressions.ios).toEqual([]);
+    expect(result.current.archived).toHaveLength(1);
+    expect(isLegacyArchived(result.current.archived[0])).toBe(true);
+    // Un cambio re-persiste TODO, incluido el board legacy
     act(() => {
-      result.current.archiveBoard();
+      result.current.addRegression('ios', { version: '1.0.0', url: '', fecha: '2026-08-10' });
     });
-    expect(result.current.archived).toEqual([]);
+    const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+    expect(stored.board).toEqual(legacyBoard);
+    expect(stored.archived[0].name).toBe('Regresión 2026-07-18');
+    expect(stored.regressions.ios).toHaveLength(1);
   });
 
-  it('archiveBoard ignores whitespace-only cells', () => {
+  it('hydration survives a malformed entry (null) in archived without wiping the legacy board or the other entries', () => {
+    const legacyBoard = { ios: [['celda vieja']], webDesktop: [] };
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      board: legacyBoard,
+      archived: [null, { id: 'old-1', name: 'Regresión 2026-07-18', archivedAt: '2026-07-18', board: { ios: [['x']] } }],
+    }));
     const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, '   ');
-    });
-    act(() => {
-      result.current.archiveBoard();
-    });
-    expect(result.current.archived).toEqual([]);
+    // La entrada basura no debe tumbar la hidratación ni borrar el board legacy
+    expect(result.current.archived).toHaveLength(1);
+    expect(isLegacyArchived(result.current.archived[0])).toBe(true);
+    expect((result.current.archived[0] as ArchivedRegression).name).toBe('Regresión 2026-07-18');
   });
 
-  it('deleteArchived removes a snapshot', () => {
-    const { result } = renderHook(() => useRegressions());
-    act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'algo');
-      result.current.archiveBoard();
-    });
-    const id = result.current.archived[0].id;
-    act(() => {
-      result.current.deleteArchived(id);
-    });
-    expect(result.current.archived).toEqual([]);
-  });
-
-  it('recovers from corrupt JSON in localStorage', () => {
+  it('recovers from corrupt JSON with an empty state', () => {
     localStorage.setItem('acgen_regressions', '{no es json');
     const { result } = renderHook(() => useRegressions());
-    expect(result.current.board.ios).toHaveLength(20);
+    expect(result.current.regressions.ios).toEqual([]);
     expect(result.current.archived).toEqual([]);
   });
 
-  it('merges missing platforms when hydrating old data', () => {
-    localStorage.setItem('acgen_regressions', JSON.stringify({
-      board: { ios: [['x', '', '', '', '', '']] },
-      archived: [],
-    }));
+  it('ticketRowHasContent and filledTicketCount count rows with any trimmed content', () => {
     const { result } = renderHook(() => useRegressions());
-    expect(result.current.board.ios[0][0]).toBe('x');
-    expect(result.current.board.webDesktop).toHaveLength(20);
+    const reg = addOne(result);
+    expect(filledTicketCount(result.current.regressions.ios[0])).toBe(0);
+    const t0 = reg.tickets[0];
+    act(() => {
+      result.current.updateTicket('ios', reg.id, t0.id, 'squad', '  Checkout  ');
+    });
+    const after: Regression = result.current.regressions.ios[0];
+    expect(ticketRowHasContent(after.tickets[0])).toBe(true);
+    expect(ticketRowHasContent(after.tickets[1])).toBe(false);
+    expect(filledTicketCount(after)).toBe(1);
   });
 
-  it('content only in an orphaned platform key does not count as board content', () => {
-    // Datos de pestañas retiradas (android, webMobile) sobreviven en localStorage
-    // pero no deben habilitar el archivado de un board visualmente vacío.
-    localStorage.setItem('acgen_regressions', JSON.stringify({
-      board: { android: [['dato huérfano', '', '', '', '', '']] },
-      archived: [],
-    }));
+  it('new tickets include an empty status field', () => {
     const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    expect(reg.tickets[0].status).toBe('');
     act(() => {
-      result.current.archiveBoard();
+      result.current.addTicket('ios', reg.id);
     });
-    expect(result.current.archived).toEqual([]);
+    expect(result.current.regressions.ios[0].tickets[3].status).toBe('');
   });
 
-  it('keeps changes in memory even when localStorage.setItem throws (quota exceeded)', () => {
+  it('hydration backfills status on tickets stored before the column existed', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: {
+        ios: [{
+          id: 'r1', version: '1.0.0', url: '', fecha: '2026-08-10',
+          tickets: [{ id: 't1', ticket: 'PROJ-1', fecha: '', prioridad: '', creador: '', squad: '' }],
+        }],
+        webDesktop: [],
+      },
+      archived: [{
+        id: 'a1', archivedAt: '2026-08-09', platform: 'webDesktop',
+        regression: {
+          id: 'r0', version: '0.9.0', url: '', fecha: '2026-08-09',
+          tickets: [{ id: 't9', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout' }],
+        },
+      }],
+    }));
     const { result } = renderHook(() => useRegressions());
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(result.current.regressions.ios[0].tickets[0].status).toBe('');
+    const entry = result.current.archived[0] as ArchivedRegressionEntry;
+    expect(entry.regression.tickets[0].status).toBe('');
+  });
+
+  it('ticketRowHasContent counts a row whose only content is status', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
     act(() => {
-      result.current.updateGridCell('ios', 0, 0, 'sobrevive');
+      result.current.updateTicket('ios', reg.id, reg.tickets[0].id, 'status', '  OK  ');
     });
-    expect(result.current.board.ios[0][0]).toBe('sobrevive');
-    expect(errSpy).toHaveBeenCalled();
+    const after = result.current.regressions.ios[0];
+    expect(ticketRowHasContent(after.tickets[0])).toBe(true);
+    expect(filledTicketCount(after)).toBe(1);
+  });
+
+  it('does not double-persist under StrictMode on mount', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(spy).not.toHaveBeenCalled();
   });
 });
