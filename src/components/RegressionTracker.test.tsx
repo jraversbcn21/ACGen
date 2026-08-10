@@ -98,6 +98,17 @@ describe('RegressionTracker (versioned)', () => {
     expect(screen.getByText('Archivada')).toBeInTheDocument(); // badge
   });
 
+  it('expanding a card and editing a ticket cell round-trips through the real hook to localStorage', () => {
+    renderTracker();
+    createRegression('1.0.0');
+    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    const firstRowInputs = document.querySelectorAll('tbody tr:first-child input');
+    fireEvent.change(firstRowInputs[0], { target: { value: 'PROJ-42' } });
+
+    const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+    expect(stored.regressions.ios[0].tickets[0].ticket).toBe('PROJ-42');
+  });
+
   it('a legacy archived snapshot still opens with the read-only grid', () => {
     localStorage.setItem('acgen_regressions', JSON.stringify({
       archived: [{
