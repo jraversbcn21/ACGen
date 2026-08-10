@@ -10,7 +10,7 @@ export type PlatformId = 'ios' | 'webDesktop';
 
 export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'webDesktop'];
 
-export type TicketField = 'ticket' | 'fecha' | 'prioridad' | 'creador' | 'squad';
+export type TicketField = 'ticket' | 'fecha' | 'prioridad' | 'creador' | 'squad' | 'status';
 
 export interface RegressionTicket {
   id: string;
@@ -19,6 +19,7 @@ export interface RegressionTicket {
   prioridad: string;
   creador: string;
   squad: string;
+  status: string;
 }
 
 export interface Regression {
@@ -62,7 +63,33 @@ interface RegressionState {
 export const INITIAL_TICKET_ROWS = 3;
 
 function emptyTicket(): RegressionTicket {
-  return { id: crypto.randomUUID(), ticket: '', fecha: '', prioridad: '', creador: '', squad: '' };
+  return { id: crypto.randomUUID(), ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' };
+}
+
+// Rellena campos añadidos después de que existieran datos guardados (p.ej.
+// `status`, incorporado tras el primer despliegue del modelo versionado).
+function normalizeTicket(t: Partial<RegressionTicket>): RegressionTicket {
+  return {
+    id: t.id ?? crypto.randomUUID(),
+    ticket: t.ticket ?? '',
+    fecha: t.fecha ?? '',
+    prioridad: t.prioridad ?? '',
+    creador: t.creador ?? '',
+    squad: t.squad ?? '',
+    status: t.status ?? '',
+  };
+}
+
+// Tolerante a entradas malformadas: nunca lanza (una excepción aquí caería en
+// el catch de hidratación y vaciaría TODO el estado — ver el guard de archived).
+function normalizeRegression(r: Partial<Regression> | null | undefined): Regression {
+  return {
+    id: r?.id ?? crypto.randomUUID(),
+    version: r?.version ?? '',
+    url: r?.url ?? '',
+    fecha: r?.fecha ?? '',
+    tickets: Array.isArray(r?.tickets) ? r.tickets.map(normalizeTicket) : [],
+  };
 }
 
 function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
@@ -78,7 +105,7 @@ function emptyRegressions(): Record<PlatformId, Regression[]> {
 }
 
 export function ticketRowHasContent(t: RegressionTicket): boolean {
-  return [t.ticket, t.fecha, t.prioridad, t.creador, t.squad].some((v) => v.trim() !== '');
+  return [t.ticket, t.fecha, t.prioridad, t.creador, t.squad, t.status].some((v) => v.trim() !== '');
 }
 
 export function filledTicketCount(r: Regression): number {
@@ -103,12 +130,18 @@ export function useRegressions() {
         ? parsed.archived
             .filter((a: unknown) => typeof a === 'object' && a !== null)
             .map((a: ArchivedItem) =>
-              isLegacyArchived(a) ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } } : a
+              isLegacyArchived(a)
+                ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } }
+                : { ...a, regression: normalizeRegression(a.regression) }
             )
         : [];
+      const regressions = { ...emptyRegressions(), ...(parsed.regressions || {}) };
+      for (const p of PLATFORM_IDS) {
+        regressions[p] = (regressions[p] || []).map(normalizeRegression);
+      }
       return {
         ...(parsed.board ? { board: parsed.board } : {}),
-        regressions: { ...emptyRegressions(), ...(parsed.regressions || {}) },
+        regressions,
         archived,
       };
     } catch {

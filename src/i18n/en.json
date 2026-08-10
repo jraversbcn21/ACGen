@@ -201,6 +201,7 @@
   "regression.colPrioridad": "Priority",
   "regression.colCreador": "Creator",
   "regression.colSquad": "Squad",
+  "regression.colStatus": "Status",
   "regression.deleteRowConfirm": "Delete this ticket row?",
   "regression.archiveOneConfirm": "Archive this regression? It will move to the read-only history.",
   "regression.deleteOneConfirm": "Delete this regression and its tickets?",

@@ -201,6 +201,7 @@
   "regression.colPrioridad": "Prioridad",
   "regression.colCreador": "Creador",
   "regression.colSquad": "Squad",
+  "regression.colStatus": "Status",
   "regression.deleteRowConfirm": "¿Eliminar esta fila de ticket?",
   "regression.archiveOneConfirm": "¿Archivar esta regresión? Pasará al historial de solo lectura.",
   "regression.deleteOneConfirm": "¿Eliminar esta regresión y sus tickets?",

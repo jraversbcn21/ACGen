@@ -11,9 +11,9 @@ function makeRegression(overrides: Partial<Regression> = {}): Regression {
     url: 'Excel Regresión - https://sheets.example.com/reg/1',
     fecha: '2026-08-10',
     tickets: [
-      { id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: '' },
-      { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '' },
-      { id: 't3', ticket: '', fecha: '', prioridad: '', creador: '', squad: '' },
+      { id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
+      { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
+      { id: 't3', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
     ],
     ...overrides,
   };
@@ -41,8 +41,8 @@ describe('RegressionCard', () => {
     renderCard({
       regression: makeRegression({
         tickets: [
-          { id: 't1', ticket: 'PROJ-1 - https://j.example/browse/PROJ-1', fecha: '', prioridad: '', creador: '', squad: '' },
-          { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '' },
+          { id: 't1', ticket: 'PROJ-1 - https://j.example/browse/PROJ-1', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
+          { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
         ],
       }),
     });
@@ -72,8 +72,8 @@ describe('RegressionCard', () => {
       onDeleteTicket,
       regression: makeRegression({
         tickets: [
-          { id: 't1', ticket: '', fecha: '', prioridad: 'Alta', creador: '', squad: '' },
-          { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '' },
+          { id: 't1', ticket: '', fecha: '', prioridad: 'Alta', creador: '', squad: '', status: '' },
+          { id: 't2', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
         ],
       }),
     });
@@ -102,7 +102,7 @@ describe('RegressionCard', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     renderCard({
       regression: makeRegression({
-        tickets: [{ id: 't1', ticket: 'PROJ-9 - https://j.example/browse/PROJ-9', fecha: '', prioridad: '', creador: '', squad: '' }],
+        tickets: [{ id: 't1', ticket: 'PROJ-9 - https://j.example/browse/PROJ-9', fecha: '', prioridad: '', creador: '', squad: '', status: '' }],
       }),
     });
     fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
@@ -141,5 +141,42 @@ describe('RegressionCard', () => {
     expect(screen.queryByText('+ Añadir ticket')).not.toBeInTheDocument();
     const input = document.querySelector('tbody input') as HTMLInputElement;
     expect(input.readOnly).toBe(true);
+  });
+
+  it('shows the Status column right after Squad', () => {
+    renderCard();
+    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    const headers = Array.from(document.querySelectorAll('thead th')).map((th) => th.textContent);
+    // Última columna de datos = Status; la celda extra final es la del botón ×
+    expect(headers.slice(0, 6)).toEqual(['Ticket', 'Fecha', 'Prioridad', 'Creador', 'Squad', 'Status']);
+    // Y es editable: la fila tiene 6 inputs de datos
+    expect(document.querySelectorAll('tbody tr:first-child input')).toHaveLength(6);
+  });
+
+  it('columns are resizable by dragging the header handle and widths persist in localStorage', () => {
+    renderCard();
+    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    const handles = document.querySelectorAll('[data-col-resize]');
+    expect(handles).toHaveLength(6);
+    const fechaHandle = document.querySelector('[data-col-resize="fecha"]') as HTMLElement;
+    fireEvent.mouseDown(fechaHandle, { clientX: 200 });
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseUp(document);
+    const cols = document.querySelectorAll('colgroup col');
+    // fecha es la 2ª columna; su ancho por defecto (110) - 60 = 50
+    expect((cols[1] as HTMLElement).style.width).toBe('50px');
+    const stored = JSON.parse(localStorage.getItem('acgen_regression_ticket_col_widths')!);
+    expect(stored.fecha).toBe(50);
+  });
+
+  it('readOnly resize is ephemeral: dragging works but never writes the shared widths key', () => {
+    renderCard({ readOnly: true, defaultExpanded: true });
+    const handle = document.querySelector('[data-col-resize="fecha"]') as HTMLElement;
+    fireEvent.mouseDown(handle, { clientX: 200 });
+    fireEvent.mouseMove(document, { clientX: 260 });
+    fireEvent.mouseUp(document);
+    const cols = document.querySelectorAll('colgroup col');
+    expect((cols[1] as HTMLElement).style.width).toBe('170px');
+    expect(localStorage.getItem('acgen_regression_ticket_col_widths')).toBeNull();
   });
 });

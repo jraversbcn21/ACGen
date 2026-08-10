@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Regression, TicketField } from '../hooks/useRegressions';
 import { filledTicketCount, ticketRowHasContent } from '../hooks/useRegressions';
 import { parseUrlCell } from '../utils/trackerLinks';
 import { formatDate } from '../utils/dates';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { STORAGE_KEYS } from '../config/constants';
 import { useT, useLang } from '../i18n/I18nContext';
 
 const TICKET_COLUMNS: { field: TicketField; labelKey: string }[] = [
@@ -11,7 +13,16 @@ const TICKET_COLUMNS: { field: TicketField; labelKey: string }[] = [
   { field: 'prioridad', labelKey: 'regression.colPrioridad' },
   { field: 'creador', labelKey: 'regression.colCreador' },
   { field: 'squad', labelKey: 'regression.colSquad' },
+  { field: 'status', labelKey: 'regression.colStatus' },
 ];
+
+// Anchos iniciales en px (Ticket ancho, el resto compacto); el usuario los
+// ajusta arrastrando el borde de cada cabecera. Compartidos por todas las
+// tarjetas y ambas pestañas vía localStorage.
+const DEFAULT_COL_WIDTHS: Record<TicketField, number> = {
+  ticket: 300, fecha: 110, prioridad: 110, creador: 130, squad: 120, status: 110,
+};
+const MIN_COL_WIDTH = 50;
 
 interface RegressionCardProps {
   regression: Regression;
@@ -42,6 +53,50 @@ export function RegressionCard({
   const [focusedCell, setFocusedCell] = useState<string | null>(null); // `${ticketId}` (solo columna ticket)
   const t = useT();
   const { lang } = useLang();
+
+  // Resize de columnas (patrón TrackerGrid): en readOnly (snapshots) vive solo
+  // en memoria — arranca con los anchos guardados pero nunca escribe la clave.
+  const [storedColWidths, setStoredColWidths] = useLocalStorage<Partial<Record<TicketField, number>>>(
+    STORAGE_KEYS.REGRESSION_TICKET_COL_WIDTHS, {}
+  );
+  const [ephemeralColWidths, setEphemeralColWidths] = useState<Partial<Record<TicketField, number>>>(
+    () => storedColWidths
+  );
+  const colWidths = readOnly ? ephemeralColWidths : storedColWidths;
+  const setColWidths = readOnly ? setEphemeralColWidths : setStoredColWidths;
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<{ field: TicketField; startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { field, startX, startWidth } = resizeRef.current;
+      const newWidth = Math.max(MIN_COL_WIDTH, startWidth + e.clientX - startX);
+      setColWidths((prev) => ({ ...prev, [field]: newWidth }));
+    };
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, setColWidths]);
+
+  const startResize = (e: React.MouseEvent, field: TicketField) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current = { field, startX: e.clientX, startWidth: colWidths[field] ?? DEFAULT_COL_WIDTHS[field] };
+    setIsResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   const urlParts = regression.url ? parseUrlCell(regression.url) : null;
   const ticketCount = filledTicketCount(regression);
@@ -158,20 +213,29 @@ export function RegressionCard({
           <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
             <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: '30%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '17%' }} />
+                {TICKET_COLUMNS.map(({ field }) => (
+                  <col key={field} style={{ width: colWidths[field] ?? DEFAULT_COL_WIDTHS[field] }} />
+                ))}
                 {!readOnly && <col style={{ width: 36 }} />}
               </colgroup>
               <thead>
                 <tr>
-                  {TICKET_COLUMNS.map(({ labelKey }) => (
+                  {TICKET_COLUMNS.map(({ field, labelKey }) => (
                     <th key={labelKey} style={{
+                      position: 'relative',
                       height: 26, background: 'var(--surface)', border: '1px solid var(--border)',
                       fontSize: 11, fontWeight: 700, color: 'var(--text-2)', textAlign: 'left', padding: '0 6px',
-                    }}>{t(labelKey)}</th>
+                    }}>
+                      {t(labelKey)}
+                      <div
+                        data-col-resize={field}
+                        onMouseDown={(e) => startResize(e, field)}
+                        style={{
+                          position: 'absolute', right: -1, top: 0, width: 5, height: '100%',
+                          cursor: 'col-resize', zIndex: 10,
+                        }}
+                      />
+                    </th>
                   ))}
                   {!readOnly && <th style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}></th>}
                 </tr>

@@ -196,6 +196,50 @@ describe('useRegressions (versioned)', () => {
     expect(filledTicketCount(after)).toBe(1);
   });
 
+  it('new tickets include an empty status field', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    expect(reg.tickets[0].status).toBe('');
+    act(() => {
+      result.current.addTicket('ios', reg.id);
+    });
+    expect(result.current.regressions.ios[0].tickets[3].status).toBe('');
+  });
+
+  it('hydration backfills status on tickets stored before the column existed', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: {
+        ios: [{
+          id: 'r1', version: '1.0.0', url: '', fecha: '2026-08-10',
+          tickets: [{ id: 't1', ticket: 'PROJ-1', fecha: '', prioridad: '', creador: '', squad: '' }],
+        }],
+        webDesktop: [],
+      },
+      archived: [{
+        id: 'a1', archivedAt: '2026-08-09', platform: 'webDesktop',
+        regression: {
+          id: 'r0', version: '0.9.0', url: '', fecha: '2026-08-09',
+          tickets: [{ id: 't9', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout' }],
+        },
+      }],
+    }));
+    const { result } = renderHook(() => useRegressions());
+    expect(result.current.regressions.ios[0].tickets[0].status).toBe('');
+    const entry = result.current.archived[0] as ArchivedRegressionEntry;
+    expect(entry.regression.tickets[0].status).toBe('');
+  });
+
+  it('ticketRowHasContent counts a row whose only content is status', () => {
+    const { result } = renderHook(() => useRegressions());
+    const reg = addOne(result);
+    act(() => {
+      result.current.updateTicket('ios', reg.id, reg.tickets[0].id, 'status', '  OK  ');
+    });
+    const after = result.current.regressions.ios[0];
+    expect(ticketRowHasContent(after.tickets[0])).toBe(true);
+    expect(filledTicketCount(after)).toBe(1);
+  });
+
   it('does not double-persist under StrictMode on mount', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem');
     renderHook(() => useRegressions(), { wrapper: StrictMode });
