@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
+import { parseUrlCell } from '../utils/trackerLinks';
 
 const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
-const URL_CELL_PATTERN = /^(?:(.+?)\s*-\s*)?(https?:\/\/\S+)$/;
 const MIN_COL_WIDTH = 50;
 const LEGACY_JIRA_BASE_URL_KEY = 'acgen_jira_base_url';
 const ABSOLUTE_HTTP_URL = /^https?:\/\//i;
@@ -201,13 +201,12 @@ export function TrackerGrid<T extends string>({
       const m = value.match(TICKET_KEY_PATTERN);
       return m ? `${baseUrl}/browse/${m[1]}` : null;
     }
-    const m = value.match(URL_CELL_PATTERN);
-    return m ? m[2] : null;
+    return parseUrlCell(value)?.url ?? null;
   };
 
   const getLinkName = (value: string): string | null => {
     if (linkMode !== 'url') return null;
-    return value.match(URL_CELL_PATTERN)?.[1] ?? null;
+    return parseUrlCell(value)?.name ?? null;
   };
 
   const handleDragStart = (e: React.DragEvent, ri: number) => {
