@@ -25,4 +25,9 @@ describe('PWA icons', () => {
   it('icon-512.png is really 512x512', () => {
     expect(pngSize('public/icon-512.png')).toEqual({ width: 512, height: 512 });
   });
+
+  it('index.html declares a favicon link (without one, browsers request /favicon.ico and 404)', () => {
+    const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf-8');
+    expect(html).toMatch(/<link rel="icon"[^>]*href="\/icon-192\.png"/);
+  });
 });
