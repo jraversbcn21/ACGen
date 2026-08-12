@@ -295,7 +295,8 @@ export function RegressionTracker() {
               if (dragIndex !== null && dropTarget) {
                 let to = dropTarget.half === 'top' ? dropTarget.index : dropTarget.index + 1;
                 if (to > dragIndex) to -= 1;
-                if (to !== dragIndex) moveRegression(activeTab, list[dragIndex].id, to);
+                const dragged = list[dragIndex];
+                if (dragged && to !== dragIndex) moveRegression(activeTab, dragged.id, to);
               }
               setDragIndex(null);
               setDropTarget(null);
