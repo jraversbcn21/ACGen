@@ -208,6 +208,7 @@
   "regression.archiveOneConfirm": "Archive this regression? It will move to the read-only history.",
   "regression.deleteOneConfirm": "Delete this regression and its tickets?",
   "regression.noRegressions": "No regressions yet. Create the first one with + New regression.",
+  "regression.dragHandle": "Drag to reorder",
   "error.noEdgeCases": "No edge cases were generated. Try a more detailed description.",
   "workspace.none": "No workspace",
   "workspace.new": "+ New workspace",

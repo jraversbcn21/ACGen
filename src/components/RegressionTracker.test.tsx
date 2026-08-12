@@ -166,4 +166,58 @@ describe('RegressionTracker (versioned)', () => {
       expect((screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement).value).toBe('1.0');
     });
   });
+
+  describe('drag & drop reorder', () => {
+    // jsdom devuelve rects de tamaño 0, así que clientY negativo = mitad
+    // superior y positivo = mitad inferior respecto a rect.top + height/2 = 0.
+    it('dragging a card by its handle onto the top half of the first card moves it to the top', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      createRegression('3.0.0');
+      // orden actual (las nuevas entran arriba): 3.0.0, 2.0.0, 1.0.0
+      const handles = screen.getAllByLabelText('Arrastrar para reordenar');
+      fireEvent.dragStart(handles[2]); // 1.0.0
+      const first = document.querySelector('[data-drag-index="0"]')!;
+      fireEvent.dragOver(first, { clientY: -5 });
+      fireEvent.drop(first);
+      const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+      expect(stored.regressions.ios.map((r: { version: string }) => r.version)).toEqual(['1.0.0', '3.0.0', '2.0.0']);
+    });
+
+    it('dropping on the bottom half of the last card moves it to the bottom', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      createRegression('3.0.0');
+      const handles = screen.getAllByLabelText('Arrastrar para reordenar');
+      fireEvent.dragStart(handles[0]); // 3.0.0
+      const last = document.querySelector('[data-drag-index="2"]')!;
+      fireEvent.dragOver(last, { clientY: 5 });
+      fireEvent.drop(last);
+      const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+      expect(stored.regressions.ios.map((r: { version: string }) => r.version)).toEqual(['2.0.0', '1.0.0', '3.0.0']);
+    });
+
+    it('dropping a card on its own position leaves the stored order unchanged', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      const before = localStorage.getItem('acgen_regressions');
+      const handles = screen.getAllByLabelText('Arrastrar para reordenar');
+      fireEvent.dragStart(handles[0]);
+      const self = document.querySelector('[data-drag-index="0"]')!;
+      fireEvent.dragOver(self, { clientY: -5 });
+      fireEvent.drop(self);
+      expect(localStorage.getItem('acgen_regressions')).toBe(before);
+    });
+
+    it('handles disappear while a search is active', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      expect(screen.getByLabelText('Arrastrar para reordenar')).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
+      expect(screen.queryByLabelText('Arrastrar para reordenar')).not.toBeInTheDocument();
+    });
+  });
 });

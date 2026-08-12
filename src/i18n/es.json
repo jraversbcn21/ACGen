@@ -208,6 +208,7 @@
   "regression.archiveOneConfirm": "¿Archivar esta regresión? Pasará al historial de solo lectura.",
   "regression.deleteOneConfirm": "¿Eliminar esta regresión y sus tickets?",
   "regression.noRegressions": "No hay regresiones. Crea la primera con + Nueva regresión.",
+  "regression.dragHandle": "Arrastrar para reordenar",
   "error.noEdgeCases": "No se generaron casos limite. Intenta con una descripcion mas detallada.",
   "workspace.none": "Sin workspace",
   "workspace.new": "+ Nuevo workspace",

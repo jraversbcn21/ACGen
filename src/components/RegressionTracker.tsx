@@ -30,7 +30,7 @@ export function RegressionTracker() {
     regressions, archived,
     addRegression, updateRegression, deleteRegression,
     addTicket, updateTicket, deleteTicket,
-    archiveRegression, deleteArchived,
+    archiveRegression, deleteArchived, moveRegression,
   } = useRegressions();
   const [screen, setScreen] = useState<Screen>({ kind: 'board' });
   const [activeTab, setActiveTab] = useState<PlatformId>(PLATFORM_IDS[0]);
@@ -38,6 +38,9 @@ export function RegressionTracker() {
   const [draft, setDraft] = useState({ version: '', url: '', fecha: localTodayISO() });
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ index: number; half: 'top' | 'bottom' } | null>(null);
+  const searching = needle !== '';
   const t = useT();
   const { lang } = useLang();
 
@@ -276,19 +279,64 @@ export function RegressionTracker() {
             {t('regression.noMatches')}
           </p>
         )}
-        {visible.map(({ regression, forceExpanded, visibleTicketIds }) => (
-          <RegressionCard
+        {visible.map(({ regression, index, forceExpanded, visibleTicketIds }) => (
+          <div
             key={regression.id}
-            regression={regression}
-            forceExpanded={forceExpanded}
-            visibleTicketIds={visibleTicketIds}
-            onUpdateRegression={(patch) => updateRegression(activeTab, regression.id, patch)}
-            onUpdateTicket={(ticketId, field, value) => updateTicket(activeTab, regression.id, ticketId, field, value)}
-            onAddTicket={() => addTicket(activeTab, regression.id)}
-            onDeleteTicket={(ticketId) => deleteTicket(activeTab, regression.id, ticketId)}
-            onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(activeTab, regression.id); }}
-            onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(activeTab, regression.id); }}
-          />
+            data-drag-index={index}
+            onDragOver={(e) => {
+              if (dragIndex === null) return;
+              e.preventDefault();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const half = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+              setDropTarget((prev) => (prev?.index === index && prev.half === half ? prev : { index, half }));
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragIndex !== null && dropTarget) {
+                let to = dropTarget.half === 'top' ? dropTarget.index : dropTarget.index + 1;
+                if (to > dragIndex) to -= 1;
+                if (to !== dragIndex) moveRegression(activeTab, list[dragIndex].id, to);
+              }
+              setDragIndex(null);
+              setDropTarget(null);
+            }}
+            style={{
+              opacity: dragIndex === index ? 0.5 : 1,
+              boxShadow:
+                dragIndex !== null && dropTarget?.index === index
+                  ? dropTarget.half === 'top' ? '0 -2px 0 0 var(--accent)' : '0 2px 0 0 var(--accent)'
+                  : undefined,
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <RegressionCard
+              regression={regression}
+              forceExpanded={forceExpanded}
+              visibleTicketIds={visibleTicketIds}
+              dragHandle={searching ? undefined : (
+                <span
+                  draggable
+                  role="button"
+                  aria-label={t('regression.dragHandle')}
+                  title={t('regression.dragHandle')}
+                  onDragStart={(e) => {
+                    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+                    setDragIndex(index);
+                  }}
+                  onDragEnd={() => { setDragIndex(null); setDropTarget(null); }}
+                  style={{ cursor: 'grab', color: 'var(--text-3)', fontSize: 14, userSelect: 'none', padding: '0 2px' }}
+                >
+                  ⠿
+                </span>
+              )}
+              onUpdateRegression={(patch) => updateRegression(activeTab, regression.id, patch)}
+              onUpdateTicket={(ticketId, field, value) => updateTicket(activeTab, regression.id, ticketId, field, value)}
+              onAddTicket={() => addTicket(activeTab, regression.id)}
+              onDeleteTicket={(ticketId) => deleteTicket(activeTab, regression.id, ticketId)}
+              onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(activeTab, regression.id); }}
+              onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(activeTab, regression.id); }}
+            />
+          </div>
         ))}
       </div>
     </div>
