@@ -63,7 +63,7 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/components/UpdateBanner.test.tsx` | 3 — renders nothing when not visible, shows the update message + Actualizar button when visible, clicking Actualizar calls `onReload` |
 | `src/hooks/useAppUpdate.test.ts` | 5 — starts with `needRefresh` false and a callable `reload`, calling `reload` before any update is available doesn't throw; `reload` reloads immediately when the SW API is absent, reloads exactly once on `controllerchange` (fallback timer doesn't double-fire), falls back to reloading after 2s when `controllerchange` never fires |
 
-**Total: 440 tests across 45 files.**
+**Total: 455 tests across 45 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
