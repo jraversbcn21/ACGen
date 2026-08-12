@@ -83,7 +83,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (455 tests / 45 files) |
+| Tests | Vitest + React Testing Library (469 tests / 46 files) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 
