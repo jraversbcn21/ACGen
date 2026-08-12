@@ -36,6 +36,8 @@ export function RegressionTracker() {
   const [activeTab, setActiveTab] = useState<PlatformId>(PLATFORM_IDS[0]);
   const [showNewForm, setShowNewForm] = useState(false);
   const [draft, setDraft] = useState({ version: '', url: '', fecha: localTodayISO() });
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
   const t = useT();
   const { lang } = useLang();
 
@@ -137,6 +139,20 @@ export function RegressionTracker() {
   }
 
   const list = regressions[activeTab] || [];
+  const hasText = (s: string) => s.toLowerCase().includes(needle);
+  const visible = list
+    .map((regression, index) => {
+      if (!needle) return { regression, index, forceExpanded: false, visibleTicketIds: undefined as string[] | undefined };
+      const ticketIds = regression.tickets
+        .filter((tk) => [tk.ticket, tk.fecha, tk.prioridad, tk.creador, tk.squad, tk.status].some(hasText))
+        .map((tk) => tk.id);
+      if (ticketIds.length > 0) return { regression, index, forceExpanded: true, visibleTicketIds: ticketIds };
+      if (hasText(regression.version) || hasText(regression.url)) {
+        return { regression, index, forceExpanded: false, visibleTicketIds: undefined as string[] | undefined };
+      }
+      return null;
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null);
 
   return (
     <div>
@@ -177,47 +193,76 @@ export function RegressionTracker() {
         </a>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        {!showNewForm ? (
-          <button type="button" className="btn-ghost" onClick={() => { setDraft({ version: '', url: '', fecha: localTodayISO() }); setShowNewForm(true); }} style={{ padding: '6px 14px', fontSize: 13 }}>
-            + {t('regression.newRegression')}
-          </button>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              autoFocus
-              aria-label={t('regression.versionLabel')}
-              placeholder="1.0.0"
-              value={draft.version}
-              onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
-              style={{ ...formInputStyle, width: 100 }}
-            />
-            <input
-              type="text"
-              aria-label={t('regression.urlLabel')}
-              placeholder="https://..."
-              value={draft.url}
-              onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
-              style={{ ...formInputStyle, flex: 1, minWidth: 200 }}
-            />
-            <input
-              type="date"
-              aria-label={t('regression.dateLabel')}
-              value={draft.fecha}
-              onChange={(e) => setDraft((d) => ({ ...d, fecha: e.target.value }))}
-              style={{ ...formInputStyle, width: 150 }}
-            />
-            <button type="button" className="btn-ghost" disabled={!draft.version.trim()} onClick={handleCreate} style={{ padding: '6px 14px', fontSize: 13 }}>
-              {t('regression.create')}
+      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+          {!showNewForm ? (
+            <button type="button" className="btn-ghost" onClick={() => { setDraft({ version: '', url: '', fecha: localTodayISO() }); setShowNewForm(true); }} style={{ padding: '6px 14px', fontSize: 13 }}>
+              + {t('regression.newRegression')}
             </button>
-            <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)} style={{ padding: '6px 14px', fontSize: 13 }}>
-              {t('common.cancel')}
+          ) : (
+            <>
+              <input
+                type="text"
+                autoFocus
+                aria-label={t('regression.versionLabel')}
+                placeholder="1.0.0"
+                value={draft.version}
+                onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
+                style={{ ...formInputStyle, width: 100 }}
+              />
+              <input
+                type="text"
+                aria-label={t('regression.urlLabel')}
+                placeholder="https://..."
+                value={draft.url}
+                onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
+                style={{ ...formInputStyle, flex: 1, minWidth: 200 }}
+              />
+              <input
+                type="date"
+                aria-label={t('regression.dateLabel')}
+                value={draft.fecha}
+                onChange={(e) => setDraft((d) => ({ ...d, fecha: e.target.value }))}
+                style={{ ...formInputStyle, width: 150 }}
+              />
+              <button type="button" className="btn-ghost" disabled={!draft.version.trim()} onClick={handleCreate} style={{ padding: '6px 14px', fontSize: 13 }}>
+                {t('regression.create')}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)} style={{ padding: '6px 14px', fontSize: 13 }}>
+                {t('common.cancel')}
+              </button>
+            </>
+          )}
+        </span>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {needle !== '' && (
+            <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+              {visible.length} / {list.length}
+            </span>
+          )}
+          <input
+            type="text"
+            aria-label={t('regression.searchPlaceholder')}
+            placeholder={t('regression.searchPlaceholder')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ ...formInputStyle, width: 220 }}
+          />
+          {query !== '' && (
+            <button
+              type="button"
+              className="btn-ghost"
+              aria-label={t('regression.searchClear')}
+              title={t('regression.searchClear')}
+              onClick={() => setQuery('')}
+              style={{ padding: '4px 8px', fontSize: 12 }}
+            >
+              ×
             </button>
-          </div>
-        )}
+          )}
+        </span>
       </div>
 
       <div style={{ marginTop: 14 }}>
@@ -226,10 +271,17 @@ export function RegressionTracker() {
             {t('regression.noRegressions')}
           </p>
         )}
-        {list.map((regression) => (
+        {list.length > 0 && needle !== '' && visible.length === 0 && (
+          <p style={{ marginTop: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
+            {t('regression.noMatches')}
+          </p>
+        )}
+        {visible.map(({ regression, forceExpanded, visibleTicketIds }) => (
           <RegressionCard
             key={regression.id}
             regression={regression}
+            forceExpanded={forceExpanded}
+            visibleTicketIds={visibleTicketIds}
             onUpdateRegression={(patch) => updateRegression(activeTab, regression.id, patch)}
             onUpdateTicket={(ticketId, field, value) => updateTicket(activeTab, regression.id, ticketId, field, value)}
             onAddTicket={() => addTicket(activeTab, regression.id)}

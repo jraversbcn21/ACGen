@@ -123,4 +123,47 @@ describe('RegressionTracker (versioned)', () => {
     expect(screen.getByText('Notas')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Smoke - https://z.example/p/1')).toBeInTheDocument();
   });
+
+  describe('search', () => {
+    it('filters by version leaving matching cards collapsed and shows the N / M counter', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '2.0' } });
+      expect(screen.getByText('2.0.0')).toBeInTheDocument();
+      expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
+      expect(screen.getByText('1 / 2')).toBeInTheDocument();
+      expect(screen.queryByText('Prioridad')).not.toBeInTheDocument(); // match por cabecera: colapsada
+    });
+
+    it('a ticket match auto-expands the card showing only matching rows (case-insensitive)', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+      const firstRowInputs = document.querySelectorAll('tbody tr:first-child input');
+      fireEvent.change(firstRowInputs[0], { target: { value: 'PROJ-42' } });
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: 'proj-42' } });
+      expect(screen.getByText('Prioridad')).toBeInTheDocument(); // auto-expandida
+      expect(document.querySelectorAll('tbody tr')).toHaveLength(1); // solo la fila coincidente
+      expect(screen.getByDisplayValue('PROJ-42')).toBeInTheDocument();
+    });
+
+    it('shows the no-matches message and clears the search with the × button', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: 'zzz' } });
+      expect(screen.getByText('Sin coincidencias.')).toBeInTheDocument();
+      expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText('Limpiar búsqueda'));
+      expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    });
+
+    it('keeps the query when switching tabs', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
+      fireEvent.click(screen.getByText('WEB'));
+      expect((screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement).value).toBe('1.0');
+    });
+  });
 });
