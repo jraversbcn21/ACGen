@@ -179,4 +179,32 @@ describe('RegressionCard', () => {
     expect((cols[1] as HTMLElement).style.width).toBe('170px');
     expect(localStorage.getItem('acgen_regression_ticket_col_widths')).toBeNull();
   });
+
+  it('forceExpanded shows the table without interaction and disables the chevron', () => {
+    renderCard({ forceExpanded: true });
+    expect(screen.getByText('Prioridad')).toBeInTheDocument();
+    const chevron = screen.getByLabelText('Mostrar u ocultar tickets') as HTMLButtonElement;
+    expect(chevron.disabled).toBe(true);
+  });
+
+  it('visibleTicketIds renders only those rows and hides the add-ticket button', () => {
+    renderCard({
+      forceExpanded: true,
+      visibleTicketIds: ['t2'],
+      regression: makeRegression({
+        tickets: [
+          { id: 't1', ticket: 'PROJ-1', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
+          { id: 't2', ticket: 'PROJ-2', fecha: '', prioridad: '', creador: '', squad: '', status: '' },
+        ],
+      }),
+    });
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(screen.getByDisplayValue('PROJ-2')).toBeInTheDocument();
+    expect(screen.queryByText('+ Añadir ticket')).not.toBeInTheDocument();
+  });
+
+  it('renders the dragHandle node in the header when provided', () => {
+    renderCard({ dragHandle: <span data-testid="handle">⠿</span> });
+    expect(screen.getByTestId('handle')).toBeInTheDocument();
+  });
 });

@@ -28,6 +28,9 @@ interface RegressionCardProps {
   regression: Regression;
   readOnly?: boolean;
   defaultExpanded?: boolean;
+  dragHandle?: React.ReactNode;
+  forceExpanded?: boolean;
+  visibleTicketIds?: string[];
   onUpdateRegression?: (patch: { version?: string; url?: string; fecha?: string }) => void;
   onUpdateTicket?: (ticketId: string, field: TicketField, value: string) => void;
   onAddTicket?: () => void;
@@ -40,6 +43,9 @@ export function RegressionCard({
   regression,
   readOnly = false,
   defaultExpanded = false,
+  dragHandle,
+  forceExpanded = false,
+  visibleTicketIds,
   onUpdateRegression,
   onUpdateTicket,
   onAddTicket,
@@ -98,6 +104,11 @@ export function RegressionCard({
     document.body.style.userSelect = 'none';
   };
 
+  const isExpanded = forceExpanded || expanded;
+  const visibleTickets = visibleTicketIds
+    ? regression.tickets.filter((tk) => visibleTicketIds.includes(tk.id))
+    : regression.tickets;
+
   const urlParts = regression.url ? parseUrlCell(regression.url) : null;
   const ticketCount = filledTicketCount(regression);
 
@@ -125,15 +136,17 @@ export function RegressionCard({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', flexWrap: 'wrap' }}>
+        {dragHandle}
         <button
           type="button"
           className="btn-ghost"
           aria-label={t('regression.toggleTickets')}
-          aria-expanded={expanded}
+          aria-expanded={isExpanded}
+          disabled={forceExpanded}
           onClick={() => setExpanded((v) => !v)}
           style={{ padding: '2px 8px', fontSize: 12 }}
         >
-          {expanded ? '▾' : '▸'}
+          {isExpanded ? '▾' : '▸'}
         </button>
         {editing ? (
           <>
@@ -208,7 +221,7 @@ export function RegressionCard({
         )}
       </div>
 
-      {expanded && (
+      {isExpanded && (
         <div style={{ padding: '0 16px 14px' }}>
           <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
             <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', width: '100%', tableLayout: 'fixed' }}>
@@ -241,7 +254,7 @@ export function RegressionCard({
                 </tr>
               </thead>
               <tbody>
-                {regression.tickets.map((ticket) => (
+                {visibleTickets.map((ticket) => (
                   <tr key={ticket.id}>
                     {TICKET_COLUMNS.map(({ field }) => {
                       const value = ticket[field];
@@ -325,7 +338,7 @@ export function RegressionCard({
               </tbody>
             </table>
           </div>
-          {!readOnly && (
+          {!readOnly && !visibleTicketIds && (
             <button type="button" className="btn-ghost" onClick={onAddTicket} style={{ marginTop: 8, padding: '6px 14px', fontSize: 13 }}>
               + {t('regression.addTicket')}
             </button>
