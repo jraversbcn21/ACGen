@@ -28,3 +28,6 @@ dist-ssr
 .worktrees/
 .vercel
 .env*
+
+# Artefactos de ejecución SDD (briefs/reports/diffs de subagent-driven-development)
+.superpowers/
