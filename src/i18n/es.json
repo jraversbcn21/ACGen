@@ -179,6 +179,7 @@
   "sprint.trackerUrlPlaceholder": "https://jira.example.com",
   "regression.openLink": "Ctrl + Click para abrir el enlace",
   "regression.openLinkDirect": "Abrir el enlace",
+  "regression.matchInUrl": "Coincide en la URL del enlace",
   "landing.tool.regressiontracker": "Regression Tracker",
   "landing.tool.regressiontrackerDesc": "Seguimiento de regresiones por plataforma",
   "sidebar.regression": "Regression",

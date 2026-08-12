@@ -207,4 +207,73 @@ describe('RegressionCard', () => {
     renderCard({ dragHandle: <span data-testid="handle">⠿</span> });
     expect(screen.getByTestId('handle')).toBeInTheDocument();
   });
+
+  describe('highlightNeedle', () => {
+    it('marks the matching substring in the version and in a plain ticket cell overlay', () => {
+      renderCard({
+        highlightNeedle: '1.0',
+        forceExpanded: true,
+        regression: makeRegression({
+          tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: 'P1.0', creador: '', squad: '', status: '' }],
+        }),
+      });
+      const marks = [...document.querySelectorAll('mark')];
+      expect(marks.length).toBeGreaterThanOrEqual(2); // versión "1.0.0" + celda "P1.0"
+      expect(marks.every((m) => m.textContent === '1.0')).toBe(true);
+    });
+
+    it('tints the whole link name and shows the matchInUrl tooltip when the match is only in the hidden URL', () => {
+      renderCard({
+        highlightNeedle: '1475',
+        forceExpanded: true,
+        regression: makeRegression({
+          tickets: [{ id: 't1', ticket: '[DESK] toast roto - https://jira.example.com/browse/BSKWEB-1475', fecha: '', prioridad: '', creador: '', squad: '', status: '' }],
+        }),
+      });
+      const td = document.querySelector('td[title="Coincide en la URL del enlace"]');
+      expect(td).not.toBeNull();
+      expect(td!.textContent).toContain('[DESK] toast roto');
+      expect(td!.querySelectorAll('mark')).toHaveLength(0); // nombre entero tintado, sin submarca
+    });
+
+    it('highlights the substring inside the link name when the visible name matches', () => {
+      renderCard({
+        highlightNeedle: 'toast',
+        forceExpanded: true,
+        regression: makeRegression({
+          tickets: [{ id: 't1', ticket: '[DESK] toast roto - https://jira.example.com/browse/BSKWEB-1475', fecha: '', prioridad: '', creador: '', squad: '', status: '' }],
+        }),
+      });
+      const overlayMark = [...document.querySelectorAll('tbody mark')].find((m) => m.textContent === 'toast');
+      expect(overlayMark).toBeTruthy();
+      expect(document.querySelector('td[title="Coincide en la URL del enlace"]')).toBeNull();
+    });
+
+    it('focusing a highlighted cell removes the overlay and blur restores it', () => {
+      renderCard({
+        highlightNeedle: 'P1',
+        forceExpanded: true,
+        regression: makeRegression({
+          tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: 'P1', creador: '', squad: '', status: '' }],
+        }),
+      });
+      const input = screen.getByDisplayValue('P1') as HTMLInputElement;
+      expect(document.querySelectorAll('tbody mark')).toHaveLength(1);
+      fireEvent.focus(input);
+      expect(document.querySelectorAll('tbody mark')).toHaveLength(0);
+      fireEvent.blur(input);
+      expect(document.querySelectorAll('tbody mark')).toHaveLength(1);
+    });
+
+    it('without highlightNeedle no <mark> is rendered', () => {
+      renderCard({ forceExpanded: true });
+      expect(document.querySelectorAll('mark')).toHaveLength(0);
+    });
+
+    it('tints the header excel link and shows the tooltip when the match is only in its URL', () => {
+      renderCard({ highlightNeedle: 'sheets.example' });
+      const link = screen.getByRole('link', { name: /Excel Regresión/ });
+      expect(link).toHaveAttribute('title', 'Coincide en la URL del enlace');
+    });
+  });
 });

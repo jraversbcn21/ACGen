@@ -6,6 +6,7 @@ import { formatDate } from '../utils/dates';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT, useLang } from '../i18n/I18nContext';
+import { highlightMatches, containsMatch, MARK_STYLE } from '../utils/highlight';
 
 const TICKET_COLUMNS: { field: TicketField; labelKey: string }[] = [
   { field: 'ticket', labelKey: 'regression.colTicket' },
@@ -37,6 +38,7 @@ interface RegressionCardProps {
   onDeleteTicket?: (ticketId: string) => void;
   onArchive?: () => void;
   onDelete?: () => void;
+  highlightNeedle?: string;
 }
 
 export function RegressionCard({
@@ -52,11 +54,12 @@ export function RegressionCard({
   onDeleteTicket,
   onArchive,
   onDelete,
+  highlightNeedle,
 }: RegressionCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ version: '', url: '', fecha: '' });
-  const [focusedCell, setFocusedCell] = useState<string | null>(null); // `${ticketId}` (solo columna ticket)
+  const [focusedCell, setFocusedCell] = useState<string | null>(null); // `${ticketId}:${field}`
   const t = useT();
   const { lang } = useLang();
 
@@ -111,6 +114,11 @@ export function RegressionCard({
 
   const urlParts = regression.url ? parseUrlCell(regression.url) : null;
   const ticketCount = filledTicketCount(regression);
+
+  const needle = highlightNeedle?.trim() ?? '';
+  const urlVisibleText = urlParts ? (urlParts.name ?? urlParts.url) : '';
+  const urlVisibleMatch = needle !== '' && urlParts !== null && containsMatch(urlVisibleText, needle);
+  const urlHiddenMatch = needle !== '' && urlParts !== null && !urlVisibleMatch && containsMatch(regression.url, needle);
 
   const startEdit = () => {
     setDraft({ version: regression.version, url: regression.url, fecha: regression.fecha });
@@ -183,19 +191,23 @@ export function RegressionCard({
           </>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{regression.version}</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{needle ? highlightMatches(regression.version, needle) : regression.version}</span>
             {urlParts && (
               <a
                 href={urlParts.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={t('regression.openLinkDirect')}
+                title={urlHiddenMatch ? t('regression.matchInUrl') : t('regression.openLinkDirect')}
                 style={{
                   color: 'var(--accent)', fontWeight: 600, fontSize: 12, fontFamily: 'var(--font-mono)',
                   maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}
               >
-                {urlParts.name ?? urlParts.url} ↗
+                {urlVisibleMatch
+                  ? highlightMatches(urlVisibleText, needle)
+                  : urlHiddenMatch
+                    ? <span style={MARK_STYLE}>{urlVisibleText}</span>
+                    : urlParts.name ?? urlParts.url} ↗
               </a>
             )}
             <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
@@ -259,15 +271,33 @@ export function RegressionCard({
                     {TICKET_COLUMNS.map(({ field }) => {
                       const value = ticket[field];
                       const parts = field === 'ticket' ? parseUrlCell(value) : null;
-                      const isFocused = focusedCell === ticket.id;
-                      const showNameOverlay = Boolean(parts?.name) && !isFocused;
+                      const cellKey = `${ticket.id}:${field}`;
+                      const isFocused = focusedCell === cellKey;
+                      const visibleText = parts ? (parts.name ?? parts.url) : value;
+                      const visibleMatch = needle !== '' && containsMatch(visibleText, needle);
+                      const hiddenMatch = needle !== '' && !visibleMatch && containsMatch(value, needle);
+                      // Un solo overlay por celda: nombre SnapLink (resaltado, tintado o plano)
+                      // o texto plano resaltado. Con foco no hay overlay: edición normal.
+                      let overlayContent: React.ReactNode = null;
+                      if (!isFocused) {
+                        if (parts?.name) {
+                          overlayContent = visibleMatch
+                            ? highlightMatches(parts.name, needle)
+                            : hiddenMatch
+                              ? <span style={MARK_STYLE}>{parts.name}</span>
+                              : parts.name;
+                        } else if (visibleMatch) {
+                          overlayContent = highlightMatches(visibleText, needle);
+                        }
+                      }
+                      const showOverlay = overlayContent !== null;
                       return (
                         <td
                           key={field}
                           onClick={(e) => {
                             if (parts && e.ctrlKey) window.open(parts.url, '_blank', 'noopener,noreferrer');
                           }}
-                          title={parts ? t('regression.openLink') : undefined}
+                          title={hiddenMatch && parts ? t('regression.matchInUrl') : parts ? t('regression.openLink') : undefined}
                           style={{
                             border: '1px solid var(--border)', padding: 0, position: 'relative', overflow: 'hidden',
                             cursor: parts ? 'pointer' : undefined,
@@ -278,24 +308,24 @@ export function RegressionCard({
                             value={value}
                             readOnly={readOnly}
                             onChange={(e) => onUpdateTicket?.(ticket.id, field, e.target.value)}
-                            onFocus={field === 'ticket' ? () => setFocusedCell(ticket.id) : undefined}
-                            onBlur={field === 'ticket' ? () => setFocusedCell((prev) => (prev === ticket.id ? null : prev)) : undefined}
+                            onFocus={() => setFocusedCell(cellKey)}
+                            onBlur={() => setFocusedCell((prev) => (prev === cellKey ? null : prev))}
                             style={{
                               width: '100%', height: 28, border: 'none', outline: 'none',
                               padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)', background: 'transparent',
-                              color: showNameOverlay ? 'transparent' : parts ? 'var(--accent)' : 'var(--text)',
+                              color: showOverlay ? 'transparent' : parts ? 'var(--accent)' : 'var(--text)',
                               fontWeight: parts ? 600 : 400,
                               cursor: parts ? 'pointer' : undefined,
                             }}
                           />
-                          {showNameOverlay && (
+                          {showOverlay && (
                             <span style={{
                               position: 'absolute', left: 0, right: 0, top: 0, height: 28, lineHeight: '28px',
                               padding: '0 6px', fontSize: 12, fontFamily: 'var(--font-mono)',
-                              color: 'var(--accent)', fontWeight: 600,
+                              color: parts ? 'var(--accent)' : 'var(--text)', fontWeight: parts ? 600 : 400,
                               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                               pointerEvents: 'none',
-                            }}>{parts!.name}</span>
+                            }}>{overlayContent}</span>
                           )}
                           {parts && (
                             <button
