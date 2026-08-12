@@ -245,4 +245,57 @@ describe('useRegressions (versioned)', () => {
     renderHook(() => useRegressions(), { wrapper: StrictMode });
     expect(spy).not.toHaveBeenCalled();
   });
+
+  describe('moveRegression', () => {
+    function addThree(result: { current: ReturnType<typeof useRegressions> }) {
+      act(() => {
+        result.current.addRegression('ios', { version: '1.0.0', url: '', fecha: '2026-08-01' });
+        result.current.addRegression('ios', { version: '2.0.0', url: '', fecha: '2026-08-05' });
+        result.current.addRegression('ios', { version: '3.0.0', url: '', fecha: '2026-08-10' });
+      });
+      // orden resultante (las nuevas entran arriba): ['3.0.0', '2.0.0', '1.0.0']
+    }
+
+    it('moves a regression to the top', () => {
+      const { result } = renderHook(() => useRegressions());
+      addThree(result);
+      const last = result.current.regressions.ios[2];
+      act(() => { result.current.moveRegression('ios', last.id, 0); });
+      expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['1.0.0', '3.0.0', '2.0.0']);
+    });
+
+    it('moves a regression to the bottom and to a middle position', () => {
+      const { result } = renderHook(() => useRegressions());
+      addThree(result);
+      const first = result.current.regressions.ios[0];
+      act(() => { result.current.moveRegression('ios', first.id, 2); });
+      expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['2.0.0', '1.0.0', '3.0.0']);
+      act(() => { result.current.moveRegression('ios', first.id, 1); });
+      expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['2.0.0', '3.0.0', '1.0.0']);
+    });
+
+    it('clamps out-of-range indexes and ignores unknown ids', () => {
+      const { result } = renderHook(() => useRegressions());
+      addThree(result);
+      const first = result.current.regressions.ios[0];
+      act(() => { result.current.moveRegression('ios', first.id, 99); });
+      expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['2.0.0', '1.0.0', '3.0.0']);
+      act(() => { result.current.moveRegression('ios', first.id, -5); });
+      expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['3.0.0', '2.0.0', '1.0.0']);
+      const before = result.current.regressions.ios;
+      act(() => { result.current.moveRegression('ios', 'no-existe', 0); });
+      expect(result.current.regressions.ios).toEqual(before);
+    });
+
+    it('does not touch the other platform and persists the new order', () => {
+      const { result } = renderHook(() => useRegressions());
+      addThree(result);
+      act(() => { result.current.addRegression('webDesktop', { version: '9.9.9', url: '', fecha: '2026-08-10' }); });
+      const last = result.current.regressions.ios[2];
+      act(() => { result.current.moveRegression('ios', last.id, 0); });
+      expect(result.current.regressions.webDesktop.map((r) => r.version)).toEqual(['9.9.9']);
+      const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+      expect(stored.regressions.ios.map((r: { version: string }) => r.version)).toEqual(['1.0.0', '3.0.0', '2.0.0']);
+    });
+  });
 });

@@ -203,6 +203,21 @@ export function useRegressions() {
     setState((prev) => mapPlatform(prev, platform, (list) => list.filter((r) => r.id !== id)));
   }, []);
 
+  const moveRegression = useCallback((platform: PlatformId, id: string, toIndex: number) => {
+    setState((prev) =>
+      mapPlatform(prev, platform, (list) => {
+        const from = list.findIndex((r) => r.id === id);
+        if (from === -1) return list;
+        const to = Math.max(0, Math.min(toIndex, list.length - 1));
+        if (to === from) return list;
+        const next = [...list];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        return next;
+      })
+    );
+  }, []);
+
   const addTicket = useCallback((platform: PlatformId, regressionId: string) => {
     setState((prev) =>
       mapPlatform(prev, platform, (list) =>
@@ -263,6 +278,7 @@ export function useRegressions() {
     addRegression,
     updateRegression,
     deleteRegression,
+    moveRegression,
     addTicket,
     updateTicket,
     deleteTicket,
