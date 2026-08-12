@@ -239,7 +239,7 @@ export function RegressionTracker() {
             </>
           )}
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {needle !== '' && (
             <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
               {visible.length} / {list.length}
@@ -251,7 +251,7 @@ export function RegressionTracker() {
             placeholder={t('regression.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ ...formInputStyle, width: 440, maxWidth: '100%' }}
+            style={{ ...formInputStyle, width: 440, maxWidth: '100%', minWidth: 0 }}
           />
           {query !== '' && (
             <button
