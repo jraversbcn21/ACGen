@@ -251,7 +251,7 @@ export function RegressionTracker() {
             placeholder={t('regression.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ ...formInputStyle, width: 220 }}
+            style={{ ...formInputStyle, width: 440, maxWidth: '100%' }}
           />
           {query !== '' && (
             <button
@@ -314,6 +314,7 @@ export function RegressionTracker() {
               regression={regression}
               forceExpanded={forceExpanded}
               visibleTicketIds={visibleTicketIds}
+              highlightNeedle={needle || undefined}
               dragHandle={searching ? undefined : (
                 <span
                   draggable

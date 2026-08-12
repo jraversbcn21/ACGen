@@ -130,7 +130,8 @@ describe('RegressionTracker (versioned)', () => {
       createRegression('1.0.0');
       createRegression('2.0.0');
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '2.0' } });
-      expect(screen.getByText('2.0.0')).toBeInTheDocument();
+      const matches = screen.queryAllByText((_, element) => element?.textContent?.includes('2.0.0') ?? false);
+      expect(matches.length).toBeGreaterThan(0);
       expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
       expect(screen.getByText('1 / 2')).toBeInTheDocument();
       expect(screen.queryByText('Prioridad')).not.toBeInTheDocument(); // match por cabecera: colapsada
@@ -164,6 +165,21 @@ describe('RegressionTracker (versioned)', () => {
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
       fireEvent.click(screen.getByText('WEB'));
       expect((screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement).value).toBe('1.0');
+    });
+
+    it('search results render highlighted matches inside the cards', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
+      const marks = document.querySelectorAll('mark');
+      expect(marks.length).toBeGreaterThan(0);
+      expect(marks[0].textContent).toBe('1.0');
+    });
+
+    it('the search input is twice as wide (440px)', () => {
+      renderTracker();
+      const input = screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement;
+      expect(input.style.width).toBe('440px');
     });
   });
 
