@@ -3,7 +3,7 @@ import { Icon } from './Icons';
 import { useT } from '../i18n/I18nContext';
 
 interface LandingScreenProps {
-  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker') => void;
+  onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker' | 'designvalidator') => void;
   provider: string;
   onProviderChange: (provider: string) => void;
   apiKey: string;
@@ -62,6 +62,13 @@ const tools = [
     icon: Icon.edgecase,
     titleKey: 'landing.tool.edgecase',
     descKey: 'landing.tool.edgecaseDesc',
+    tag: 'QA',
+  },
+  {
+    id: 'designvalidator' as const,
+    icon: Icon.designvalidator,
+    titleKey: 'landing.tool.designvalidator',
+    descKey: 'landing.tool.designvalidatorDesc',
     tag: 'QA',
   },
   {

@@ -28,6 +28,14 @@ export const Icon = {
       <circle cx="13.2" cy="16.6" r=".6" fill="currentColor" stroke="none" />
     </Svg>
   ),
+  designvalidator: (p: SvgProps) => (
+    <Svg {...p}>
+      <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+      <circle cx="8.5" cy="9.5" r="1.3" />
+      <path d="m3.5 16 4.5-4 3.5 3.2" />
+      <path d="m13.5 14.5 2 2 4-4" />
+    </Svg>
+  ),
   bug: (p: SvgProps) => (
     <Svg {...p}>
       <path d="M8.5 9a3.5 3.5 0 0 1 7 0v3.5a3.5 3.5 0 0 1-7 0V9Z" />

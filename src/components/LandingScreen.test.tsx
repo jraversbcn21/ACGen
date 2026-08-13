@@ -24,10 +24,10 @@ function renderLanding() {
 describe('LandingScreen layout', () => {
   afterEach(() => localStorage.clear());
 
-  it('renders the 10 tool buttons', () => {
+  it('renders the 11 tool buttons', () => {
     renderLanding();
     const list = document.querySelector('.tool-list');
-    expect(list?.querySelectorAll('.tool-row')).toHaveLength(10);
+    expect(list?.querySelectorAll('.tool-row')).toHaveLength(11);
   });
 
   it('wraps everything in a centered .landing container', () => {
@@ -39,11 +39,11 @@ describe('LandingScreen layout', () => {
     expect(landing?.querySelector('.tool-list')).not.toBeNull();
   });
 
-  it('renders exactly the 10 tool cells with no placeholder slot', () => {
+  it('renders exactly the 11 tool cells with no placeholder slot', () => {
     renderLanding();
     const list = document.querySelector('.tool-list');
     expect(list?.querySelector('.add-slot')).toBeNull();
-    expect(list?.children).toHaveLength(10);
+    expect(list?.children).toHaveLength(11);
   });
 
   it('still fires onSelect when a tool is clicked', () => {
