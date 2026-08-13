@@ -1,7 +1,7 @@
 import { API_URL, TEMPERATURE, DEFAULT_PROMPTS } from '../config/constants';
 import { baseUrlStatus } from '../config/providers';
 import type { GroqApiError, TestCaseData } from '../types';
-import type { ProjectProfile } from '../types/context';
+import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
 type ToolType = 'criteria' | 'testcase';
@@ -14,12 +14,21 @@ function i18nError(key: string, params?: Record<string, string | number>): I18nE
 }
 
 export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
+  const p = (key: keyof ProjectProfile): string => {
+    const value = profile[key];
+    return value && value.trim() ? value : DEFAULT_PROFILE[key];
+  };
   return prompt
-    .replace(/\{dominio\}/g, profile.domain)
-    .replace(/\{tipoProducto\}/g, profile.productType)
-    .replace(/\{mercados\}/g, profile.markets)
-    .replace(/\{terminologia\}/g, profile.terminology)
-    .replace(/\{tono\}/g, profile.tone);
+    .replace(/\{dominio\}/g, p('domain'))
+    .replace(/\{tipoProducto\}/g, p('productType'))
+    .replace(/\{mercados\}/g, p('markets'))
+    .replace(/\{terminologia\}/g, p('terminology'))
+    .replace(/\{tono\}/g, p('tone'))
+    .replace(/\{entornos\}/g, p('environments'))
+    .replace(/\{mercadoPrincipal\}/g, p('mainMarket'))
+    .replace(/\{mapaSitio\}/g, p('siteMap'))
+    .replace(/\{idiomaSalida\}/g, p('outputLanguage'))
+    .replace(/\{convencionesDatos\}/g, p('testDataConventions'));
 }
 
 function getReasoningParams(model: string, tool: ToolType): Record<string, unknown> {

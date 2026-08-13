@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq, extractJsonArray } from './apiService';
+import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq, extractJsonArray, interpolateProfile } from './apiService';
 import type { I18nError } from './apiService';
+import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
+import { DEFAULT_PROMPTS } from '../config/constants';
 
 /** Builds an SSE body that delivers `contentChunks` as separate delta events. */
 function sseResponse(contentChunks: string[]): Response {
@@ -309,6 +311,39 @@ describe('i18n error keys', () => {
     for (const key of ['error.invalidJson', 'error.noTestCaseArray', 'error.invalidFormat', 'error.testCaseInvalid', 'error.testCaseMissingFields', 'error.testCaseWrongTypes', 'error.apiKey', 'error.rateLimit', 'error.modelDecommissioned', 'error.recordInvalid', 'error.recordNestedValue']) {
       expect(es[key], `missing in es: ${key}`).toBeTruthy();
       expect(en[key], `missing in en: ${key}`).toBeTruthy();
+    }
+  });
+});
+
+describe('interpolateProfile v2', () => {
+  it('sustituye los cinco placeholders nuevos', () => {
+    const prompt = 'A {entornos} B {mercadoPrincipal} C {mapaSitio} D {idiomaSalida} E {convencionesDatos}';
+    const out = interpolateProfile(prompt, {
+      ...DEFAULT_PROFILE,
+      environments: 'UAT', mainMarket: 'FR', siteMap: 'Login, Dashboard',
+      outputLanguage: 'inglés', testDataConventions: 'usar tarjetas Stripe',
+    });
+    expect(out).toBe('A UAT B FR C Login, Dashboard D inglés E usar tarjetas Stripe');
+  });
+
+  it('un campo vacío cae al valor de DEFAULT_PROFILE', () => {
+    const out = interpolateProfile('X {entornos} Y', { ...DEFAULT_PROFILE, environments: '' });
+    expect(out).toBe('X Pro Y');
+  });
+
+  it('un perfil antiguo sin los campos nuevos cae a los defaults', () => {
+    const legacy = {
+      domain: 'Salud', productType: 'App', markets: 'ES',
+      terminology: 'citas', tone: 'Cercano',
+    } as unknown as ProjectProfile;
+    const out = interpolateProfile('{mercadoPrincipal}/{entornos} en {idiomaSalida}', legacy);
+    expect(out).toBe('ES/Pro en español');
+  });
+
+  it('ningún placeholder queda sin sustituir con el perfil por defecto', () => {
+    for (const prompt of Object.values(DEFAULT_PROMPTS)) {
+      const out = interpolateProfile(prompt, DEFAULT_PROFILE);
+      expect(out).not.toMatch(/\{(dominio|tipoProducto|mercados|terminologia|tono|entornos|mercadoPrincipal|mapaSitio|idiomaSalida|convencionesDatos)\}/);
     }
   });
 });
