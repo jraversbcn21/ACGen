@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useT } from '../i18n/I18nContext';
 import { fileToProcessedDataUrl } from '../utils/image';
 
@@ -34,6 +34,24 @@ export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageD
     if (!files) return undefined;
     return Array.from(files).find((f) => f.type.startsWith('image/')) ?? Array.from(files)[0];
   };
+
+  // El onPaste del div de abajo solo dispara si el foco está dentro de él, lo
+  // cual casi nunca ocurre en producción (el foco suele estar en el textarea
+  // de criterios o en el body). Un listener global cubre el Ctrl+V real sin
+  // robarle el pegado de texto al textarea: solo interceptamos cuando el
+  // portapapeles trae de verdad un fichero de imagen.
+  useEffect(() => {
+    if (disabled) return;
+    const handler = (e: ClipboardEvent) => {
+      const file = firstImageFile(e.clipboardData?.files);
+      if (file && file.type.startsWith('image/')) {
+        e.preventDefault();
+        handleFile(file);
+      }
+    };
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [disabled, handleFile]);
 
   return (
     <div

@@ -63,6 +63,14 @@ describe('DesignValidatorTool', () => {
     expect(onSave).toHaveBeenCalled();
   });
 
+  it('Ctrl+Enter con todo listo dispara la generación', async () => {
+    renderTool();
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'criterios' } });
+    await attachImage();
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    await waitFor(() => expect(streamMock).toHaveBeenCalledTimes(1));
+  });
+
   it('envía ContentPart[] con el texto y la imagen', async () => {
     renderTool();
     fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'criterios' } });
@@ -103,6 +111,24 @@ describe('DesignValidatorTool', () => {
   it('muestra la nota de privacidad (la imagen viaja al proveedor)', () => {
     renderTool();
     expect(screen.getByText(/anonimizador solo procesa texto/i)).toBeInTheDocument();
+  });
+
+  it('Limpiar y Deshacer restauran también la imagen adjunta', async () => {
+    renderTool();
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'criterios' } });
+    await attachImage();
+    fireEvent.click(screen.getByRole('button', { name: /limpiar/i }));
+    expect(screen.queryByText('diseno.png')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /deshacer/i }));
+    expect(await screen.findByText('diseno.png')).toBeInTheDocument();
+  });
+
+  it('sin API key con proveedor de visión e imagen adjunta muestra el aviso de key ausente y deshabilita generar', async () => {
+    renderTool({ apiKey: '' });
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'criterios' } });
+    await attachImage();
+    expect(screen.getByText(/falta la api key/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /generar/i })).toBeDisabled();
   });
 
   it('el base64 de la imagen jamás toca localStorage', async () => {

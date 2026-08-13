@@ -78,7 +78,7 @@ describe('fileToProcessedDataUrl - manejo de errores', () => {
       onerror: (() => void) | null = null;
       onabort: (() => void) | null = null;
       result: string | null = null;
-      readAsDataURL(_file: File) {
+      readAsDataURL() {
         queueMicrotask(() => this.onabort?.());
       }
     }
@@ -86,5 +86,54 @@ describe('fileToProcessedDataUrl - manejo de errores', () => {
 
     const file = new File(['x'], 'foo.png', { type: 'image/png' });
     await expect(fileToProcessedDataUrl(file)).rejects.toThrow('error.notAnImage');
+  });
+});
+
+describe('fileToProcessedDataUrl - recompresión por tope de tamaño', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('dimensiones dentro del límite pero data URL original por encima del tope: recomprime con canvas en vez de rechazar', async () => {
+    class FakeFileReader {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      result: string | null = null;
+      readAsDataURL() {
+        this.result = 'data:image/png;base64,' + 'A'.repeat(MAX_BASE64_BYTES + 1000);
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('FileReader', FakeFileReader as unknown as typeof FileReader);
+
+    class FakeImage {
+      naturalWidth = 1400;
+      naturalHeight = 900;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_v: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
+
+    const originalCreateElement = document.createElement.bind(document);
+    const fakeCtx = { drawImage: () => {} };
+    const fakeCanvas = {
+      width: 0,
+      height: 0,
+      getContext: () => fakeCtx,
+      toDataURL: () => 'data:image/jpeg;base64,SCALED_SMALL',
+    };
+    vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+      if (tag === 'canvas') return fakeCanvas as unknown as HTMLCanvasElement;
+      return originalCreateElement(tag);
+    }) as typeof document.createElement);
+
+    const file = new File(['x'], 'foo.png', { type: 'image/png' });
+    const result = await fileToProcessedDataUrl(file);
+    expect(result).toBe('data:image/jpeg;base64,SCALED_SMALL');
   });
 });

@@ -51,13 +51,22 @@ describe('ImageDropzone', () => {
     expect(onRemove).toHaveBeenCalled();
   });
 
-  it('acepta una imagen pegada desde el portapapeles', async () => {
+  it('acepta una imagen pegada desde el portapapeles en cualquier punto de la página (paste global)', async () => {
     const { onImage } = renderZone();
     const file = new File(['x'], 'pegada.png', { type: 'image/png' });
-    fireEvent.paste(screen.getByTestId('image-dropzone'), {
+    fireEvent.paste(document.body, {
       clipboardData: { files: [file], items: [{ kind: 'file', type: 'image/png', getAsFile: () => file }] },
     });
     await waitFor(() => expect(onImage).toHaveBeenCalled());
+  });
+
+  it('un pegado de solo texto (sin imagen en el portapapeles) no llama a onImage', async () => {
+    const { onImage } = renderZone();
+    fireEvent.paste(document.body, {
+      clipboardData: { files: [], items: [{ kind: 'string', type: 'text/plain', getAsFile: () => null }] },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(onImage).not.toHaveBeenCalled();
   });
 
   it('deshabilitado no procesa nada', () => {

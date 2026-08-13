@@ -46,8 +46,8 @@ export async function fileToProcessedDataUrl(file: File): Promise<string> {
   const img = await loadImage(dataUrl);
   const { width, height } = targetDimensions(img.naturalWidth, img.naturalHeight, MAX_EDGE);
 
-  if (width === img.naturalWidth && height === img.naturalHeight) {
-    assertDataUrlWithinLimit(dataUrl);
+  const withinDimensions = width === img.naturalWidth && height === img.naturalHeight;
+  if (withinDimensions && dataUrl.length <= MAX_BASE64_BYTES) {
     return dataUrl;
   }
 

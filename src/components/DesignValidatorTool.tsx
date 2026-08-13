@@ -65,6 +65,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
 
   const handleClear = useCallback(() => {
     const prevCriteria = criteria;
+    const prevImage = image;
     const prevReport = report;
     setCriteria('');
     setImage(null);
@@ -72,9 +73,21 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
     setError(null);
     showToast(t('common.cleared'), () => {
       setCriteria(prevCriteria);
+      setImage(prevImage);
       setReport(prevReport);
     });
-  }, [criteria, report, showToast, t]);
+  }, [criteria, image, report, showToast, t]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (canGenerate && !loading && !isStreaming) handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [canGenerate, loading, isStreaming, handleGenerate]);
 
   const copySuggestion = useCallback((s: DesignReport['sugerencias'][number]) => {
     void navigator.clipboard.writeText(`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`);
@@ -95,6 +108,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
           imageName={image?.name ?? null}
           onImage={(dataUrl, name) => setImage({ dataUrl, name })}
           onRemove={() => setImage(null)}
+          disabled={loading || isStreaming}
         />
         <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0' }}>{t('designvalidator.privacyNote')}</p>
 
@@ -110,6 +124,9 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
         )}
         {image && vision === 'unknown' && (
           <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.unknownVision')}</p>
+        )}
+        {image && vision !== 'no' && !apiKey.trim() && (
+          <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.missingKey')}</p>
         )}
 
         <div className="actions-bar">
