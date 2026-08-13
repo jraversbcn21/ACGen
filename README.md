@@ -9,7 +9,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
 
-ACGen es una aplicacion web (SPA) que integra diez herramientas para agilizar el trabajo diario de equipos QA: ocho generadores impulsados por IA (multi-proveedor: Groq, OpenRouter o cualquier endpoint compatible con OpenAI) y dos herramientas de seguimiento 100% offline (Sprint Tracker y Regression Tracker). Deploy 100% estatico, sin backend propio.
+ACGen es una aplicacion web (SPA) que integra once herramientas para agilizar el trabajo diario de equipos QA: ocho generadores impulsados por IA (multi-proveedor: Groq, OpenRouter o cualquier endpoint compatible con OpenAI), dos herramientas de seguimiento 100% offline (Sprint Tracker y Regression Tracker), y un validador de criterios contra diseño con capacidad de vision. Deploy 100% estatico, sin backend propio.
 
 ## Caracteristicas
 
@@ -60,6 +60,9 @@ Genera una lista de edge cases agrupados por categoria (valores frontera, estado
 ### Conversor de Formatos
 Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido.
 
+### Validador de Diseño
+Valida criterios de aceptacion contra un diseno visual: adjunta una captura de pantalla del flujo, proporciona los criterios, y la herramienta genera un informe JSON estructurado con carencias, contradicciones y sugerencias. Downscalea automaticamente las imagenes a 1568px (maximo 4MB) y utiliza un modelo con capacidad de vision para el analisis multimodal. **Requiere un modelo con soporte de vision**: se recomienda OpenRouter con `gemini-2.5-flash` o un endpoint Custom compatible; Groq actualmente no dispone de modelos con vision. Las imagenes nunca se persisten en localStorage.
+
 ### Sprint Tracker
 Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene 5 pestanas (Resueltos, Creados, ReOpen, Prioridad Alta, JSD) con una hoja de calculo editable: columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea, navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Los sprints activos se pueden renombrar en linea (boton Editar) y archivar directamente desde la lista (boton Archivar, con confirmacion): el sprint pasa a Archivado con su fecha de cierre y permanece consultable. Funciona completamente offline. Los datos viven en localStorage.
 
@@ -86,7 +89,7 @@ Editable desde el sidebar, define 10 campos (dominio, tipo de producto, mercados
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (481 tests / 48 files) |
+| Tests | Vitest + React Testing Library (521 tests / 53 files) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

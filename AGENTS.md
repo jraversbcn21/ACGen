@@ -65,8 +65,12 @@ Unit tests with Vitest + React Testing Library. Hooks with non-trivial logic are
 | `src/App.test.tsx` | 1 — navigating between views scrolls to top |
 | `src/components/UpdateBanner.test.tsx` | 3 — renders nothing when not visible, shows the update message + Actualizar button when visible, clicking Actualizar calls `onReload` |
 | `src/hooks/useAppUpdate.test.ts` | 5 — starts with `needRefresh` false and a callable `reload`, calling `reload` before any update is available doesn't throw; `reload` reloads immediately when the SW API is absent, reloads exactly once on `controllerchange` (fallback timer doesn't double-fire), falls back to reloading after 2s when `controllerchange` never fires |
+| `src/services/designReport.test.ts` | 10 — JSON schema validation, missing sections, contradict strategy, duplicates, key expansion, invalid report shape, recommendation transform, malformed JSON, cardinality edge cases, field-level detail coverage |
+| `src/utils/image.test.ts` | 10 — file type validation, size limits, downscale to exact dimensions, EXIF strip, multiple files, canvas fallback, blob round-trip, invalid canvas context, large file handling, aspect ratio preservation |
+| `src/components/ImageDropzone.test.tsx` | 5 — drag-drop + file input, validation error toast, downscale feedback, 4MB limit violation, multiple files acceptance with size check |
+| `src/components/DesignValidatorTool.test.tsx` | 8 — missing vision model handling, trim whitespace in criteria, valid ContentPart[] assembly, base64 never in localStorage, invalid JSON report handling, unknown model fallback, success response flow, i18n error messages |
 
-**Total: 481 tests across 48 files.**
+**Total: 521 tests across 53 files.**
 
 Run `npm test` before committing when modifying hooks or services.
 
@@ -84,12 +88,20 @@ Run `npm test` before committing when modifying hooks or services.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
 - **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
 - **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
-- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (245 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (284 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
 - **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
 - **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, update banner in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `prompt` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts. Update flow is manual (`virtual:pwa-register` wired in `useAppUpdate.ts` with `immediate: true`, not the plugin's auto-injected script): the new service worker installs but waits (`skipWaiting: false`, gated behind the `SKIP_WAITING` message); `<UpdateBanner>` appears when `onNeedRefresh` fires and only reloads when the user clicks "Actualizar". **`clientsClaim: true` is load-bearing**: in prompt mode the plugin doesn't set it, and without it the newly-activated SW never takes control of already-open pages, `controllerchange` never fires and the button silently does nothing (found live by Jorge). `reload()` is belt-and-suspenders: `updateServiceWorker(true)` + a `controllerchange` listener that reloads via `reloadPage()`, plus a 2s fallback reload for uncontrolled pages (e.g. after a hard refresh) — the button always behaves as a guaranteed reload. A background check (`registration.update()`) runs every hour so a tab left open still notices new deploys.
 
-## Tools (10 total)
+## Evolution
+
+| Phase | Highlights |
+|---|---|
+| Fase 1 | 8 LLM tools (generate + refine + convert), anonymizer, history, demo mode, i18n (es/en), dark mode, PWA |
+| Fase 2 | Workspaces, artifact chaining, Sprint Tracker (5-tab spreadsheet, drag-drop, search), Regression Tracker (versioned, offline), backup/restore, mobile responsive, prompt override, multi-provider (Groq/OpenRouter/Custom) |
+| Fase 3 | Design Validator (multimodal vision analysis): ImageDropzone with downscale to 1568px and 4MB limit; JSON report (gaps/contradictions/suggestions); vision-model gating (OpenRouter/custom; no Groq); image never persisted; test counts: 521 tests across 53 files; i18n: 284 keys; corrects Fase 2 off-by-one (481→521 actual) |
+
+## Tools (11 total)
 
 ### Generar (Generate)
 
@@ -113,6 +125,12 @@ Run `npm test` before committing when modifying hooks or services.
 | Tool | View | Key files | LLM? |
 |---|---|---|---|
 | Conversor de Formatos | `converter` | `ConverterTool.tsx` | Yes — `criteria` |
+
+### Validar (Validate)
+
+| Tool | View | Key files | LLM? |
+|---|---|---|---|
+| Validador de Diseño | `designvalidator` | `DesignValidatorTool.tsx`, `designReport.ts`, `image.ts`, `ImageDropzone.tsx` | Yes — vision-capable model required (OpenRouter/custom; Groq has no vision) |
 
 ### Seguimiento (Track)
 
