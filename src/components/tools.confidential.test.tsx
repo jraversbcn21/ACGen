@@ -31,7 +31,9 @@ const TOOLS: { name: string; Tool: ComponentType<{ apiKey: string; model: string
 const SENSITIVE = 'Revisar PROJ-1234 y avisar a jorge@example.com';
 
 function sentInput(): string {
-  return streamMock.mock.calls[0][2];
+  const input = streamMock.mock.calls[0][2];
+  if (typeof input !== 'string') throw new Error('expected a string userInput');
+  return input;
 }
 function sentMap(): Record<string, string> | undefined {
   return streamMock.mock.calls[0][6];

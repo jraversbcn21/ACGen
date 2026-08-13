@@ -31,4 +31,10 @@ describe('supportsVision', () => {
       }
     }
   });
+
+  it('todo proveedor de lista fija tiene entrada en VISION_MODELS', () => {
+    for (const [id, def] of Object.entries(PROVIDERS)) {
+      if (def.models.length > 0) expect(VISION_MODELS).toHaveProperty(id);
+    }
+  });
 });

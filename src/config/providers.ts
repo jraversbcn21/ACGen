@@ -64,7 +64,7 @@ export function sanitizeModel(providerId: string, model: string): string {
  * Modelos con soporte de entrada de imagen, por proveedor. Groq retiró sus
  * modelos de visión (Llama 4 Scout/Maverick) en 2026 — lista vacía a propósito.
  */
-export const VISION_MODELS: Record<string, string[]> = {
+export const VISION_MODELS: Readonly<Record<string, readonly string[]>> = {
   groq: [],
   openrouter: [
     'openai/gpt-4o',
@@ -77,6 +77,7 @@ export const VISION_MODELS: Record<string, string[]> = {
 /**
  * 'unknown' = proveedor con lista de modelos abierta (custom): no podemos
  * verificar la capacidad; el llamador decide si avisa en vez de bloquear.
+ * Recibe el modelo ya saneado (pásalo por sanitizeModel antes si viene de localStorage).
  */
 export function supportsVision(providerId: string, model: string): 'yes' | 'no' | 'unknown' {
   const def = getProvider(providerId);
