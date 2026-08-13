@@ -35,11 +35,13 @@ export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageD
     return Array.from(files).find((f) => f.type.startsWith('image/')) ?? Array.from(files)[0];
   };
 
-  // El onPaste del div de abajo solo dispara si el foco está dentro de él, lo
-  // cual casi nunca ocurre en producción (el foco suele estar en el textarea
-  // de criterios o en el body). Un listener global cubre el Ctrl+V real sin
-  // robarle el pegado de texto al textarea: solo interceptamos cuando el
-  // portapapeles trae de verdad un fichero de imagen.
+  // Un onPaste en el div solo dispara si el foco está dentro de él, lo cual
+  // casi nunca ocurre en producción (el foco suele estar en el textarea de
+  // criterios o en el body), así que no hay listener local: este listener
+  // global cubre el Ctrl+V real en cualquier punto de la página sin robarle
+  // el pegado de texto al textarea, y sin disparar dos veces si el foco sí
+  // estuviera dentro del div. Solo interceptamos cuando el portapapeles trae
+  // de verdad un fichero de imagen.
   useEffect(() => {
     if (disabled) return;
     const handler = (e: ClipboardEvent) => {
@@ -60,7 +62,6 @@ export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageD
       style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: 12, opacity: disabled ? 0.6 : 1 }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); handleFile(firstImageFile(e.dataTransfer?.files)); }}
-      onPaste={(e) => handleFile(firstImageFile(e.clipboardData?.files))}
     >
       {imageName ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
