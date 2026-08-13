@@ -1,6 +1,6 @@
 import { API_URL, TEMPERATURE, DEFAULT_PROMPTS } from '../config/constants';
 import { baseUrlStatus } from '../config/providers';
-import type { ContentPart, GroqApiError, TestCaseData } from '../types';
+import type { ContentPart, DesignReport, GroqApiError, TestCaseData } from '../types';
 import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
@@ -85,6 +85,36 @@ export function extractJsonArray(text: string): unknown[] {
   return items;
 }
 
+export function extractJsonObject(text: string): Record<string, unknown> {
+  let cleaned = text.trim();
+  const fenceMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/i);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        parsed = JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+      } catch {
+        throw i18nError('error.invalidJson');
+      }
+    } else {
+      throw i18nError('error.invalidJson');
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw i18nError('error.invalidFormat');
+  }
+  return parsed as Record<string, unknown>;
+}
+
 const STRING_FIELDS = ['key', 'summary', 'priority', 'type', 'preconditions', 'expectedResult'] as const;
 
 export function validateTestCases(items: unknown[]): TestCaseData[] {
@@ -115,6 +145,38 @@ export function validateTestCases(items: unknown[]): TestCaseData[] {
     validated.push(tc as unknown as TestCaseData);
   }
   return validated;
+}
+
+const DESIGN_REPORT_FIELDS = {
+  carencias: ['flujo', 'descripcion'],
+  contradicciones: ['criterio', 'evidenciaDiseno', 'descripcion'],
+  sugerencias: ['titulo', 'dado', 'cuando', 'entonces'],
+} as const;
+
+export function validateDesignReport(obj: Record<string, unknown>): DesignReport {
+  const report = {} as Record<string, unknown[]>;
+  for (const [section, fields] of Object.entries(DESIGN_REPORT_FIELDS)) {
+    const raw = obj[section] ?? [];
+    if (!Array.isArray(raw)) {
+      throw i18nError('error.invalidDesignReport', { field: section });
+    }
+    report[section] = raw.map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        throw i18nError('error.invalidDesignReport', { field: section });
+      }
+      const record = item as Record<string, unknown>;
+      const clean: Record<string, string> = {};
+      for (const field of fields) {
+        const value = record[field];
+        if (typeof value !== 'string') {
+          throw i18nError('error.invalidDesignReport', { field: `${section}.${field}` });
+        }
+        clean[field] = value;
+      }
+      return clean;
+    });
+  }
+  return report as unknown as DesignReport;
 }
 
 export function isModelDecommissioned(errorMessage: string | undefined, status: number): boolean {

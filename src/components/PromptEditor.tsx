@@ -12,6 +12,7 @@ const TOOLS = [
   { key: 'refiner', labelKey: 'sidebar.refiner' },
   { key: 'edgecase', labelKey: 'sidebar.edgecase' },
   { key: 'converter', labelKey: 'sidebar.converter' },
+  { key: 'designvalidator', labelKey: 'sidebar.designvalidator' },
 ];
 
 interface PromptEditorProps {
