@@ -144,7 +144,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
           <div className="output-section" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <section>
               <h3>{t('designvalidator.gaps')} ({report.carencias.length})</h3>
-              {report.carencias.length === 0 ? <p className="empty-note">{t('designvalidator.noFindings')}</p> : (
+              {report.carencias.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <thead><tr><th>{t('designvalidator.colFlow')}</th><th>{t('designvalidator.colDescription')}</th></tr></thead>
@@ -159,7 +159,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
             </section>
             <section>
               <h3>{t('designvalidator.contradictions')} ({report.contradicciones.length})</h3>
-              {report.contradicciones.length === 0 ? <p className="empty-note">{t('designvalidator.noFindings')}</p> : (
+              {report.contradicciones.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <thead><tr><th>{t('designvalidator.colCriterion')}</th><th>{t('designvalidator.colEvidence')}</th><th>{t('designvalidator.colDescription')}</th></tr></thead>
@@ -174,9 +174,9 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
             </section>
             <section>
               <h3>{t('designvalidator.suggestions')} ({report.sugerencias.length})</h3>
-              {report.sugerencias.length === 0 ? <p className="empty-note">{t('designvalidator.noFindings')}</p> : (
+              {report.sugerencias.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
                 report.sugerencias.map((s, i) => (
-                  <div key={i} className="suggestion-card" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                       <strong>{s.titulo}</strong>
                       <button type="button" className="btn-ghost" style={{ fontSize: 12 }} onClick={() => copySuggestion(s)}>

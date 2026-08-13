@@ -58,7 +58,6 @@ export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageD
   return (
     <div
       data-testid="image-dropzone"
-      className="image-dropzone"
       style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: 12, opacity: disabled ? 0.6 : 1 }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); handleFile(firstImageFile(e.dataTransfer?.files)); }}

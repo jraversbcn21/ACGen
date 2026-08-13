@@ -90,7 +90,7 @@ Run `npm test` before committing when modifying hooks or services.
 - **Streaming**: `streamWithGroq()` async generator yields tokens progressively. `useStreamingResponse()` hook manages state. Supports optional `anonymizeMap` for confidential mode and `baseUrl` for multi-provider.
 - **Design tokens**: `:root` invariants + `[data-theme="light"]` / `[data-theme="dark"]` in `App.css`. Key tokens: `--accent` (purple), `--bg`, `--surface`, `--border`, `--text`, `--text-2`, `--text-3`, `--radius` (16px), `--radius-sm` (11px), `--shadow-sm/md/lg`. Fonts: Manrope, Newsreader italic, JetBrains Mono.
 - **Theme**: light/dark via `[data-theme]` on `<html>`. Applied synchronously from localStorage before paint. Toggle in Header.
-- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (284 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
+- **i18n**: `I18nContext` + `useT()` hook. `es.json` and `en.json` (285 keys, exact parity, guarded by `src/i18n/keyParity.test.ts`). Language toggle in Header (ES|EN). Detects browser language on first visit. Missing keys fall back to Spanish. Parameter interpolation supported.
 - **SVG Icons**: `src/components/Icons.tsx` exports `Icon` object with named components. All 24x24, stroke-based, `currentColor`, `strokeWidth` 1.6.
 - **Shared CSS**: form fields, buttons, tables, badges, modal overlay, action bar, model badge, searchable select, sprint spreadsheet, error boundary fallback, toast, update banner in `App.css`.
 - **PWA**: `vite-plugin-pwa` with `prompt` register type, manifest, icons (192+512), workbox static precache of JS/CSS/HTML/fonts. Update flow is manual (`virtual:pwa-register` wired in `useAppUpdate.ts` with `immediate: true`, not the plugin's auto-injected script): the new service worker installs but waits (`skipWaiting: false`, gated behind the `SKIP_WAITING` message); `<UpdateBanner>` appears when `onNeedRefresh` fires and only reloads when the user clicks "Actualizar". **`clientsClaim: true` is load-bearing**: in prompt mode the plugin doesn't set it, and without it the newly-activated SW never takes control of already-open pages, `controllerchange` never fires and the button silently does nothing (found live by Jorge). `reload()` is belt-and-suspenders: `updateServiceWorker(true)` + a `controllerchange` listener that reloads via `reloadPage()`, plus a 2s fallback reload for uncontrolled pages (e.g. after a hard refresh) — the button always behaves as a guaranteed reload. A background check (`registration.update()`) runs every hour so a tab left open still notices new deploys.
@@ -168,11 +168,11 @@ Run `npm test` before committing when modifying hooks or services.
 
 ### Project profile
 
-- `src/types/context.ts` — `ProjectProfile { domain, productType, markets, terminology, tone }`
-- `DEFAULT_PROFILE` with ecommerce defaults
-- `useProfile()` hook — persisted in localStorage
-- `interpolateProfile(prompt, profile)` — replaces `{dominio}`, `{tipoProducto}`, `{mercados}`, `{terminologia}`, `{tono}` placeholders
+- `src/types/context.ts` — `ProjectProfile` with 10 fields: the original `domain`, `productType`, `markets`, `terminology`, `tone` plus Fase 1's `environments`, `mainMarket`, `siteMap`, `outputLanguage`, `testDataConventions`. `DEFAULT_PROFILE` reproduces the app's classic ecommerce behavior.
+- `useProfile()` hook (`src/components/ContextProfile.tsx`) — persisted in localStorage (`acgen_project_profile`), merges the stored profile over `DEFAULT_PROFILE` so a pre-Fase-1 profile (only the original 5 fields) transparently receives the 5 new ones instead of breaking.
+- `interpolateProfile(prompt, profile)` (`apiService.ts`) — replaces the 10 placeholders (`{dominio}`, `{tipoProducto}`, `{mercados}`, `{terminologia}`, `{tono}`, `{entornos}`, `{mercadoPrincipal}`, `{mapaSitio}`, `{idiomaSalida}`, `{convencionesDatos}`). Rule: an empty field (`''`) substitutes as empty — it's omitted from the prompt; only a genuinely absent/non-string field (e.g. a legacy profile missing that key) falls back to `DEFAULT_PROFILE`.
 - All prompts in `constants.ts` use these placeholders
+- `<ProfileEditor>` — modal twin of `<PromptEditor>` with all 10 fields, Guardar/Restaurar por defecto. Opened from the Sidebar footer (next to the prompt editor link).
 
 ### Customizable prompts
 
@@ -199,6 +199,7 @@ Run `npm test` before committing when modifying hooks or services.
 - Per-provider API keys: `acgen_key_groq`, `acgen_key_openrouter`, `acgen_key_custom`
 - Auto-migration: old `acgen_api_key` → `acgen_key_groq` on first load
 - `streamWithGroq()` accepts `baseUrl` parameter
+- **Vision capability**: `VISION_MODELS` (providers.ts) maps each fixed-list provider to its vision-capable models; `supportsVision(providerId, model): 'yes' | 'no' | 'unknown'` looks a sanitized model up in it. Groq's list is deliberately empty (Llama 4 vision was retired in 2026); OpenRouter has 4 vision models (`gpt-4o`, `claude-sonnet-4`, `gemini-2.5-flash`, `llama-4-maverick`); the open-list Custom provider always returns `'unknown'` — capability can't be verified, so `DesignValidatorTool` warns instead of blocking.
 
 ### UX
 
@@ -211,7 +212,7 @@ Run `npm test` before committing when modifying hooks or services.
 ### Acceptance Criteria
 
 - System prompt (`HARDCODED_PROMPT`) — Confluence wiki format with `{panel}`, `{quote}`, `*Dado*`, `*Cuando*`, `*Entonces*`
-- `REQUIRED_MARKERS` validate response format. Missing markers → error listing missing elements.
+- Output format is enforced by the prompt only — no runtime validation of the response shape. `promptTemplates.test.ts` guards the default template's key labels.
 - Streaming output in editable textarea. ChainMenu for sending to Refiner, TestCase, BugReport.
 
 ### Test Cases
@@ -304,9 +305,9 @@ Run `npm test` before committing when modifying hooks or services.
 | File | Purpose |
 |---|---|
 | `src/config/constants.ts` | API_URL, all 9 prompts, `DEFAULT_PROMPTS` map, AVAILABLE_MODELS, DEFAULT_MODEL, STORAGE_KEYS, ViewType, SUPPORTED_MARKETS, PLATFORMS, DATA_TYPES |
-| `src/config/providers.ts` | `PROVIDERS` registry, `ProviderDef` interface, `getProvider()` |
+| `src/config/providers.ts` | `PROVIDERS` registry, `ProviderDef` interface, `getProvider()`, `VISION_MODELS`, `supportsVision()` |
 | `src/config/demoData.ts` | `DEMO_DATA` pre-generated samples (acceptance/testcase/bugreport/testdata only) |
-| `src/services/apiService.ts` | `streamWithGroq()` (streaming — the only generation path all tools use), `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`. Plain module with no React context, so it can't call `t()` — thrown errors are `I18nError` (`message` = i18n key, `params?` for interpolation, `cause` = the raw upstream error text on HTTP errors). Each of the 8 tools' catch block calls `t(err.message, err.params)` to render the translated string. |
+| `src/services/apiService.ts` | `streamWithGroq()` (streaming — the only generation path all tools use), `getPrompt()`, `interpolateProfile()`, `extractJsonArray()`, `extractJsonObject()`, `isModelDecommissioned()`, `validateTestCases()`, `validateTestDataRows()`, `validateDesignReport()`. Plain module with no React context, so it can't call `t()` — thrown errors are `I18nError` (`message` = i18n key, `params?` for interpolation, `cause` = the raw upstream error text on HTTP errors). Each tool's catch block calls `t(err.message, err.params)` to render the translated string. |
 | `src/services/anonymizer.ts` | `anonymize()`, `deanonymize()`, `applyPlaceholderEdits()`, `splitPendingPlaceholder()` — 7 regex patterns |
 | `src/utils/download.ts` | `downloadJson()`, `toFilename()` — client-side file download used by workspace export and backup export |
 | `src/utils/dates.ts` | `formatDate(iso, lang)` — parses 'YYYY-MM-DD' as a LOCAL date (never `new Date(iso)`, which is UTC midnight and shifts a day back in negative-offset timezones) and formats per app language (es-ES / en-US); `localTodayISO()` — today's LOCAL day, used by the new-sprint form default, `archiveSprint` and `archiveBoard` |
@@ -337,6 +338,9 @@ Run `npm test` before committing when modifying hooks or services.
 | `src/components/ChainMenu.tsx` | "Send to..." dropdown for artifact chaining |
 | `src/components/ContextProfile.tsx` | `useProfile()` hook — reads `acgen_project_profile`, merges the stored value over `DEFAULT_PROFILE` so pre-Fase-1 profiles get the new fields |
 | `src/components/ProfileEditor.tsx` | Modal editor for the 10 `ProjectProfile` fields (twin of `PromptEditor`), Guardar/Restaurar por defecto |
+| `src/components/ImageDropzone.tsx` | File/drag-drop/paste image picker used by `DesignValidatorTool`; downscales + caps via `image.ts` |
+| `src/components/DesignValidatorTool.tsx` | Design-vs-criteria validator tool: assembles the `ContentPart[]` message, gates Generar on `supportsVision` |
+| `src/utils/image.ts` | `targetDimensions()`, `assertDataUrlWithinLimit()`, `fileToProcessedDataUrl()` — client-side downscale to 1568px long side + 4MB data-URL cap, re-encoding via canvas when needed |
 | `src/components/ConfidentialToggle.tsx` | Per-tool confidential mode toggle |
 | `src/components/AnonymizerReview.tsx` | Substitution review modal |
 | `src/components/PromptEditor.tsx` | Per-tool prompt override editor |
@@ -352,14 +356,15 @@ Run `npm test` before committing when modifying hooks or services.
 
 | Tool | Edit file | Additional steps |
 |---|---|---|
-| Acceptance Criteria | `HARDCODED_PROMPT` in `constants.ts` | Update `REQUIRED_MARKERS` if markers change. Or override via PromptEditor. |
+| Acceptance Criteria | `HARDCODED_PROMPT` in `constants.ts` | No runtime validation — edit the prompt (or override via PromptEditor); keep `promptTemplates.test.ts` in sync. |
 | Test Cases | `TESTCASE_PROMPT` in `constants.ts` | Update `extractJsonArray` / `validateTestCases` in `apiService.ts` if schema changes. |
 | Bug Report | `BUG_REPORT_PROMPT` in `constants.ts` | Date injected in `buildBugReportMessage()` (`BugReportTool.tsx`) via `padStart`. |
 | Test Data | `TEST_DATA_PROMPT` in `constants.ts` | Add entries to `DATA_TYPES` and update schema. |
 | User Story | `USER_STORY_PROMPT` in `constants.ts` | Update INVEST checklist format in rendering. |
-| Refiner | `REFINER_PROMPT` in `constants.ts` | Update category parsing in component. |
+| Refiner | `REFINER_PROMPT` in `constants.ts` | The component renders raw streamed text — only the prompt defines the categories. |
 | Edge Case | `EDGE_CASE_PROMPT` in `constants.ts` | JSON schema matches TestCaseTool validation. |
 | Converter | `CONVERTER_PROMPT` in `constants.ts` | Update FORMATS list in component if adding formats. |
+| Design Validator | `DESIGN_VALIDATOR_PROMPT` in `constants.ts` | Output validated by `validateDesignReport` (`apiService.ts`) against the carencias/contradicciones/sugerencias schema — changing the JSON shape means updating the prompt + validator + `DesignReport` type + `designReport.test.ts`. |
 
 ## Notable
 
@@ -373,7 +378,17 @@ Run `npm test` before committing when modifying hooks or services.
 
 ## Known issues
 
-None outstanding as of 2026-08-12 (production verified live after the reorder/search and search-highlight releases: 12/12 + 8/8 end-to-end checks in real Chrome against the production build, zero console errors; both bundles confirmed live on acgen.vercel.app). The full fix trail is in "Evolution history" below and in each PR's / commit's description on GitHub. Two deliberate, non-blocking caveats worth knowing: (1) the Regression Tracker's hover ↗ icon can capture the last ~22px of a long cell, and touch devices without `:hover` never see it; a configured tracker base URL can't be cleared from the UI (all deliberate — see the 2026-07-21 row). (2) The PWA update banner's very first appearance for a given user is a one-time transition: a browser still running the old `autoUpdate`-era service worker won't show the banner until one hard refresh (or closing every tab) swaps it for the current `prompt`-based worker; from then on the banner + "Actualizar" button work on every deploy. (The Fase 3 audit's meta-lesson still stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
+As of 2026-08-13, production is still verified live through the 2026-08-12 releases (reorder/search + search-highlight: 12/12 + 8/8 end-to-end checks in real Chrome against the production build, zero console errors; both bundles confirmed live on acgen.vercel.app). The full fix trail is in "Evolution history" below and in each PR's / commit's description on GitHub. Two deliberate, non-blocking caveats worth knowing: (1) the Regression Tracker's hover ↗ icon can capture the last ~22px of a long cell, and touch devices without `:hover` never see it; a configured tracker base URL can't be cleared from the UI (all deliberate — see the 2026-07-21 row). (2) The PWA update banner's very first appearance for a given user is a one-time transition: a browser still running the old `autoUpdate`-era service worker won't show the banner until one hard refresh (or closing every tab) swaps it for the current `prompt`-based worker; from then on the banner + "Actualizar" button work on every deploy. (The Fase 3 audit's meta-lesson still stands: task-by-task reviews missed flow-level bugs; verify data flow end to end.)
+
+Pending items from the 2026-08-13 session-close audit (productización F1-F3), none blocking a release:
+
+- `tsconfig.test.json` inherits its `exclude` from `tsconfig.app.json`, so no `*.test.ts` file is ever typechecked (`npm test` runs Vitest without `--typecheck`); actually fixing that inheritance uncovers real type errors in ~5 test files (`useAutoBackup`, `autoBackup`, `BackupMenu`, `SprintList`, `pwaIcons`) — scheduled as its own chore, not folded into this pass.
+- `src/config/demoData.ts` still carries pre-productization literals (`maria@qa`, `Test1234`, Pro/ES) instead of the profile's placeholders; there's no demo mode for `designvalidator` (would require a bundled sample image) — won't-fix for now.
+- `hasSignificantData()` (`backup.ts`) doesn't count a customized project profile or a prompt override as "significant data" — the backup reminder never fires for a user who has only touched those.
+- `<ProfileEditor>` is unreachable from the landing screen (the Sidebar that hosts its entry point is hidden there).
+- Vision calls (`designvalidator`) show only the button's spinner — the streamed text is buffered and unused until the response completes — which feels slow on large images.
+- `prefill` is never cleared in `App.tsx` after a chained navigation consumes it, so re-entering a tool after chaining re-injects the stale text (pre-existing, shared with testcase/edgecase, not new to this session).
+- The Sidebar's "Perfil" button reuses `Icon.userstory` (the same glyph as the Historia de Usuario nav entry) — it needs its own icon.
 
 ## Evolution history
 
@@ -412,6 +427,7 @@ None outstanding as of 2026-08-12 (production verified live after the reorder/se
 | Fase 1 productización: perfil v2 (entornos, mercado, mapa de sitio, idioma, convenciones de datos) + editor de perfil; prompts sin literales del proyecto | 2026-08-13 | `ProjectProfile` (`src/types/context.ts`) gana 5 campos (`environments`, `mainMarket`, `siteMap`, `outputLanguage`, `testDataConventions`); `useProfile()` fusiona el perfil guardado sobre `DEFAULT_PROFILE` para que un perfil pre-Fase-1 (solo los 5 campos originales) reciba los nuevos sin romperse. Nuevo `interpolateProfile()` en `apiService.ts` sustituye placeholders `{dominio}`/`{tipoProducto}`/`{mercados}`/`{terminologia}`/`{tono}`/`{entornos}`/`{mercadoPrincipal}`/`{mapaSitio}`/`{idiomaSalida}`/`{convencionesDatos}` en los prompts, con fallback al placeholder sin sustituir si el campo no existe. Los 5 `DEFAULT_PROMPTS` reescritos para no llevar literales del proyecto (Adyen, Pro/ES, PDP, Test1234, etc.) — el perfil por defecto reproduce el comportamiento clásico salvo ajustes deliberados — línea de contexto de dominio añadida al prompt de criterios, esquema user-registration genérico en test data, 'europeo' eliminado del bug report, y normalización de acentos/casing en menciones de idioma ('ESPAÑOL'/'espanol' → 'español' vía {idiomaSalida}) (`promptTemplates.test.ts`). Nuevo `ProfileEditor.tsx` (gemelo de `PromptEditor`, modal con los 10 campos, Guardar/Restaurar por defecto), montado desde el Sidebar con `Icon.userstory` junto al enlace de Prompts; `PromptEditor` documenta las 10 variables en su hint. 15 claves i18n nuevas ×2 idiomas (245 → 260, parity mantenida). TDD (RED verificado en `ProfileEditor.test.tsx` y `ContextProfile.test.ts`). 469 → 482 tests (esta fila quedó documentada como "→ 481" hasta la corrección de la fila de Fase 3 de productización de más abajo; el recuento real de la rama en ese punto era 482). |
 | Fase 2 de productización: cimientos de visión multimodal | 2026-08-13 | Nuevo tipo `ContentPart` (`src/types/*`) y mapa `VISION_MODELS`/`supportsVision(providerId, model)` en `src/config/providers.ts` (Groq: ningún modelo soporta visión — Llama 4 retirados en 2026; OpenRouter: lista explícita de modelos con visión; custom: `'unknown'`, capacidad no verificable). `streamWithGroq` amplía `userInput` a `string \| ContentPart[]` manteniendo el path de string existente byte-idéntico (no hace falta tocar la construcción del body, ya serializaba `userInput` sin transformarlo). Guards de tipo añadidos en los tests de modo confidencial para que el nuevo tipo unión no rompa su tipado. Nuevo `src/config/providers.vision.test.ts` (6 tests) + 2 tests nuevos en `apiService.test.ts` ("streamWithGroq multimodal input"). 482 → 490 tests. |
 | Fase 3 de productización: Validador de Criterios contra Diseño (multimodal) | 2026-08-13 | Nueva herramienta `designvalidator`: `ImageDropzone.tsx` acepta fichero/drag-drop/pegado, downscalea la imagen a 1568px de lado largo y aplica un tope de 4MB sobre el data URL resultante (`src/utils/image.ts`); `apiService.ts` gana `extractJsonObject`/`validateDesignReport` para parsear y validar el informe JSON del modelo (carencias/contradicciones/sugerencias), cubiertas por `designReport.test.ts`; `DesignValidatorTool.tsx` ensambla el `ContentPart[]` (texto + imagen) enviado a `streamWithGroq`, con gating por `supportsVision` (modelo sin visión deshabilita Generar y ofrece el cambio; proveedor custom avisa de que la capacidad no es verificable pero permite generar) — la imagen en base64 nunca toca `localStorage`, solo el nombre de fichero se guarda en el artefacto. Nuevos `designReport.test.ts` (10), `image.test.ts` (8), `ImageDropzone.test.tsx` (5), `DesignValidatorTool.test.tsx` (8). De paso corrige el off-by-one heredado de la fila anterior: el checkpoint de Fase 1 de productización quedó documentado como "→ 481" cuando el recuento real era 482. 490 → 521 tests. **Fix wave de la review final de rama:** pegado global de imagen vía listener de `paste` en `window` (el `onPaste` del div nunca disparaba en producción sin foco dentro de él), recompresión con canvas para imágenes con dimensiones dentro de límite pero data URL original por encima del tope de 4MB (antes se rechazaban sin re-encodear), aviso `designvalidator.missingKey` cuando falta la API key del proveedor con imagen adjunta, nota de privacidad reescrita para dejar explícito que texto e imagen viajan tal cual y que el anonimizador no puede enmascarar imágenes, atajo Ctrl+Enter (mismo patrón que el resto de herramientas), dropzone deshabilitada durante la generación, y Deshacer tras Limpiar restaura también la imagen. 521 → 526 tests. |
+| Auditoría de cierre de sesión (productización F1-F3) | 2026-08-13 | Pase de documentación y limpieza sin cambios funcionales. Retiradas las referencias obsoletas a `REQUIRED_MARKERS` (ya no existe) y al "category parsing" del Refiner (el componente siempre renderizó texto streamed en crudo) en las secciones de Acceptance Criteria y en la tabla "Changing output format". Sección "Project profile" reescrita para reflejar los 10 campos actuales, `useProfile()`, la regla de `interpolateProfile` (campo vacío se omite; solo un campo ausente/no-string cae al default) y `<ProfileEditor>`. Visión multimodal documentada en "Multi-provider LLM" (`VISION_MODELS`/`supportsVision`). Tabla de "Key files" al día: filas nuevas para `ImageDropzone.tsx`, `DesignValidatorTool.tsx` y `image.ts`; filas de `providers.ts`/`apiService.ts` ampliadas. Nueva fila `designvalidator` en "Changing output format". 3 classNames muertos retirados del código (`image-dropzone`, `suggestion-card`, `empty-note` — ninguno definido en CSS ni usado por tests; `data-testid="image-dropzone"` se mantiene). Recuento i18n corregido a 285 (coincidía ya en la tabla de Key files pero no en Architecture). README actualizado a 526 tests / 53 files. Pendientes de la sesión anotados en "Known issues" (tsconfig.test.json sin typecheck, demoData.ts con literales pre-productización, hasSignificantData sin perfil/prompts, ProfileEditor inalcanzable desde landing, spinner-only en llamadas de visión, prefill nunca limpiado, icono duplicado del botón Perfil). Fases 4-5 del plan de productización quedan pendientes de GO de Jorge. 526 → 526 tests (sin cambios de comportamiento). |
 
 † `ResultPanel.tsx` (added Fase 2) was removed in the audit cleanup — every tool had already grown its own output rendering and nothing imported it.
 

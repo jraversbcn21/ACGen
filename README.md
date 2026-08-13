@@ -89,7 +89,7 @@ Editable desde el sidebar, define 10 campos (dominio, tipo de producto, mercados
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (521 tests / 53 files) |
+| Tests | Vitest + React Testing Library (526 tests / 53 files) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 
