@@ -1,6 +1,6 @@
 import { API_URL, TEMPERATURE, DEFAULT_PROMPTS } from '../config/constants';
 import { baseUrlStatus } from '../config/providers';
-import type { GroqApiError, TestCaseData } from '../types';
+import type { ContentPart, GroqApiError, TestCaseData } from '../types';
 import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
@@ -131,7 +131,7 @@ export function isModelDecommissioned(errorMessage: string | undefined, status: 
 export async function* streamWithGroq(
   apiKey: string,
   model: string,
-  userInput: string,
+  userInput: string | ContentPart[],
   systemPrompt: string,
   tool: ToolType,
   profile?: ProjectProfile,
