@@ -2,6 +2,8 @@
 
 export const HARDCODED_PROMPT = `Based on all the information provided, read it, analyze it, and generate one or more acceptance criteria as you consider necessary. Do not be overly detailed; generate only the most important and general criteria. The criteria can be one or several depending on the scope of the information provided. The criteria must be written from the perspective of an end user going through the process, not from a technical point of view. Describe the steps and conditions as if a regular person were navigating or interacting with the system, using natural and everyday language, avoiding technical or implementation-specific terms.
 
+Contexto del producto: {dominio}.
+
 Always respond using exactly this format and no other:
 
 {panel:title=Criterios aceptación}
@@ -9,14 +11,14 @@ Always respond using exactly this format and no other:
 *Cuando*
 *Entonces*
 *ResultadoQA:* (/)/(x)
-*Pais/Entorno:* [País]/Pro
+*Pais/Entorno:* [País]/{entornos}
 *Fecha:* [Fecha proporcionada en formato DD/MM/YYYY]
 *Evidencia:*
 *Validado por:*
 {quote}{panel}
 
 REGLAS ADICIONALES:
-- En el campo *Pais/Entorno:*, el entorno siempre debe ser "Pro". Formato: [País del contexto]/Pro. Ejemplo: España/Pro, México/Pro, Francia/Pro.
+- En el campo *Pais/Entorno:*, el entorno siempre debe ser "{entornos}". Formato: [País del contexto]/{entornos}. Ejemplo: España/{entornos}, México/{entornos}, Francia/{entornos}.
 - En el campo *Fecha:*, usa EXACTAMENTE la fecha proporcionada en el mensaje del usuario. No inventes ni generes otra fecha.
 - En el campo *Validado por:*, deja el campo vacío: escribe solo la etiqueta, sin ningún nombre ni valor. Sin excepciones.
 - En el campo *ResultadoQA:*, siempre debe aparecer exactamente "(/)/(x)". Sin excepciones ni variaciones.
@@ -25,7 +27,7 @@ If more than one acceptance criterion is needed, repeat the full block above for
 
 export const TESTCASE_PROMPT = `Eres un ingeniero QA generando casos de prueba para un {dominio}. Basándote en la instrucción del usuario, genera casos de prueba exhaustivos y realistas que cubran el área o flujo solicitado.
 
-Basa tu respuesta en patrones estandar de {dominio} — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: Home, Footer, Menú/Navegación, Buscador, Parrillas de productos, Filtros, PDP (Detalle de Producto), Cesta y Checkout.
+Basa tu respuesta en patrones estandar de {dominio} — NO intentes navegar ni depender de datos del sitio en vivo. Las áreas del sitio incluyen: {mapaSitio}.
 
 CRÍTICO: Devuelve ÚNICAMENTE un array JSON válido. NO incluyas bloques de código markdown, comillas invertidas, explicaciones ni ningún texto antes o después del JSON. La respuesta debe ser parseable directamente por JSON.parse().
 
@@ -45,7 +47,7 @@ El tipo debe ser uno de: "Positivo", "Negativo".
 
 Genera tantos casos de prueba como el usuario solicite. Si no se especifica, genera 5 casos de prueba. Usa claves secuenciales (TC-001, TC-002, ...). Cubre tanto escenarios positivos como negativos. Los resultados esperados deben ser orientados al usuario sin jerga técnica.
 
-Todo el contenido generado (summary, preconditions, testSteps, expectedResult) DEBE estar en español.`;
+Todo el contenido generado (summary, preconditions, testSteps, expectedResult) DEBE estar en {idiomaSalida}.`;
 
 export const AVAILABLE_MODELS = [
   "openai/gpt-oss-120b",
@@ -333,16 +335,7 @@ REGLAS:
 2. RESPONDE ÚNICAMENTE con un JSON array. Sin explicaciones, sin markdown, sin backticks.
 3. Cada objeto del array representa un registro de datos completo.
 4. Los datos deben ser realistas: nombres comunes del país, ciudades reales, formatos de código postal correctos, prefijos telefónicos del país, etc.
-5. Para tarjetas de pago, usa EXCLUSIVAMENTE números de tarjeta de prueba estándar de Adyen (el PSP utilizado):
-   - Visa: 4111 1111 1111 1111
-   - Mastercard: 5500 0000 0000 0004
-   - Amex: 3700 0000 0000 002
-   - Usar fecha de expiración futura (03/2030) y CVV genérico (737 para Amex, 123 para el resto)
-   - Variar el tipo de tarjeta entre registros
-6. Para cupones/códigos promocionales, genera códigos con formato realista (WELCOME10, SUMMER2026, FREESHIP, MODA20, etc.) e indica tipo (porcentaje, monto fijo, envío gratis), valor, y condiciones de uso.
-7. Los códigos postales, formatos de teléfono y formatos de dirección DEBEN ser válidos para el país seleccionado.
-8. Para datos de tipo "user-registration": los emails DEBEN seguir este formato: un nombre corto y común del país en minúsculas (sin apellidos, sin números, sin puntos, sin guiones) seguido de un dominio de prueba QA. Rota los dominios en este orden: @qa, @qa1, @qa2, @qa.1, @qa.2, @qa.3, @qa.4, etc. Ejemplos: maria@qa, jean@qa1, luca@qa2, anna@qa.1, pedro@qa.2.
-9. Para datos de tipo "user-registration": la contraseña SIEMPRE debe ser exactamente "Test1234" para TODOS los registros generados. Sin excepciones ni variaciones.
+{convencionesDatos}
 
 ESQUEMA JSON POR TIPO DE DATO:
 
@@ -353,7 +346,7 @@ Para "billing-data":
 [{"nombre":"...","apellidos":"...","documentoId":"...","tipoDocumento":"...","direccion":"...","codigoPostal":"...","ciudad":"...","provincia":"...","pais":"...","telefono":"...","email":"..."}]
 
 Para "user-registration":
-[{"nombre":"...","apellidos":"...","email":"nombre@qa","password":"Test1234","telefono":"...","fechaNacimiento":"...","genero":"..."}]
+[{"nombre":"...","apellidos":"...","email":"...","password":"...","telefono":"...","fechaNacimiento":"...","genero":"..."}]
 
 Para "payment-cards":
 [{"tipo":"...","numero":"...","titular":"...","expiracion":"...","cvv":"..."}]
@@ -367,25 +360,25 @@ export const BUG_REPORT_PROMPT = `Eres un QA Engineer senior especializado en {d
 
 CONTEXTO DEL PROYECTO:
 - {dominio}
-- Multi-mercado europeo con particularidades por país (impuestos, métodos de pago, idiomas, divisas)
+- Multi-mercado con particularidades por país (impuestos, métodos de pago, idiomas, divisas)
 - Plataformas: {tipoProducto}
 - {mercados}
 - Flujos criticos: {terminologia}
 
 REGLAS:
-1. Todo el contenido DEBE estar en ESPAÑOL.
+1. Todo el contenido DEBE estar en {idiomaSalida}.
 2. Usa EXACTAMENTE el formato Jira wiki markup que se indica abajo. No te desvíes de la estructura.
 3. Genera pasos de reproducción detallados, numerados con #, específicos y basados en la descripción proporcionada.
 4. Si la plataforma es App Android o App iOS, usa lenguaje de interacción móvil/app: "tap en", "swipe", "navegar al tab de", "pull to refresh", etc.
 5. Si la plataforma es Web, usa lenguaje web: "clic en", "hover sobre", "scroll hasta", "navegar a", etc.
 6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD-MM-YYYY. El campo "Validado por:" debe quedar vacío: solo la etiqueta, sin ningún nombre.
 7. Si se proporciona contexto de un ticket de Jira relacionado, úsalo para enriquecer la descripción, precondiciones y criterios.
-8. En el panel DESCRIPCIÓN, el campo "Entorno/Pais" debe ser siempre exactamente "Pro/ES", independientemente del mercado seleccionado. Los campos "Versión" y "Evidencia" deben quedar vacíos: solo la etiqueta.
+8. En el panel DESCRIPCIÓN, el campo "Entorno/Pais" debe ser siempre exactamente "{entornos}/{mercadoPrincipal}", independientemente del mercado seleccionado. Los campos "Versión" y "Evidencia" deben quedar vacíos: solo la etiqueta.
 
 FORMATO DE SALIDA — usa EXACTAMENTE esta estructura, rellenando cada sección:
 
 {panel:title=DESCRIPCIÓN:}
-- Entorno/Pais: Pro/ES
+- Entorno/Pais: {entornos}/{mercadoPrincipal}
 - Versión:
 {panel}
 {panel:title=PRECONDICION:}
@@ -449,7 +442,7 @@ export const REFINER_PROMPT = `Eres un analista de requisitos senior especializa
 4. **Dependencias no declaradas**: sistemas, APIs o datos externos necesarios
 5. **Preguntas sugeridas para refinement**: preguntas concretas para aclarar con stakeholders
 
-Responde en espanol, estructurado por categorias, con viñetas claras. Se constructivo y practico.
+Responde en {idiomaSalida}, estructurado por categorias, con viñetas claras. Se constructivo y practico.
 {tono}`;
 
 export const EDGE_CASE_PROMPT = `Eres un QA engineer especializado en {dominio}. Analiza el requisito proporcionado y genera una lista de casos limite (edge cases) agrupados por categoria.
@@ -469,7 +462,7 @@ Devuelve UNICAMENTE un array JSON valido. Cada objeto:
   "resultadoEsperado": "Que deberia ocurrir"
 }
 
-Genera al menos 8 casos limite. Todo en espanol.`;
+Genera al menos 8 casos limite. Todo en {idiomaSalida}.`;
 
 export const CONVERTER_PROMPT = `Eres un experto en conversion de formatos de documentacion agil. Convierte el texto proporcionado al formato de salida solicitado, preservando el significado pero adaptando la estructura.
 
