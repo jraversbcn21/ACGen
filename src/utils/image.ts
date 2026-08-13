@@ -19,6 +19,7 @@ function readAsDataUrl(file: File): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(new Error('error.notAnImage'));
+    reader.onabort = () => reject(new Error('error.notAnImage'));
     reader.readAsDataURL(file);
   });
 }
@@ -59,8 +60,13 @@ export async function fileToProcessedDataUrl(file: File): Promise<string> {
     assertDataUrlWithinLimit(dataUrl);
     return dataUrl;
   }
-  ctx.drawImage(img, 0, 0, width, height);
-  const scaled = canvas.toDataURL('image/jpeg', 0.85);
+  let scaled: string;
+  try {
+    ctx.drawImage(img, 0, 0, width, height);
+    scaled = canvas.toDataURL('image/jpeg', 0.85);
+  } catch {
+    throw new Error('error.notAnImage');
+  }
   assertDataUrlWithinLimit(scaled);
   return scaled;
 }

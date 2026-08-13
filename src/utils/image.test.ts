@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { targetDimensions, MAX_BASE64_BYTES, assertDataUrlWithinLimit } from './image';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { targetDimensions, MAX_BASE64_BYTES, assertDataUrlWithinLimit, fileToProcessedDataUrl } from './image';
 
 describe('targetDimensions', () => {
   it('no toca imágenes dentro del límite', () => {
@@ -30,5 +30,61 @@ describe('assertDataUrlWithinLimit', () => {
   it('lanza error.imageTooLarge si supera el tope', () => {
     const big = 'data:image/jpeg;base64,' + 'A'.repeat(MAX_BASE64_BYTES + 1);
     expect(() => assertDataUrlWithinLimit(big)).toThrowError('error.imageTooLarge');
+  });
+});
+
+describe('fileToProcessedDataUrl - manejo de errores', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('si el canvas lanza al dibujar/codificar, rechaza con error.notAnImage (no el mensaje crudo del navegador)', async () => {
+    const originalCreateElement = document.createElement.bind(document);
+    const fakeCtx = {
+      drawImage: () => {
+        throw new DOMException('mensaje interno del navegador', 'InvalidStateError');
+      },
+    };
+    const fakeCanvas = {
+      width: 0,
+      height: 0,
+      getContext: () => fakeCtx,
+      toDataURL: () => 'data:image/jpeg;base64,NO_DEBERIA_LLEGAR',
+    };
+    vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+      if (tag === 'canvas') return fakeCanvas as unknown as HTMLCanvasElement;
+      return originalCreateElement(tag);
+    }) as typeof document.createElement);
+
+    class FakeImage {
+      naturalWidth = 3000;
+      naturalHeight = 2000;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_v: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
+
+    const file = new File(['x'], 'foo.png', { type: 'image/png' });
+    await expect(fileToProcessedDataUrl(file)).rejects.toThrow('error.notAnImage');
+  });
+
+  it('si la lectura del fichero se aborta, rechaza con error.notAnImage en vez de dejar la promesa colgada', async () => {
+    class FakeFileReader {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      result: string | null = null;
+      readAsDataURL(_file: File) {
+        queueMicrotask(() => this.onabort?.());
+      }
+    }
+    vi.stubGlobal('FileReader', FakeFileReader as unknown as typeof FileReader);
+
+    const file = new File(['x'], 'foo.png', { type: 'image/png' });
+    await expect(fileToProcessedDataUrl(file)).rejects.toThrow('error.notAnImage');
   });
 });
