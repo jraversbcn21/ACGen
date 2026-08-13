@@ -75,7 +75,7 @@ export function PromptEditor({ onClose }: PromptEditorProps) {
           ))}
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-          Variables: &#123;dominio&#125;, &#123;tipoProducto&#125;, &#123;mercados&#125;, &#123;terminologia&#125;, &#123;tono&#125;
+          Variables: &#123;dominio&#125;, &#123;tipoProducto&#125;, &#123;mercados&#125;, &#123;terminologia&#125;, &#123;tono&#125;, &#123;entornos&#125;, &#123;mercadoPrincipal&#125;, &#123;mapaSitio&#125;, &#123;idiomaSalida&#125;, &#123;convencionesDatos&#125;
         </p>
         <textarea
           value={text}
