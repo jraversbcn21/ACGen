@@ -326,9 +326,14 @@ describe('interpolateProfile v2', () => {
     expect(out).toBe('A UAT B FR C Login, Dashboard D inglés E usar tarjetas Stripe');
   });
 
-  it('un campo vacío cae al valor de DEFAULT_PROFILE', () => {
+  it('un campo vacío se respeta (queda vacío en el prompt)', () => {
     const out = interpolateProfile('X {entornos} Y', { ...DEFAULT_PROFILE, environments: '' });
-    expect(out).toBe('X Pro Y');
+    expect(out).toBe('X  Y');
+  });
+
+  it('un campo con valor no-string cae al valor de DEFAULT_PROFILE', () => {
+    const broken = { ...DEFAULT_PROFILE, environments: 123 } as unknown as ProjectProfile;
+    expect(interpolateProfile('X {entornos} Y', broken)).toBe('X Pro Y');
   });
 
   it('un perfil antiguo sin los campos nuevos cae a los defaults', () => {

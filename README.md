@@ -74,6 +74,9 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 - **Copia automatica a fichero local (solo Chromium)**: en navegadores con la File System Access API (Chrome, Edge...) se puede enlazar un fichero local al que ACGen escribe una copia de seguridad automaticamente cada vez que cambian los datos (con un pequeno margen de espera para agrupar cambios seguidos). Esa copia sobrevive a un borrado de datos del navegador porque vive en el disco, fuera del almacenamiento del sitio; solo hay que volver a seleccionar el fichero si el navegador olvida el permiso. No disponible en Firefox/Safari.
 - La app tambien solicita almacenamiento persistente al navegador (`navigator.storage.persist()`) al arrancar, para reducir el riesgo de que el sistema operativo purgue el localStorage por falta de espacio.
 
+### Perfil del proyecto
+Editable desde el sidebar, define 10 campos (dominio, tipo de producto, mercados, terminologia, tono, entorno, mercado principal, idioma de salida, mapa del sitio, convenciones de datos de prueba) que se inyectan como variables en los prompts de todas las herramientas. Los valores por defecto reproducen el comportamiento clasico de la app; un campo dejado vacio se omite del prompt en lugar de recuperar su valor por defecto.
+
 ---
 
 ## Stack Tecnologico
@@ -83,7 +86,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (469 tests / 46 files) |
+| Tests | Vitest + React Testing Library (481 tests / 48 files) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

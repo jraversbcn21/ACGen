@@ -16,7 +16,7 @@ function i18nError(key: string, params?: Record<string, string | number>): I18nE
 export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
   const p = (key: keyof ProjectProfile): string => {
     const value = profile[key];
-    return value && value.trim() ? value : DEFAULT_PROFILE[key];
+    return typeof value === 'string' ? value : DEFAULT_PROFILE[key];
   };
   return prompt
     .replace(/\{dominio\}/g, p('domain'))

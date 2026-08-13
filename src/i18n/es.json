@@ -41,6 +41,7 @@
   "sidebar.sprint": "Sprint",
   "sidebar.prompts": "Prompts",
   "sidebar.inicio": "Inicio",
+  "sidebar.profile": "Perfil",
   "landing.eyebrow": "Quality Assurance",
   "landing.generators": "Generadores",
   "landing.provider": "Proveedor",
@@ -245,7 +246,7 @@
   "backup.autoReconnect": "Reconectar fichero",
   "backup.autoError": "No se pudo escribir el auto-backup.",
   "profile.title": "Perfil del proyecto",
-  "profile.hint": "Estos valores se inyectan en los prompts de todas las herramientas. Ajústalos a tu producto: dominio, entorno, mercado, idioma y convenciones de datos de prueba.",
+  "profile.hint": "Estos valores se inyectan en los prompts de todas las herramientas. Ajústalos a tu producto: dominio, entorno, mercado, idioma y convenciones de datos de prueba. Deja un campo vacío para omitirlo de los prompts.",
   "profile.domain": "Dominio / industria",
   "profile.productType": "Tipo de producto",
   "profile.markets": "Mercados",
@@ -257,6 +258,5 @@
   "profile.siteMap": "Mapa del sitio / áreas del producto",
   "profile.testDataConventions": "Convenciones de datos de prueba",
   "profile.reset": "Restaurar por defecto",
-  "profile.saved": "¡Guardado!",
-  "sidebar.profile": "Perfil"
+  "profile.saved": "¡Guardado!"
 }
