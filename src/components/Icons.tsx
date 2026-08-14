@@ -111,6 +111,14 @@ export const Icon = {
       <path d="M12 3v2" />
     </Svg>
   ),
+  profile: (p: SvgProps) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10.5" r="2.2" />
+      <path d="M5.8 16.5a3.4 3.4 0 0 1 6.4 0" />
+      <path d="M15 9.5h3.5M15 13h3.5" />
+    </Svg>
+  ),
   refiner: (p: SvgProps) => (
     <Svg {...p}>
       <circle cx="12" cy="12" r="9" />
