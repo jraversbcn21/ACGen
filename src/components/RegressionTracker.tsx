@@ -1,29 +1,19 @@
 import { useState, useCallback } from 'react';
 import { TrackerGrid } from './TrackerGrid';
 import { RegressionCard } from './RegressionCard';
-import { useRegressions, PLATFORM_IDS, isLegacyArchived } from '../hooks/useRegressions';
+import { RegressionSchemaEditor } from './RegressionSchemaEditor';
+import { useRegressions, isLegacyArchived } from '../hooks/useRegressions';
 import type { PlatformId, ArchivedItem } from '../hooks/useRegressions';
+import { useSchema } from '../hooks/useSchema';
+import { DEFAULT_SCHEMA, resolveLabel, visibleEntries } from '../types/schema';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT, useLang } from '../i18n/I18nContext';
 import { formatDate, localTodayISO } from '../utils/dates';
 
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  ios: 'APPS',
-  webDesktop: 'WEB',
-};
-
 // Cabeceras del grid ANTIGUO: solo para renderizar snapshots legacy del historial.
 const LEGACY_HEADERS = ['Regresión', 'Versión', 'Fecha', 'Notas', 'Status'];
-const LEGACY_PLATFORM_HEADERS: Record<PlatformId, string[]> = {
-  ios: LEGACY_HEADERS,
-  webDesktop: LEGACY_HEADERS,
-};
 
 type Screen = { kind: 'board' } | { kind: 'archivedList' } | { kind: 'snapshot'; id: string };
-
-function archivedLabel(item: ArchivedItem): string {
-  return isLegacyArchived(item) ? item.name : `${PLATFORM_LABELS[item.platform]} · ${item.regression.version}`;
-}
 
 export function RegressionTracker() {
   const {
@@ -33,8 +23,9 @@ export function RegressionTracker() {
     archiveRegression, deleteArchived, moveRegression,
   } = useRegressions();
   const [screen, setScreen] = useState<Screen>({ kind: 'board' });
-  const [activeTab, setActiveTab] = useState<PlatformId>(PLATFORM_IDS[0]);
+  const [activeTab, setActiveTab] = useState<PlatformId>(DEFAULT_SCHEMA.regression.platforms[0].id);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [draft, setDraft] = useState({ version: '', url: '', fecha: localTodayISO() });
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
@@ -44,11 +35,30 @@ export function RegressionTracker() {
   const t = useT();
   const { lang } = useLang();
 
+  const [schema] = useSchema();
+  const platforms = visibleEntries(schema.regression.platforms);
+  const platformIds = platforms.map((p) => p.id);
+  const visibleFieldIds = visibleEntries(schema.regression.ticketFields).map((f) => f.id);
+
+  // activeTab puede quedar apuntando a una plataforma que el usuario acaba de
+  // ocultar; en ese caso se reencamina a la primera visible. Si un esquema
+  // escrito a mano deja CERO plataformas visibles, platformIds[0] tambien es
+  // undefined — sin el fallback final, `regressions[undefined]` escribiria
+  // bajo la clave literal "undefined" en vez de fallar de forma audible.
+  const safeTab: PlatformId =
+    platformIds.includes(activeTab) ? activeTab : platformIds[0] ?? DEFAULT_SCHEMA.regression.platforms[0].id;
+
+  const platformLabel = (id: PlatformId): string =>
+    resolveLabel(schema.regression.platforms.find((p) => p.id === id), t) || id;
+
+  const archivedLabel = (item: ArchivedItem): string =>
+    isLegacyArchived(item) ? item.name : `${platformLabel(item.platform)} · ${item.regression.version}`;
+
   const noop = useCallback(() => {}, []);
 
   const handleCreate = () => {
     if (!draft.version.trim()) return;
-    addRegression(activeTab, draft);
+    addRegression(safeTab, draft);
     setDraft({ version: '', url: '', fecha: localTodayISO() });
     setShowNewForm(false);
   };
@@ -74,9 +84,9 @@ export function RegressionTracker() {
         </div>
         {isLegacyArchived(snapshot) ? (
           <TrackerGrid
-            tabs={PLATFORM_IDS}
-            tabLabels={PLATFORM_LABELS}
-            tabHeaders={LEGACY_PLATFORM_HEADERS}
+            tabs={platformIds}
+            tabLabels={Object.fromEntries(platforms.map((p) => [p.id, resolveLabel(p, t)]))}
+            tabHeaders={Object.fromEntries(platformIds.map((p) => [p, LEGACY_HEADERS]))}
             tabGrid={snapshot.board}
             linkMode="url"
             readOnly
@@ -141,13 +151,13 @@ export function RegressionTracker() {
     );
   }
 
-  const list = regressions[activeTab] || [];
+  const list = regressions[safeTab] || [];
   const hasText = (s: string) => s.toLowerCase().includes(needle);
   const visible = list
     .map((regression, index) => {
       if (!needle) return { regression, index, forceExpanded: false, visibleTicketIds: undefined as string[] | undefined };
       const ticketIds = regression.tickets
-        .filter((tk) => [tk.ticket, tk.fecha, tk.prioridad, tk.creador, tk.squad, tk.status].some(hasText))
+        .filter((tk) => visibleFieldIds.some((f) => hasText(tk[f] ?? '')))
         .map((tk) => tk.id);
       if (ticketIds.length > 0) return { regression, index, forceExpanded: true, visibleTicketIds: ticketIds };
       if (hasText(regression.version) || hasText(regression.url)) {
@@ -174,14 +184,14 @@ export function RegressionTracker() {
       </div>
 
       <div className="sprint-tabs">
-        {PLATFORM_IDS.map((tab) => (
+        {platforms.map((platform) => (
           <button
-            key={tab}
+            key={platform.id}
             type="button"
-            className={`btn-ghost ${activeTab === tab ? 'sprint-tab-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            className={`btn-ghost ${safeTab === platform.id ? 'sprint-tab-active' : ''}`}
+            onClick={() => setActiveTab(platform.id)}
           >
-            {PLATFORM_LABELS[tab]}
+            {resolveLabel(platform, t)}
           </button>
         ))}
         <a
@@ -194,6 +204,14 @@ export function RegressionTracker() {
         >
           + SnapLink
         </a>
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={() => setShowSchemaEditor(true)}
+          style={{ padding: '6px 14px', fontSize: 12 }}
+        >
+          {t('schema.open')}
+        </button>
       </div>
 
       <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -296,7 +314,7 @@ export function RegressionTracker() {
                 let to = dropTarget.half === 'top' ? dropTarget.index : dropTarget.index + 1;
                 if (to > dragIndex) to -= 1;
                 const dragged = list[dragIndex];
-                if (dragged && to !== dragIndex) moveRegression(activeTab, dragged.id, to);
+                if (dragged && to !== dragIndex) moveRegression(safeTab, dragged.id, to);
               }
               setDragIndex(null);
               setDropTarget(null);
@@ -331,16 +349,17 @@ export function RegressionTracker() {
                   ⠿
                 </span>
               )}
-              onUpdateRegression={(patch) => updateRegression(activeTab, regression.id, patch)}
-              onUpdateTicket={(ticketId, field, value) => updateTicket(activeTab, regression.id, ticketId, field, value)}
-              onAddTicket={() => addTicket(activeTab, regression.id)}
-              onDeleteTicket={(ticketId) => deleteTicket(activeTab, regression.id, ticketId)}
-              onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(activeTab, regression.id); }}
-              onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(activeTab, regression.id); }}
+              onUpdateRegression={(patch) => updateRegression(safeTab, regression.id, patch)}
+              onUpdateTicket={(ticketId, field, value) => updateTicket(safeTab, regression.id, ticketId, field, value)}
+              onAddTicket={() => addTicket(safeTab, regression.id)}
+              onDeleteTicket={(ticketId) => deleteTicket(safeTab, regression.id, ticketId)}
+              onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(safeTab, regression.id); }}
+              onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(safeTab, regression.id); }}
             />
           </div>
         ))}
       </div>
+      {showSchemaEditor && <RegressionSchemaEditor onClose={() => setShowSchemaEditor(false)} />}
     </div>
   );
 }

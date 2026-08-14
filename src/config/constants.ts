@@ -71,6 +71,7 @@ export const STORAGE_KEYS = {
   WORKSPACES: 'acgen_workspaces',
   ACTIVE_WORKSPACE: 'acgen_active_workspace',
   LAST_BACKUP: 'acgen_last_backup',
+  SCHEMA: 'acgen_schema',
 } as const;
 
 export const TEMPERATURE = 0.2;

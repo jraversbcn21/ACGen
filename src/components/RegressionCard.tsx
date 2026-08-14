@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Regression, TicketField } from '../hooks/useRegressions';
+import type { Regression } from '../hooks/useRegressions';
 import { filledTicketCount, ticketRowHasContent } from '../hooks/useRegressions';
+import { useSchema } from '../hooks/useSchema';
+import { resolveLabel, visibleEntries } from '../types/schema';
 import { parseUrlCell } from '../utils/trackerLinks';
 import { formatDate } from '../utils/dates';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -8,21 +10,13 @@ import { STORAGE_KEYS } from '../config/constants';
 import { useT, useLang } from '../i18n/I18nContext';
 import { highlightMatches, containsMatch, MARK_STYLE } from '../utils/highlight';
 
-const TICKET_COLUMNS: { field: TicketField; labelKey: string }[] = [
-  { field: 'ticket', labelKey: 'regression.colTicket' },
-  { field: 'fecha', labelKey: 'regression.colFecha' },
-  { field: 'prioridad', labelKey: 'regression.colPrioridad' },
-  { field: 'creador', labelKey: 'regression.colCreador' },
-  { field: 'squad', labelKey: 'regression.colSquad' },
-  { field: 'status', labelKey: 'regression.colStatus' },
-];
-
-// Anchos iniciales en px (Ticket ancho, el resto compacto); el usuario los
-// ajusta arrastrando el borde de cada cabecera. Compartidos por todas las
-// tarjetas y ambas pestañas vía localStorage.
-const DEFAULT_COL_WIDTHS: Record<TicketField, number> = {
+// Anchos iniciales en px de los campos por defecto (Ticket ancho, el resto
+// compacto); el usuario los ajusta arrastrando el borde de cada cabecera.
+// Un campo anadido por el usuario arranca en FALLBACK_COL_WIDTH.
+const DEFAULT_COL_WIDTHS: Record<string, number> = {
   ticket: 300, fecha: 110, prioridad: 110, creador: 130, squad: 120, status: 110,
 };
+const FALLBACK_COL_WIDTH = 120;
 const MIN_COL_WIDTH = 50;
 
 interface RegressionCardProps {
@@ -33,7 +27,7 @@ interface RegressionCardProps {
   forceExpanded?: boolean;
   visibleTicketIds?: string[];
   onUpdateRegression?: (patch: { version?: string; url?: string; fecha?: string }) => void;
-  onUpdateTicket?: (ticketId: string, field: TicketField, value: string) => void;
+  onUpdateTicket?: (ticketId: string, field: string, value: string) => void;
   onAddTicket?: () => void;
   onDeleteTicket?: (ticketId: string) => void;
   onArchive?: () => void;
@@ -63,18 +57,26 @@ export function RegressionCard({
   const t = useT();
   const { lang } = useLang();
 
+  const [schema] = useSchema();
+  const columns = visibleEntries(schema.regression.ticketFields);
+  const fieldIds = columns.map((c) => c.id);
+  // La celda-enlace es la PRIMERA COLUMNA VISIBLE, no el id 'ticket': asi
+  // sobrevive a renombrados y a que se oculte algo por delante. Con el esquema
+  // por defecto es exactamente la misma celda que antes.
+  const linkFieldId = fieldIds[0];
+
   // Resize de columnas (patrón TrackerGrid): en readOnly (snapshots) vive solo
   // en memoria — arranca con los anchos guardados pero nunca escribe la clave.
-  const [storedColWidths, setStoredColWidths] = useLocalStorage<Partial<Record<TicketField, number>>>(
+  const [storedColWidths, setStoredColWidths] = useLocalStorage<Record<string, number>>(
     STORAGE_KEYS.REGRESSION_TICKET_COL_WIDTHS, {}
   );
-  const [ephemeralColWidths, setEphemeralColWidths] = useState<Partial<Record<TicketField, number>>>(
+  const [ephemeralColWidths, setEphemeralColWidths] = useState<Record<string, number>>(
     () => storedColWidths
   );
   const colWidths = readOnly ? ephemeralColWidths : storedColWidths;
   const setColWidths = readOnly ? setEphemeralColWidths : setStoredColWidths;
   const [isResizing, setIsResizing] = useState(false);
-  const resizeRef = useRef<{ field: TicketField; startX: number; startWidth: number } | null>(null);
+  const resizeRef = useRef<{ field: string; startX: number; startWidth: number } | null>(null);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -98,10 +100,13 @@ export function RegressionCard({
     };
   }, [isResizing, setColWidths]);
 
-  const startResize = (e: React.MouseEvent, field: TicketField) => {
+  const startResize = (e: React.MouseEvent, field: string) => {
     e.preventDefault();
     e.stopPropagation();
-    resizeRef.current = { field, startX: e.clientX, startWidth: colWidths[field] ?? DEFAULT_COL_WIDTHS[field] };
+    resizeRef.current = {
+      field, startX: e.clientX,
+      startWidth: colWidths[field] ?? DEFAULT_COL_WIDTHS[field] ?? FALLBACK_COL_WIDTH,
+    };
     setIsResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -113,7 +118,7 @@ export function RegressionCard({
     : regression.tickets;
 
   const urlParts = regression.url ? parseUrlCell(regression.url) : null;
-  const ticketCount = filledTicketCount(regression);
+  const ticketCount = filledTicketCount(regression, fieldIds);
 
   const needle = highlightNeedle?.trim() ?? '';
   const urlVisibleText = urlParts ? (urlParts.name ?? urlParts.url) : '';
@@ -238,23 +243,23 @@ export function RegressionCard({
           <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
             <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
-                {TICKET_COLUMNS.map(({ field }) => (
-                  <col key={field} style={{ width: colWidths[field] ?? DEFAULT_COL_WIDTHS[field] }} />
+                {columns.map(({ id }) => (
+                  <col key={id} style={{ width: colWidths[id] ?? DEFAULT_COL_WIDTHS[id] ?? FALLBACK_COL_WIDTH }} />
                 ))}
                 {!readOnly && <col style={{ width: 36 }} />}
               </colgroup>
               <thead>
                 <tr>
-                  {TICKET_COLUMNS.map(({ field, labelKey }) => (
-                    <th key={labelKey} style={{
+                  {columns.map((column) => (
+                    <th key={column.id} style={{
                       position: 'relative',
                       height: 26, background: 'var(--surface)', border: '1px solid var(--border)',
                       fontSize: 11, fontWeight: 700, color: 'var(--text-2)', textAlign: 'left', padding: '0 6px',
                     }}>
-                      {t(labelKey)}
+                      {resolveLabel(column, t)}
                       <div
-                        data-col-resize={field}
-                        onMouseDown={(e) => startResize(e, field)}
+                        data-col-resize={column.id}
+                        onMouseDown={(e) => startResize(e, column.id)}
                         style={{
                           position: 'absolute', right: -1, top: 0, width: 5, height: '100%',
                           cursor: 'col-resize', zIndex: 10,
@@ -268,9 +273,9 @@ export function RegressionCard({
               <tbody>
                 {visibleTickets.map((ticket) => (
                   <tr key={ticket.id}>
-                    {TICKET_COLUMNS.map(({ field }) => {
-                      const value = ticket[field];
-                      const parts = field === 'ticket' ? parseUrlCell(value) : null;
+                    {columns.map(({ id: field }) => {
+                      const value = ticket[field] ?? '';
+                      const parts = field === linkFieldId ? parseUrlCell(value) : null;
                       const cellKey = `${ticket.id}:${field}`;
                       const isFocused = focusedCell === cellKey;
                       const visibleText = parts ? (parts.name ?? parts.url) : value;
@@ -354,7 +359,7 @@ export function RegressionCard({
                           aria-label={t('common.delete')}
                           title={t('common.delete')}
                           onClick={() => {
-                            if (ticketRowHasContent(ticket) && !confirm(t('regression.deleteRowConfirm'))) return;
+                            if (ticketRowHasContent(ticket, fieldIds) && !confirm(t('regression.deleteRowConfirm'))) return;
                             onDeleteTicket?.(ticket.id);
                           }}
                           style={{ padding: '2px 8px', fontSize: 12 }}

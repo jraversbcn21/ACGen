@@ -2,10 +2,14 @@ import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
-  useRegressions, PLATFORM_IDS, INITIAL_TICKET_ROWS,
+  useRegressions, INITIAL_TICKET_ROWS,
   ticketRowHasContent, filledTicketCount, isLegacyArchived,
 } from './useRegressions';
-import type { Regression, ArchivedRegression, ArchivedRegressionEntry } from './useRegressions';
+import type { Regression, ArchivedRegression, ArchivedRegressionEntry, RegressionTicket } from './useRegressions';
+import { STORAGE_KEYS } from '../config/constants';
+import { DEFAULT_SCHEMA } from '../types/schema';
+
+const TICKET_FIELD_IDS = ['ticket', 'fecha', 'prioridad', 'creador', 'squad', 'status'];
 
 beforeEach(() => {
   localStorage.clear();
@@ -25,7 +29,6 @@ function addOne(result: { current: ReturnType<typeof useRegressions> }, version 
 describe('useRegressions (versioned)', () => {
   it('initializes with empty lists per platform and no archived', () => {
     const { result } = renderHook(() => useRegressions());
-    expect(PLATFORM_IDS).toEqual(['ios', 'webDesktop']);
     expect(result.current.regressions.ios).toEqual([]);
     expect(result.current.regressions.webDesktop).toEqual([]);
     expect(result.current.archived).toEqual([]);
@@ -185,15 +188,15 @@ describe('useRegressions (versioned)', () => {
   it('ticketRowHasContent and filledTicketCount count rows with any trimmed content', () => {
     const { result } = renderHook(() => useRegressions());
     const reg = addOne(result);
-    expect(filledTicketCount(result.current.regressions.ios[0])).toBe(0);
+    expect(filledTicketCount(result.current.regressions.ios[0], TICKET_FIELD_IDS)).toBe(0);
     const t0 = reg.tickets[0];
     act(() => {
       result.current.updateTicket('ios', reg.id, t0.id, 'squad', '  Checkout  ');
     });
     const after: Regression = result.current.regressions.ios[0];
-    expect(ticketRowHasContent(after.tickets[0])).toBe(true);
-    expect(ticketRowHasContent(after.tickets[1])).toBe(false);
-    expect(filledTicketCount(after)).toBe(1);
+    expect(ticketRowHasContent(after.tickets[0], TICKET_FIELD_IDS)).toBe(true);
+    expect(ticketRowHasContent(after.tickets[1], TICKET_FIELD_IDS)).toBe(false);
+    expect(filledTicketCount(after, TICKET_FIELD_IDS)).toBe(1);
   });
 
   it('new tickets include an empty status field', () => {
@@ -236,8 +239,8 @@ describe('useRegressions (versioned)', () => {
       result.current.updateTicket('ios', reg.id, reg.tickets[0].id, 'status', '  OK  ');
     });
     const after = result.current.regressions.ios[0];
-    expect(ticketRowHasContent(after.tickets[0])).toBe(true);
-    expect(filledTicketCount(after)).toBe(1);
+    expect(ticketRowHasContent(after.tickets[0], TICKET_FIELD_IDS)).toBe(true);
+    expect(filledTicketCount(after, TICKET_FIELD_IDS)).toBe(1);
   });
 
   it('does not double-persist under StrictMode on mount', () => {
@@ -297,5 +300,126 @@ describe('useRegressions (versioned)', () => {
       const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
       expect(stored.regressions.ios.map((r: { version: string }) => r.version)).toEqual(['1.0.0', '3.0.0', '2.0.0']);
     });
+  });
+});
+
+describe('useRegressions guiado por esquema', () => {
+  // Payload real pre-esquema: exactamente lo que un usuario tiene guardado hoy.
+  const PRE_SCHEMA_PAYLOAD = {
+    regressions: {
+      ios: [{
+        id: 'reg-1', version: '1.2.0', url: 'https://excel.example/reg', fecha: '2026-08-10',
+        tickets: [
+          { id: 't1', ticket: 'BSKWEB-1475', fecha: '2026-08-11', prioridad: 'Alta',
+            creador: 'Jorge-QA', squad: 'Checkout', status: 'Resuelto' },
+        ],
+      }],
+      webDesktop: [],
+    },
+    archived: [],
+  };
+
+  it('GUARDIAN: hidrata datos pre-esquema sin esquema guardado y conserva los 6 campos', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify(PRE_SCHEMA_PAYLOAD));
+    expect(localStorage.getItem(STORAGE_KEYS.SCHEMA)).toBeNull();
+
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    const ticket = result.current.regressions.ios[0].tickets[0];
+
+    expect(ticket.ticket).toBe('BSKWEB-1475');
+    expect(ticket.fecha).toBe('2026-08-11');
+    expect(ticket.prioridad).toBe('Alta');
+    expect(ticket.creador).toBe('Jorge-QA');
+    expect(ticket.squad).toBe('Checkout');
+    expect(ticket.status).toBe('Resuelto');
+    expect(result.current.regressions.webDesktop).toEqual([]);
+  });
+
+  it('un campo guardado que ya no esta en el esquema se conserva intacto', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: {
+        ios: [{
+          id: 'reg-1', version: '1.0.0', url: '', fecha: '2026-08-10',
+          tickets: [{ id: 't1', ticket: 'ABC-1', fecha: '', prioridad: '', creador: '',
+                      squad: '', status: '', campoRetirado: 'no me borres' }],
+        }],
+        webDesktop: [],
+      },
+      archived: [],
+    }));
+    // Esquema sin el campo retirado (el default no lo tiene).
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify(DEFAULT_SCHEMA));
+
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(result.current.regressions.ios[0].tickets[0].campoRetirado).toBe('no me borres');
+
+    // Y sigue ahi tras una escritura que re-persiste todo el estado.
+    act(() => { result.current.addTicket('ios', 'reg-1'); });
+    const persisted = JSON.parse(localStorage.getItem('acgen_regressions')!);
+    expect(persisted.regressions.ios[0].tickets[0].campoRetirado).toBe('no me borres');
+  });
+
+  it('una plataforma guardada que ya no esta en el esquema se conserva intacta', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: {
+        ios: [], webDesktop: [],
+        android: [{ id: 'r-a', version: '9.9.9', url: '', fecha: '2026-01-01', tickets: [] }],
+      },
+      archived: [],
+    }));
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(result.current.regressions.android[0].version).toBe('9.9.9');
+  });
+
+  it('un ticket nuevo trae los campos del esquema, incluido uno anadido por el usuario', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: [...DEFAULT_SCHEMA.regression.ticketFields, { id: 'campo-nuevo', label: 'Entorno' }],
+      },
+    }));
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    act(() => {
+      result.current.addRegression('ios', { version: '1.0.0', url: '', fecha: '2026-08-10' });
+    });
+    expect(result.current.regressions.ios[0].tickets[0]['campo-nuevo']).toBe('');
+  });
+
+  it('las plataformas del esquema mandan sobre las cableadas', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        platforms: [...DEFAULT_SCHEMA.regression.platforms, { id: 'plat-nueva', label: 'TV' }],
+      },
+    }));
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(result.current.regressions['plat-nueva']).toEqual([]);
+  });
+
+  it('GUARDIAN: un esquema guardado con regression.platforms ausente no revienta el hook (fallback por lista)', () => {
+    // Payload realista: `regression` existe (pasa el fallback por seccion)
+    // pero le falta `platforms` — p.ej. edicion manual o restauracion a medias.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: DEFAULT_SCHEMA.regression.ticketFields },
+    }));
+    localStorage.setItem('acgen_regressions', JSON.stringify(PRE_SCHEMA_PAYLOAD));
+
+    expect(() => renderHook(() => useRegressions(), { wrapper: StrictMode })).not.toThrow();
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(result.current.regressions.ios[0].tickets[0].ticket).toBe('BSKWEB-1475');
+    expect(result.current.regressions.webDesktop).toEqual([]);
+  });
+
+  it('ticketRowHasContent y filledTicketCount solo miran los ids que se le pasan', () => {
+    const ticket = { id: 't1', ticket: '', fecha: '', prioridad: '', creador: '',
+                     squad: '', status: 'oculto' } as RegressionTicket;
+    expect(ticketRowHasContent(ticket, ['ticket', 'fecha'])).toBe(false);
+    expect(ticketRowHasContent(ticket, ['ticket', 'status'])).toBe(true);
+    const regression = { id: 'r', version: '1', url: '', fecha: '', tickets: [ticket] };
+    expect(filledTicketCount(regression, ['ticket'])).toBe(0);
+    expect(filledTicketCount(regression, ['status'])).toBe(1);
   });
 });
