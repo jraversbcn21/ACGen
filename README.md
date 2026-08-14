@@ -49,7 +49,7 @@ Genera bug reports en formato estructurado con paneles. Cuatro plataformas (Web 
 Genera datos de prueba realistas y con formato valido para cada mercado. Cinco tipos de dato: direcciones de envio, datos de facturacion, registros de usuario, tarjetas de pago (con numeros de prueba de Adyen) y codigos promocionales. La salida se muestra en una tabla HTML con cabeceras en espanol, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
 
 ### Historia de Usuario
-Genera una historia de usuario en formato **Como / Quiero / Para** a partir de una idea o necesidad, junto con una evaluacion de los seis criterios INVEST (Independiente, Negociable, Valiosa, Estimable, Pequena, Testeable) y criterios de aceptacion preliminares en formato Dado/Cuando/Entonces.
+Genera una historia de usuario en formato **Como / Quiero / Para** a partir de una idea o necesidad, junto con una evaluacion de los seis criterios INVEST (Independiente, Negociable, Valiosa, Estimable, Pequena, Testeable) y criterios de aceptacion preliminares en formato Dado/Cuando/Entonces. La salida se muestra en texto plano, sin simbolos de markdown a la vista.
 
 ### Refinador de Requisitos
 Analiza un requisito o historia de usuario y detecta ambiguedades, contradicciones, informacion faltante, dependencias no declaradas y sugiere preguntas concretas para refinarlo con los stakeholders.
@@ -188,7 +188,7 @@ Los modelos se ejecutan a traves del proveedor seleccionado (Groq por defecto):
 | `llama-3.1-8b-instant` | Maxima velocidad |
 | `qwen/qwen3-32b` | Soporta reasoning format (visible/oculto) |
 
-Con OpenRouter o Custom puedes usar cualquier modelo que exponga el proveedor.
+Con OpenRouter puedes elegir entre 9 modelos soportados (incluye modelos con capacidad de vision para el Validador de Diseño); con Custom, cualquier modelo que exponga tu endpoint.
 
 ---
 
