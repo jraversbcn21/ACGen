@@ -302,4 +302,13 @@ describe('RegressionTracker con esquema', () => {
     fireEvent.change(search, { target: { value: 'Checkout' } });
     expect(screen.getByText('Sin coincidencias.')).toBeTruthy();
   });
+
+  it('el boton Columnas abre y cierra el editor de esquema', () => {
+    renderTracker();
+    expect(screen.queryByRole('heading', { name: 'Columnas y plataformas' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Columnas' }));
+    expect(screen.getByRole('heading', { name: 'Columnas y plataformas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('heading', { name: 'Columnas y plataformas' })).toBeNull();
+  });
 });

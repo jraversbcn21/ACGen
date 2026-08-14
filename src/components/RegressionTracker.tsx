@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { TrackerGrid } from './TrackerGrid';
 import { RegressionCard } from './RegressionCard';
+import { RegressionSchemaEditor } from './RegressionSchemaEditor';
 import { useRegressions, isLegacyArchived } from '../hooks/useRegressions';
 import type { PlatformId, ArchivedItem } from '../hooks/useRegressions';
 import { useSchema } from '../hooks/useSchema';
@@ -24,6 +25,7 @@ export function RegressionTracker() {
   const [screen, setScreen] = useState<Screen>({ kind: 'board' });
   const [activeTab, setActiveTab] = useState<PlatformId>(DEFAULT_SCHEMA.regression.platforms[0].id);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [draft, setDraft] = useState({ version: '', url: '', fecha: localTodayISO() });
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
@@ -198,6 +200,14 @@ export function RegressionTracker() {
         >
           + SnapLink
         </a>
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={() => setShowSchemaEditor(true)}
+          style={{ padding: '6px 14px', fontSize: 12 }}
+        >
+          {t('schema.open')}
+        </button>
       </div>
 
       <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -345,6 +355,7 @@ export function RegressionTracker() {
           </div>
         ))}
       </div>
+      {showSchemaEditor && <RegressionSchemaEditor onClose={() => setShowSchemaEditor(false)} />}
     </div>
   );
 }
