@@ -3,6 +3,7 @@ import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamW
 import type { I18nError } from './apiService';
 import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { DEFAULT_PROMPTS } from '../config/constants';
+import type { ContentPart } from '../types';
 
 /** Builds an SSE body that delivers `contentChunks` as separate delta events. */
 function sseResponse(contentChunks: string[]): Response {
@@ -350,5 +351,36 @@ describe('interpolateProfile v2', () => {
       const out = interpolateProfile(prompt, DEFAULT_PROFILE);
       expect(out).not.toMatch(/\{(dominio|tipoProducto|mercados|terminologia|tono|entornos|mercadoPrincipal|mapaSitio|idiomaSalida|convencionesDatos)\}/);
     }
+  });
+});
+
+describe('streamWithGroq multimodal input', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  async function captureBody(userInput: string | ContentPart[]): Promise<Record<string, unknown>> {
+    let captured: Record<string, unknown> = {};
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      captured = JSON.parse(init.body as string);
+      return sseResponse([]);
+    }));
+    const gen = streamWithGroq('key', 'model', userInput, 'prompt', 'criteria');
+    for await (const chunk of gen) { void chunk; }
+    return captured;
+  }
+
+  it('con string, el mensaje de usuario es el string tal cual (byte-idéntico)', async () => {
+    const body = await captureBody('hola mundo');
+    const messages = body.messages as { role: string; content: unknown }[];
+    expect(messages[1]).toEqual({ role: 'user', content: 'hola mundo' });
+  });
+
+  it('con ContentPart[], el content es el array de partes', async () => {
+    const parts: ContentPart[] = [
+      { type: 'text', text: 'valida estos criterios' },
+      { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,AAAA' } },
+    ];
+    const body = await captureBody(parts);
+    const messages = body.messages as { role: string; content: unknown }[];
+    expect(messages[1]).toEqual({ role: 'user', content: parts });
   });
 });

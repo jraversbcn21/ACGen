@@ -12,7 +12,9 @@ vi.mock('../services/apiService', async (importOriginal) => {
 const streamMock = vi.mocked(streamWithGroq);
 
 function sentInput(): string {
-  return streamMock.mock.calls[0][2];
+  const input = streamMock.mock.calls[0][2];
+  if (typeof input !== 'string') throw new Error('expected a string userInput');
+  return input;
 }
 function sentMap(): Record<string, string> | undefined {
   return streamMock.mock.calls[0][6];
