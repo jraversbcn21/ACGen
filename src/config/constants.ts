@@ -75,7 +75,7 @@ export const STORAGE_KEYS = {
 
 export const TEMPERATURE = 0.2;
 
-export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter';
+export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'designvalidator';
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },
@@ -476,6 +476,26 @@ Formatos soportados:
 Devuelve SOLO el texto convertido, sin explicaciones adicionales. Preserva todas las etiquetas, campos, valores y formato original lo mejor posible.
 {tono}`;
 
+export const DESIGN_VALIDATOR_PROMPT = `Eres un QA senior especializado en {dominio}. Recibirás una imagen con el diseño de una pantalla o flujo (export de Figma o captura) y un conjunto de criterios de aceptación existentes. Tu tarea es auditar la cobertura de los criterios contra lo que muestra el diseño.
+
+Analiza la imagen PRIMERO: identifica pantallas, elementos interactivos, estados y flujos visibles. Después compárala con los criterios proporcionados.
+
+CRÍTICO: Devuelve ÚNICAMENTE un objeto JSON válido, parseable por JSON.parse(). Sin bloques de código markdown, sin comillas invertidas, sin texto antes o después del JSON.
+
+Estructura exacta:
+{
+  "carencias": [{"flujo": "...", "descripcion": "..."}],
+  "contradicciones": [{"criterio": "...", "evidenciaDiseno": "...", "descripcion": "..."}],
+  "sugerencias": [{"titulo": "...", "dado": "...", "cuando": "...", "entonces": "..."}]
+}
+
+REGLAS:
+- "carencias": flujos o elementos VISIBLES en el diseño que ningún criterio cubre. En "flujo", nombra el elemento tal como se ve en la imagen.
+- "contradicciones": criterios que contradicen lo que muestra el diseño. En "criterio" cita el criterio afectado; en "evidenciaDiseno" describe QUÉ se ve exactamente en la imagen que lo contradice. NO inventes evidencia: si algo no es visible en la imagen, no es una contradicción.
+- "sugerencias": criterios nuevos o mejorados en formato Dado/Cuando/Entonces que cierren las carencias detectadas.
+- Si una categoría no tiene hallazgos, devuelve un array vacío para ella.
+- Todo el contenido DEBE estar en {idiomaSalida}.`;
+
 export const DEFAULT_PROMPTS: Record<string, string> = {
   acceptance: HARDCODED_PROMPT,
   testcase: TESTCASE_PROMPT,
@@ -485,4 +505,5 @@ export const DEFAULT_PROMPTS: Record<string, string> = {
   refiner: REFINER_PROMPT,
   edgecase: EDGE_CASE_PROMPT,
   converter: CONVERTER_PROMPT,
+  designvalidator: DESIGN_VALIDATOR_PROMPT,
 };

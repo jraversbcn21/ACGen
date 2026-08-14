@@ -10,6 +10,7 @@ const CHAIN_RULES: Record<string, ChainOption[]> = {
   acceptance: [
     { view: 'testcase', label: 'chain.generateTestCases' },
     { view: 'edgecase', label: 'chain.generateEdgeCases' },
+    { view: 'designvalidator', label: 'chain.validateDesign' },
   ],
   userstory: [
     { view: 'acceptance', label: 'chain.generateCriteria' },

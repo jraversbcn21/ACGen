@@ -15,6 +15,7 @@ import { UserStoryTool } from './components/UserStoryTool';
 import { RefinerTool } from './components/RefinerTool';
 import { EdgeCaseTool } from './components/EdgeCaseTool';
 import { ConverterTool } from './components/ConverterTool';
+import { DesignValidatorTool } from './components/DesignValidatorTool';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { STORAGE_KEYS, DEFAULT_MODEL } from './config/constants';
@@ -26,7 +27,7 @@ import { requestPersistentStorage } from './services/persistence';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import type { ViewType } from './config/constants';
 
-const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter'];
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter', 'designvalidator'];
 
 function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
@@ -221,6 +222,13 @@ export default function App() {
           {view === 'converter' && (
             <ConverterTool apiKey={currentApiKey} model={model} profile={profile} baseUrl={currentBaseUrl}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'converter', input, output })} />
+          )}
+
+          {view === 'designvalidator' && (
+            <DesignValidatorTool apiKey={currentApiKey} model={model} provider={provider} profile={profile} baseUrl={currentBaseUrl}
+              prefill={prefill?.view === 'designvalidator' ? prefill.text : undefined}
+              onSwitchToVisionModel={() => { setProvider('openrouter'); setModel('google/gemini-2.5-flash'); }}
+              onSaveArtifact={(input, output) => saveArtifact({ tool: 'designvalidator', input, output })} />
           )}
         </ErrorBoundary>
       </main>

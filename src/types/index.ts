@@ -50,3 +50,10 @@ export interface HistoryEntry {
 export type ContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } };
+
+/** Informe del Validador de Diseño: cobertura de criterios contra una imagen de diseño. */
+export interface DesignReport {
+  carencias: { flujo: string; descripcion: string }[];
+  contradicciones: { criterio: string; evidenciaDiseno: string; descripcion: string }[];
+  sugerencias: { titulo: string; dado: string; cuando: string; entonces: string }[];
+}

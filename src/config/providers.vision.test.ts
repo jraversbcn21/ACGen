@@ -14,6 +14,7 @@ describe('supportsVision', () => {
     expect(supportsVision('openrouter', 'openai/gpt-4o')).toBe('yes');
     expect(supportsVision('openrouter', 'anthropic/claude-sonnet-4')).toBe('yes');
     expect(supportsVision('openrouter', 'meta-llama/llama-4-maverick')).toBe('yes');
+    expect(supportsVision('openrouter', 'qwen/qwen3.7-flash')).toBe('yes');
   });
 
   it('un modelo de OpenRouter sin visión devuelve no', () => {

@@ -13,6 +13,7 @@ const TOOLS = [
   { view: 'userstory' as ViewType, icon: Icon.userstory, labelKey: 'sidebar.userstory', categoryKey: 'sidebar.generar' },
   { view: 'refiner' as ViewType, icon: Icon.refiner, labelKey: 'sidebar.refiner', categoryKey: 'sidebar.refinar' },
   { view: 'edgecase' as ViewType, icon: Icon.edgecase, labelKey: 'sidebar.edgecase', categoryKey: 'sidebar.refinar' },
+  { view: 'designvalidator' as ViewType, icon: Icon.designvalidator, labelKey: 'sidebar.designvalidator', categoryKey: 'sidebar.refinar' },
   { view: 'converter' as ViewType, icon: Icon.converter, labelKey: 'sidebar.converter', categoryKey: 'sidebar.convertir' },
   { view: 'sprinttracker' as ViewType, icon: Icon.sprint, labelKey: 'sidebar.sprint', categoryKey: 'sidebar.seguimiento' },
   { view: 'regressiontracker' as ViewType, icon: Icon.regression, labelKey: 'sidebar.regression', categoryKey: 'sidebar.seguimiento' },
