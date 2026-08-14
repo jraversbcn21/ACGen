@@ -26,6 +26,7 @@ export const PROVIDERS: Record<string, ProviderDef> = {
       'anthropic/claude-sonnet-4',
       'google/gemini-2.5-flash',
       'meta-llama/llama-4-maverick',
+      'qwen/qwen3.7-flash',
       'deepseek/deepseek-chat-v3',
       'qwen/qwen3-235b',
       'mistralai/mistral-large',
@@ -71,6 +72,7 @@ export const VISION_MODELS: Readonly<Record<string, readonly string[]>> = {
     'anthropic/claude-sonnet-4',
     'google/gemini-2.5-flash',
     'meta-llama/llama-4-maverick',
+    'qwen/qwen3.7-flash',
   ],
 };
 
