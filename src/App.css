@@ -148,9 +148,17 @@ body {
 }
 
 /* === CONFIG STRIP === */
-/* Single child (ProviderConfig) whose own flex row lays the fields out
-   horizontally across the full width. */
-.config-strip { margin-bottom: 46px; }
+/* Two children: ProviderConfig's field row on the left, .config-actions
+   (Perfil / Prompts) on the right. align-items: flex-end matters here —
+   ProviderConfig's own root already uses alignItems: 'flex-end', so this
+   keeps the action buttons sitting on the same baseline as the selects
+   instead of centering against the strip's full height. */
+.config-strip {
+  margin-bottom: 46px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 12px; flex-wrap: wrap;
+}
+.config-actions { display: flex; gap: 8px; }
 
 /* === SECTION HEADER === */
 .sec-head {

@@ -44,3 +44,23 @@ describe('Sidebar — workspace label', () => {
     expect(screen.queryByText(/WS:/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Perfil y Hist. de Usuario convivían en la misma barra con el mismo
+ * glifo. Este test impide que vuelvan a converger.
+ */
+describe('Sidebar — icono propio de Perfil', () => {
+  beforeEach(() => {
+    localStorage.setItem('acgen_lang', JSON.stringify('es'));
+  });
+
+  it('el botón Perfil no comparte glifo con la entrada Hist. de Usuario', () => {
+    renderSidebar();
+    const perfil = screen.getByRole('button', { name: 'Perfil' });
+    const userstory = screen.getByRole('button', { name: 'Hist. de Usuario' });
+    expect(perfil.querySelector('svg')).not.toBeNull();
+    expect(perfil.querySelector('svg')?.innerHTML).not.toBe(
+      userstory.querySelector('svg')?.innerHTML,
+    );
+  });
+});

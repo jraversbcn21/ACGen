@@ -82,7 +82,7 @@ export function Sidebar({ activeView, onNavigate, activeWorkspaceName }: Sidebar
               <span>{t('sidebar.inicio')}</span>
             </button>
             <button type="button" className="sidebar-item" onClick={() => setShowProfileEditor(true)}>
-              <Icon.userstory size={18} />
+              <Icon.profile size={18} />
               <span>{t('sidebar.profile')}</span>
             </button>
             <button type="button" className="sidebar-item" onClick={() => setShowPromptEditor(true)}>

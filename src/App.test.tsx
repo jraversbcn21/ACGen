@@ -25,3 +25,16 @@ describe('App — hash navigation', () => {
     expect(scrollSpy).toHaveBeenCalledWith(0, 0);
   });
 });
+
+/**
+ * `<ProfileEditor>`/`<PromptEditor>` modal state is deliberately duplicated
+ * between `Sidebar.tsx` and `LandingScreen.tsx` instead of lifted to `App`,
+ * which is only safe because `App.tsx` never renders `<Sidebar>` on the
+ * landing view. Pin that premise so a future change can't silently break it.
+ */
+describe('App — landing view', () => {
+  it('renders no sidebar on the landing view', () => {
+    render(<App />);
+    expect(document.querySelector('aside.sidebar')).toBeNull();
+  });
+});
