@@ -12,6 +12,7 @@ import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
+import { stripMarkdown } from '../utils/stripMarkdown';
 
 interface UserStoryToolProps {
   apiKey: string;
@@ -44,8 +45,11 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('userstory'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
-        setResult(fullText);
-        onSaveArtifact?.(effectiveInput, fullText);
+        // Se limpia aqui y no al pintar para que lo que copias, encadenas y se
+        // guarda en el historial sea el mismo texto plano que ves.
+        const limpio = stripMarkdown(fullText);
+        setResult(limpio);
+        onSaveArtifact?.(effectiveInput, limpio);
       });
     } catch (err) {
       const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
@@ -120,12 +124,12 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
         </div>
         {result && (
           <div className="output-section" style={{ marginTop: 16 }}>
-            <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, padding: '16px 0' }}>{result}</div>
+            <div data-testid="userstory-output" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, padding: '16px 0' }}>{result}</div>
             {onChain && <ChainMenu sourceView="userstory" content={result} onChain={onChain} />}
           </div>
         )}
         {(isStreaming || loading) && !result && (
-          <div style={{ marginTop: 16, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{streamText}</div>
+          <div style={{ marginTop: 16, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{stripMarkdown(streamText)}</div>
         )}
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
