@@ -39,6 +39,38 @@ describe('stripMarkdown', () => {
     expect(stripMarkdown(entrada)).toBe('Como cliente\nQuiero guardar\n\nINVEST\n- Independent: OK');
   });
 
+  it('elimina las reglas horizontales, que no aportan nada en texto plano', () => {
+    expect(stripMarkdown('arriba\n---\nabajo')).toBe('arriba\nabajo');
+    expect(stripMarkdown('arriba\n***\nabajo')).toBe('arriba\nabajo');
+    expect(stripMarkdown('arriba\n___\nabajo')).toBe('arriba\nabajo');
+  });
+
+  it('convierte la tabla INVEST en filas legibles y tira la fila separadora', () => {
+    const tabla = [
+      '| Criterio | Estado | Observacion |',
+      '|-----------|--------|-------------|',
+      '| Independent | OK | No bloquea checkout |',
+      '| Negotiable | OK | Alcance ajustable |',
+    ].join('\n');
+    expect(stripMarkdown(tabla)).toBe(
+      ['Criterio | Estado | Observacion', 'Independent | OK | No bloquea checkout', 'Negotiable | OK | Alcance ajustable'].join('\n'),
+    );
+  });
+
+  it('limpia el markdown de dentro de las celdas', () => {
+    expect(stripMarkdown('| **Independent** | `OK` |')).toBe('Independent | OK');
+  });
+
+  it('no confunde con una tabla una frase que lleve una barra', () => {
+    expect(stripMarkdown('elige commit | push segun el caso')).toBe('elige commit | push segun el caso');
+    expect(stripMarkdown('el separador es | y ya')).toBe('el separador es | y ya');
+  });
+
+  it('no confunde una vineta con una regla horizontal', () => {
+    expect(stripMarkdown('- Independent: OK')).toBe('- Independent: OK');
+    expect(stripMarkdown('-- pendiente')).toBe('-- pendiente');
+  });
+
   it('es seguro con texto vacio o sin markdown', () => {
     expect(stripMarkdown('')).toBe('');
     expect(stripMarkdown('texto normal sin nada')).toBe('texto normal sin nada');

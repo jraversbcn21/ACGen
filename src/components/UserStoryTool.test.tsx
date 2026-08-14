@@ -46,15 +46,24 @@ vi.mock('../services/apiService', async (importOriginal) => {
 
 const streamMock = vi.mocked(streamWithGroq);
 
-// Forma real de la respuesta: USER_STORY_PROMPT pide en negrita Como, Quiero y Para.
+// Forma real observada en produccion: el prompt pide en negrita Como/Quiero/Para,
+// y el modelo anade cabeceras, reglas horizontales y a veces una tabla INVEST en
+// vez de la lista de vinetas que se le pide.
 const RESPUESTA = [
+  '### Historia de Usuario',
+  '',
   '**Como** cliente registrado',
   '**Quiero** guardar productos en una lista de deseos',
   '**Para** comprarlos mas adelante',
   '',
+  '---',
+  '',
   '### Evaluacion INVEST',
-  '- **Independent**: sin dependencias',
-  '- **Negotiable**: alcance abierto',
+  '',
+  '| Criterio | Estado | Observacion |',
+  '|----------|--------|-------------|',
+  '| **Independent** | OK | No bloquea checkout |',
+  '| **Negotiable** | OK | Alcance ajustable |',
 ].join('\n');
 
 function renderTool(props: Partial<Parameters<typeof UserStoryTool>[0]> = {}) {
@@ -89,11 +98,14 @@ describe('UserStoryTool', () => {
     // engancha el div de progreso (que ya limpia) y el test pasa en verde
     // aunque el resultado final salga con markdown.
     const salida = await screen.findByTestId('userstory-output');
-    expect(salida.textContent).not.toMatch(/\*\*/);
-    expect(salida.textContent).not.toMatch(/^#{1,6}\s/m);
-    expect(salida.textContent).toContain('Como cliente registrado');
-    expect(salida.textContent).toContain('Evaluacion INVEST');
-    expect(salida.textContent).toContain('- Independent: sin dependencias');
+    const texto = salida.textContent ?? '';
+    expect(texto).not.toMatch(/\*\*/);
+    expect(texto).not.toMatch(/^#{1,6}\s/m);
+    expect(texto).not.toMatch(/^\s*[-*_]{3,}\s*$/m);   // reglas horizontales
+    expect(texto).not.toMatch(/^\s*\|[\s|:-]+\|\s*$/m); // fila separadora de tabla
+    expect(texto).toContain('Historia de Usuario');
+    expect(texto).toContain('Como cliente registrado');
+    expect(texto).toContain('Independent | OK | No bloquea checkout');
   });
 
   it('guarda en el artefacto el mismo texto limpio que se muestra', async () => {
