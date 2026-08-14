@@ -15,6 +15,7 @@ import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
+import { parseDeviceList } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
 
 interface BugReportToolProps {
@@ -86,6 +87,9 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
   const canGenerate = apiKey.trim().length > 0 && formData.description.trim().length > 0;
+
+  const iosDevices = parseDeviceList(profile?.iosDevices ?? '', IOS_DEVICES);
+  const androidDevices = parseDeviceList(profile?.androidDevices ?? '', ANDROID_DEVICES);
 
   const marketOptions = useMemo(
     () => SUPPORTED_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
@@ -240,8 +244,8 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setFormData(prev => {
       const browsers = getAvailableBrowsers(p);
       let device = '';
-      if (p === 'app-ios') device = IOS_DEVICES[0].label;
-      else if (p === 'app-android') device = ANDROID_DEVICES[0].label;
+      if (p === 'app-ios') device = iosDevices[0];
+      else if (p === 'app-android') device = androidDevices[0];
       const keepUrl = (!wasWeb && nowWeb) || prev.url === '' || prev.url === 'https://localhost:3443/';
       return {
         ...prev,
@@ -253,7 +257,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         url: nowWeb ? (keepUrl ? 'https://localhost:3443/' : prev.url) : prev.url,
       };
     });
-  }, [formData.platform]);
+  }, [formData.platform, iosDevices, androidDevices]);
 
   const browserOptions = getAvailableBrowsers(formData.platform);
 
@@ -341,14 +345,9 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
                   onChange={(e) => updateForm('device', e.target.value)}
                   className="field-select"
                 >
-                  {formData.platform === 'app-ios'
-                    ? IOS_DEVICES.map(d => (
-                        <option key={d.id} value={d.label}>{d.label}</option>
-                      ))
-                    : ANDROID_DEVICES.map(d => (
-                        <option key={d.id} value={d.label}>{d.label}</option>
-                      ))
-                  }
+                  {(formData.platform === 'app-ios' ? iosDevices : androidDevices).map((label) => (
+                    <option key={label} value={label}>{label}</option>
+                  ))}
                 </select>
                 <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
               </div>

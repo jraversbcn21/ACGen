@@ -294,6 +294,8 @@
   "profile.outputLanguage": "Idioma de salida",
   "profile.siteMap": "Mapa del sitio / áreas del producto",
   "profile.testDataConventions": "Convenciones de datos de prueba",
+  "profile.iosDevices": "Dispositivos iOS",
+  "profile.androidDevices": "Dispositivos Android",
   "profile.reset": "Restaurar por defecto",
   "profile.saved": "¡Guardado!"
 }

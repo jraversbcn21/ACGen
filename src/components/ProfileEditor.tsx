@@ -14,6 +14,8 @@ const FIELDS: { key: keyof ProjectProfile; labelKey: string; multiline?: boolean
   { key: 'outputLanguage', labelKey: 'profile.outputLanguage' },
   { key: 'siteMap', labelKey: 'profile.siteMap', multiline: true },
   { key: 'testDataConventions', labelKey: 'profile.testDataConventions', multiline: true },
+  { key: 'iosDevices', labelKey: 'profile.iosDevices' },
+  { key: 'androidDevices', labelKey: 'profile.androidDevices' },
 ];
 
 interface ProfileEditorProps {

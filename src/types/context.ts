@@ -14,6 +14,10 @@ export interface ProjectProfile {
   outputLanguage: string;
   /** Convenciones de datos de prueba (tarjetas del PSP, emails QA, passwords...). */
   testDataConventions: string;
+  /** Dispositivos iOS disponibles para probar, separados por comas. */
+  iosDevices: string;
+  /** Dispositivos Android disponibles para probar, separados por comas. */
+  androidDevices: string;
 }
 
 export const DEFAULT_PROFILE: ProjectProfile = {
@@ -36,4 +40,16 @@ export const DEFAULT_PROFILE: ProjectProfile = {
 7. Los códigos postales, formatos de teléfono y formatos de dirección DEBEN ser válidos para el país seleccionado.
 8. Para datos de tipo "user-registration": los emails DEBEN seguir este formato: un nombre corto y común del país en minúsculas (sin apellidos, sin números, sin puntos, sin guiones) seguido de un dominio de prueba QA. Rota los dominios en este orden: @qa, @qa1, @qa2, @qa.1, @qa.2, @qa.3, @qa.4, etc. Ejemplos: maria@qa, jean@qa1, luca@qa2, anna@qa.1, pedro@qa.2.
 9. Para datos de tipo "user-registration": la contraseña SIEMPRE debe ser exactamente "Test1234" para TODOS los registros generados. Sin excepciones ni variaciones.`,
+  iosDevices: 'iPhone XR, iPhone 11',
+  androidDevices: 'Redmi Note 11 Pro, Moto g35 5G',
 };
+
+/**
+ * Trocea una lista de dispositivos separada por comas. Un campo vacio cae al
+ * listado por defecto en vez de dejar el desplegable sin opciones — mismo
+ * criterio que el resto del perfil, donde un campo vaciado no rompe nada.
+ */
+export function parseDeviceList(value: string, fallback: readonly { label: string }[]): string[] {
+  const parsed = value.split(',').map((s) => s.trim()).filter(Boolean);
+  return parsed.length > 0 ? parsed : fallback.map((d) => d.label);
+}
