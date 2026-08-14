@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nProvider } from '../i18n/I18nContext';
 import { RegressionTracker } from './RegressionTracker';
+import { STORAGE_KEYS } from '../config/constants';
+import { DEFAULT_SCHEMA } from '../types/schema';
 
 function renderTracker() {
   return render(
@@ -235,5 +237,69 @@ describe('RegressionTracker (versioned)', () => {
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
       expect(screen.queryByLabelText('Arrastrar para reordenar')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('RegressionTracker con esquema', () => {
+  it('GUARDIAN: sin esquema guardado pinta las dos pestanas de hoy', () => {
+    renderTracker();
+    expect(screen.getByRole('button', { name: 'APPS' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'WEB' })).toBeTruthy();
+  });
+
+  it('renombrar una plataforma cambia la pestana sin mover los datos', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: { ios: [{ id: 'r1', version: '1.2.3', url: '', fecha: '2026-08-10', tickets: [] }], webDesktop: [] },
+      archived: [],
+    }));
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        platforms: [{ id: 'ios', label: 'Moviles' }, { id: 'webDesktop', label: 'WEB' }],
+      },
+    }));
+    renderTracker();
+    expect(screen.getByRole('button', { name: 'Moviles' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
+    expect(screen.getByText('1.2.3')).toBeTruthy();
+  });
+
+  it('ocultar la plataforma activa reencamina a la primera visible', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        platforms: [{ id: 'ios', label: 'APPS', hidden: true }, { id: 'webDesktop', label: 'WEB' }],
+      },
+    }));
+    renderTracker();
+    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'WEB' })).toBeTruthy();
+  });
+
+  it('la busqueda no encuentra por campos ocultos', () => {
+    localStorage.setItem('acgen_regressions', JSON.stringify({
+      regressions: {
+        ios: [{ id: 'r1', version: '1.0.0', url: '', fecha: '2026-08-10', tickets: [
+          { id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout', status: '' },
+        ] }],
+        webDesktop: [],
+      },
+      archived: [],
+    }));
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: DEFAULT_SCHEMA.regression.ticketFields.map((f) =>
+          f.id === 'squad' ? { ...f, hidden: true } : f
+        ),
+      },
+    }));
+    renderTracker();
+    const search = screen.getByLabelText(/Buscar por versión/);
+    fireEvent.change(search, { target: { value: 'Checkout' } });
+    expect(screen.getByText('Sin coincidencias.')).toBeTruthy();
   });
 });
