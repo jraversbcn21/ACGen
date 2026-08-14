@@ -10,16 +10,7 @@ import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
-
-const CATEGORY_BADGES: Record<string, string> = {
-  'Valores frontera': 'badge-high',
-  'Estados vacios': 'badge-medium',
-  'Concurrencia': 'badge-warning',
-  'Internacionalizacion (i18n)': 'badge-info',
-  'Permisos y roles': 'badge-danger',
-  'Red y conectividad': 'badge-medium',
-  'Internacionalizacion': 'badge-info',
-};
+import { categoryBadge } from '../utils/categoryBadge';
 
 export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {
   const [requirement, setRequirement] = useState('');
@@ -135,7 +126,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
                 <tbody>
                   {edgeCases.map((ec, idx) => (
                     <tr key={idx}>
-                      <td><span className={`badge ${CATEGORY_BADGES[ec.categoria] || 'badge-medium'}`}>{ec.categoria}</span></td>
+                      <td><span className={`badge ${categoryBadge(ec.categoria)}`}>{ec.categoria}</span></td>
                       <td>{ec.escenario}</td>
                       <td>{ec.resultadoEsperado}</td>
                     </tr>
