@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { ProviderConfig } from './ProviderConfig';
 import { Icon } from './Icons';
 import { useT } from '../i18n/I18nContext';
+import { ProfileEditor } from './ProfileEditor';
+import { PromptEditor } from './PromptEditor';
 
 interface LandingScreenProps {
   onSelect: (view: 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker' | 'designvalidator') => void;
@@ -96,6 +99,8 @@ const tools = [
 
 export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, onApiKeyChange, model, onModelChange, customBaseUrl, onCustomBaseUrlChange }: LandingScreenProps) {
   const t = useT();
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
 
   return (
     <div className="landing">
@@ -118,6 +123,16 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
           baseUrl={customBaseUrl}
           onBaseUrlChange={onCustomBaseUrlChange}
         />
+        <div className="config-actions">
+          <button type="button" className="btn-ghost" onClick={() => setShowProfileEditor(true)}>
+            <Icon.profile size={18} />
+            {t('sidebar.profile')}
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => setShowPromptEditor(true)}>
+            <Icon.spark size={18} />
+            {t('sidebar.prompts')}
+          </button>
+        </div>
       </div>
 
       <div className="sec-head">
@@ -142,6 +157,9 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
           );
         })}
       </div>
+
+      {showProfileEditor && <ProfileEditor onClose={() => setShowProfileEditor(false)} />}
+      {showPromptEditor && <PromptEditor onClose={() => setShowPromptEditor(false)} />}
     </div>
   );
 }

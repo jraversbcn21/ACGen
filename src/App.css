@@ -150,7 +150,12 @@ body {
 /* === CONFIG STRIP === */
 /* Single child (ProviderConfig) whose own flex row lays the fields out
    horizontally across the full width. */
-.config-strip { margin-bottom: 46px; }
+.config-strip {
+  margin-bottom: 46px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 12px; flex-wrap: wrap;
+}
+.config-actions { display: flex; gap: 8px; }
 
 /* === SECTION HEADER === */
 .sec-head {
