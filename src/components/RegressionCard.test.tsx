@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nProvider } from '../i18n/I18nContext';
 import { RegressionCard } from './RegressionCard';
 import type { Regression } from '../hooks/useRegressions';
+import { STORAGE_KEYS } from '../config/constants';
+import { DEFAULT_SCHEMA } from '../types/schema';
 
 function makeRegression(overrides: Partial<Regression> = {}): Regression {
   return {
@@ -275,5 +277,103 @@ describe('RegressionCard', () => {
       const link = screen.getByRole('link', { name: /Excel Regresión/ });
       expect(link).toHaveAttribute('title', 'Coincide en la URL del enlace');
     });
+  });
+});
+
+describe('RegressionCard con esquema', () => {
+  beforeEach(() => {
+    // El beforeEach del fichero fuerza 'es' para las suites de arriba; estas
+    // pruebas asumen el idioma por defecto de jsdom (navigator.language
+    // 'en-US' => INGLES), asi que se retira el override justo para ellas.
+    localStorage.removeItem('acgen_lang');
+  });
+
+  it('GUARDIAN: sin esquema guardado pinta las 6 cabeceras de hoy en orden', () => {
+    renderCard({ defaultExpanded: true });
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent);
+    // jsdom => navigator.language 'en-US' => la app renderiza en INGLES.
+    expect(headers.slice(0, 6)).toEqual(['Ticket', 'Date', 'Priority', 'Creator', 'Squad', 'Status']);
+  });
+
+  it('renombrar un campo cambia el rotulo sin tocar el dato', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: DEFAULT_SCHEMA.regression.ticketFields.map((f) =>
+          f.id === 'squad' ? { ...f, label: 'Equipo' } : f
+        ),
+      },
+    }));
+    renderCard({
+      defaultExpanded: true,
+      regression: makeRegression({
+        tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout', status: '' }],
+      }),
+    });
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers.slice(0, 6)).toEqual(['Ticket', 'Date', 'Priority', 'Creator', 'Equipo', 'Status']);
+    expect(screen.getByDisplayValue('Checkout')).toBeTruthy();
+  });
+
+  it('un campo oculto desaparece de la tabla pero su valor sigue en el ticket', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: DEFAULT_SCHEMA.regression.ticketFields.map((f) =>
+          f.id === 'squad' ? { ...f, hidden: true } : f
+        ),
+      },
+    }));
+    renderCard({
+      defaultExpanded: true,
+      regression: makeRegression({
+        tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout', status: '' }],
+      }),
+    });
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers.slice(0, 5)).toEqual(['Ticket', 'Date', 'Priority', 'Creator', 'Status']);
+    expect(screen.queryByDisplayValue('Checkout')).toBeNull();
+  });
+
+  it('un campo anadido por el usuario se pinta y es editable', () => {
+    const onUpdateTicket = vi.fn();
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: [...DEFAULT_SCHEMA.regression.ticketFields, { id: 'entorno', label: 'Entorno' }],
+      },
+    }));
+    renderCard({
+      defaultExpanded: true,
+      onUpdateTicket,
+      regression: makeRegression({
+        tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '', entorno: 'Pro' }],
+      }),
+    });
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers.slice(0, 7)).toEqual(['Ticket', 'Date', 'Priority', 'Creator', 'Squad', 'Status', 'Entorno']);
+    fireEvent.change(screen.getByDisplayValue('Pro'), { target: { value: 'UAT' } });
+    expect(onUpdateTicket).toHaveBeenCalledWith('t1', 'entorno', 'UAT');
+  });
+
+  it('el contador de tickets no cuenta contenido de campos ocultos', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: DEFAULT_SCHEMA.regression.ticketFields.map((f) =>
+          f.id === 'squad' ? { ...f, hidden: true } : f
+        ),
+      },
+    }));
+    renderCard({
+      regression: makeRegression({
+        tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Checkout', status: '' }],
+      }),
+    });
+    expect(screen.getByText(/^0 /)).toBeTruthy();
   });
 });
