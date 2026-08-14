@@ -359,6 +359,37 @@ describe('RegressionCard con esquema', () => {
     expect(onUpdateTicket).toHaveBeenCalledWith('t1', 'entorno', 'UAT');
   });
 
+  it('con el campo ticket oculto, el enlace se mueve a la primera columna visible', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        ticketFields: DEFAULT_SCHEMA.regression.ticketFields.map((f) =>
+          f.id === 'ticket' ? { ...f, hidden: true } : f
+        ),
+      },
+    }));
+    renderCard({
+      defaultExpanded: true,
+      regression: makeRegression({
+        tickets: [{
+          id: 't1',
+          ticket: 'PROJ-1 - https://j.example/browse/PROJ-1',
+          fecha: 'PROJ-2 - https://j.example/browse/PROJ-2',
+          prioridad: '', creador: '', squad: '', status: '',
+        }],
+      }),
+    });
+    // La columna Ticket esta oculta: su valor no se pinta en ningun sitio.
+    expect(screen.queryByText('PROJ-1')).not.toBeInTheDocument();
+    // Fecha, ahora la primera columna VISIBLE, se parsea como enlace "Nombre - URL"
+    // en su lugar — antes del cambio del plan esto solo pasaba en el campo 'ticket'.
+    const overlay = screen.getByText('PROJ-2');
+    expect(overlay).toBeInTheDocument();
+    const cell = overlay.closest('td')!;
+    expect(cell).toHaveAttribute('title', 'Ctrl + Click to open the link');
+  });
+
   it('el contador de tickets no cuenta contenido de campos ocultos', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
       version: 1,

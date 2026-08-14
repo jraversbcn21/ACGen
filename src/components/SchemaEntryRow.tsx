@@ -28,6 +28,7 @@ export function SchemaEntryRow({ label, hidden, canHide, inputId, onRename, onTo
     const next = draft.trim();
     if (!next) { setDraft(label); return; }
     if (next !== label) onRename(next);
+    else setDraft(next);
   };
 
   return (

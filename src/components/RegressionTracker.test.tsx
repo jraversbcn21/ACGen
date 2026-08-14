@@ -311,4 +311,34 @@ describe('RegressionTracker con esquema', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
     expect(screen.queryByRole('heading', { name: 'Columnas y plataformas' })).toBeNull();
   });
+
+  it('anadir una plataforma desde el editor la muestra como pestana nueva', () => {
+    renderTracker();
+    fireEvent.click(screen.getByRole('button', { name: 'Columnas' }));
+    fireEvent.change(screen.getByPlaceholderText('Nombre de la plataforma nueva'), { target: { value: 'Android' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir plataforma' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByRole('button', { name: 'Android' })).toBeTruthy();
+  });
+
+  it('un esquema con todas las plataformas ocultas sigue renderizando un tracker usable y no escribe bajo la clave "undefined"', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: {
+        ...DEFAULT_SCHEMA.regression,
+        platforms: DEFAULT_SCHEMA.regression.platforms.map((p) => ({ ...p, hidden: true })),
+      },
+    }));
+    renderTracker();
+    // Sin plataformas visibles no hay pestanas, pero el resto del tracker
+    // (alta de regresion incluida) sigue siendo usable.
+    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'WEB' })).toBeNull();
+    fireEvent.click(screen.getByText('+ Nueva regresión'));
+    fireEvent.change(screen.getByLabelText('Versión'), { target: { value: '1.0.0' } });
+    fireEvent.click(screen.getByText('Crear'));
+    const stored = JSON.parse(localStorage.getItem('acgen_regressions')!);
+    expect(stored.regressions['undefined']).toBeUndefined();
+    expect(stored.regressions.ios[0].version).toBe('1.0.0');
+  });
 });

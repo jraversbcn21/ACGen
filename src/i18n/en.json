@@ -242,6 +242,8 @@
   "schema.platforms": "Platforms",
   "schema.addField": "Add field",
   "schema.newFieldPlaceholder": "New field name",
+  "schema.addPlatform": "Add platform",
+  "schema.newPlatformPlaceholder": "New platform name",
   "schema.hide": "Hide",
   "schema.nameOf": "Name of {name}",
   "schema.hiddenHint": "Hiding deletes nothing: the data stays stored and comes back when you show the entry again.",

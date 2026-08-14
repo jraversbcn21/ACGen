@@ -41,8 +41,12 @@ export function RegressionTracker() {
   const visibleFieldIds = visibleEntries(schema.regression.ticketFields).map((f) => f.id);
 
   // activeTab puede quedar apuntando a una plataforma que el usuario acaba de
-  // ocultar; en ese caso se reencamina a la primera visible.
-  const safeTab: PlatformId = platformIds.includes(activeTab) ? activeTab : platformIds[0];
+  // ocultar; en ese caso se reencamina a la primera visible. Si un esquema
+  // escrito a mano deja CERO plataformas visibles, platformIds[0] tambien es
+  // undefined — sin el fallback final, `regressions[undefined]` escribiria
+  // bajo la clave literal "undefined" en vez de fallar de forma audible.
+  const safeTab: PlatformId =
+    platformIds.includes(activeTab) ? activeTab : platformIds[0] ?? DEFAULT_SCHEMA.regression.platforms[0].id;
 
   const platformLabel = (id: PlatformId): string =>
     resolveLabel(schema.regression.platforms.find((p) => p.id === id), t) || id;

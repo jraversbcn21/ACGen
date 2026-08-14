@@ -50,7 +50,10 @@ export function resolveLabel(entry: SchemaEntry | undefined, t: (key: string) =>
   return entry.labelKey ? t(entry.labelKey) : '';
 }
 
-/** Ids de las entradas visibles, en orden. */
-export function visibleEntries(entries: SchemaEntry[]): SchemaEntry[] {
-  return entries.filter((e) => !e.hidden);
+/** Ids de las entradas visibles, en orden. Tolera una lista ausente (esquema
+ *  escrito a mano en localStorage, p.ej. `regression: { ticketFields: [] }`
+ *  sin `platforms`, o con la clave directamente omitida): sin este fallback
+ *  `.filter` lanzaria sobre `undefined` y rompería el render entero. */
+export function visibleEntries(entries?: SchemaEntry[]): SchemaEntry[] {
+  return (entries ?? []).filter((e) => !e.hidden);
 }

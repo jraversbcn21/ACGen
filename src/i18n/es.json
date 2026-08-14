@@ -242,6 +242,8 @@
   "schema.platforms": "Plataformas",
   "schema.addField": "Añadir campo",
   "schema.newFieldPlaceholder": "Nombre del campo nuevo",
+  "schema.addPlatform": "Añadir plataforma",
+  "schema.newPlatformPlaceholder": "Nombre de la plataforma nueva",
   "schema.hide": "Ocultar",
   "schema.nameOf": "Nombre de {name}",
   "schema.hiddenHint": "Ocultar no borra nada: los datos siguen guardados y vuelven al mostrar la entrada otra vez.",

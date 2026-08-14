@@ -13,7 +13,11 @@ interface RegressionSchemaEditorProps {
 export function RegressionSchemaEditor({ onClose }: RegressionSchemaEditorProps) {
   const t = useT();
   const [schema, setSchema] = useSchema();
-  const [newFieldName, setNewFieldName] = useState('');
+  // Un borrador de nombre nuevo por lista: mismo patron para campos y
+  // plataformas, sin duplicar el estado ni el manejador.
+  const [newEntryName, setNewEntryName] = useState<Record<ListName, string>>({
+    ticketFields: '', platforms: '',
+  });
 
   // Escritura directa, sin borrador global: cada cambio persiste en el acto y
   // "Restaurar por defecto" es la via de vuelta.
@@ -23,11 +27,13 @@ export function RegressionSchemaEditor({ onClose }: RegressionSchemaEditorProps)
   const patchEntry = (list: ListName, id: string, patch: Partial<SchemaEntry>) =>
     writeList(list, schema.regression[list].map((e) => (e.id === id ? { ...e, ...patch } : e)));
 
-  const addField = () => {
-    const name = newFieldName.trim();
+  // Anadir un campo o una plataforma: mismo comportamiento en los dos casos
+  // (id crypto.randomUUID(), se anade al final, nombre vacio no hace nada).
+  const addEntry = (list: ListName) => {
+    const name = newEntryName[list].trim();
     if (!name) return;
-    writeList('ticketFields', [...schema.regression.ticketFields, { id: crypto.randomUUID(), label: name }]);
-    setNewFieldName('');
+    writeList(list, [...schema.regression[list], { id: crypto.randomUUID(), label: name }]);
+    setNewEntryName((prev) => ({ ...prev, [list]: '' }));
   };
 
   const reset = () => {
@@ -51,6 +57,21 @@ export function RegressionSchemaEditor({ onClose }: RegressionSchemaEditorProps)
     ));
   };
 
+  const renderAddRow = (list: ListName, placeholderKey: string, buttonKey: string) => (
+    <div style={{ display: 'flex', gap: 8, marginTop: 8, marginBottom: 20 }}>
+      <input
+        type="text"
+        placeholder={t(placeholderKey)}
+        value={newEntryName[list]}
+        onChange={(e) => setNewEntryName((prev) => ({ ...prev, [list]: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') addEntry(list); }}
+        className="field-input"
+        style={{ flex: 1, minWidth: 0 }}
+      />
+      <button type="button" className="btn-ghost" onClick={() => addEntry(list)}>{t(buttonKey)}</button>
+    </div>
+  );
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
@@ -64,21 +85,11 @@ export function RegressionSchemaEditor({ onClose }: RegressionSchemaEditorProps)
 
         <h3 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 8px' }}>{t('schema.fields')}</h3>
         {renderList('ticketFields')}
-        <div style={{ display: 'flex', gap: 8, marginTop: 8, marginBottom: 20 }}>
-          <input
-            type="text"
-            placeholder={t('schema.newFieldPlaceholder')}
-            value={newFieldName}
-            onChange={(e) => setNewFieldName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') addField(); }}
-            className="field-input"
-            style={{ flex: 1, minWidth: 0 }}
-          />
-          <button type="button" className="btn-ghost" onClick={addField}>{t('schema.addField')}</button>
-        </div>
+        {renderAddRow('ticketFields', 'schema.newFieldPlaceholder', 'schema.addField')}
 
         <h3 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 8px' }}>{t('schema.platforms')}</h3>
         {renderList('platforms')}
+        {renderAddRow('platforms', 'schema.newPlatformPlaceholder', 'schema.addPlatform')}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
           <button type="button" className="btn-ghost" onClick={reset}>{t('schema.reset')}</button>

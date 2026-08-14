@@ -40,6 +40,38 @@ describe('useSchema', () => {
     expect(result.current[0].regression.ticketFields.find((f) => f.id === 'squad')!.label).toBe('Equipo');
   });
 
+  it('preserva una seccion desconocida del esquema guardado en cualquier escritura, no solo en un reset', () => {
+    // Payload realista para cuando la Fase 5 exista: una seccion `sprint` que
+    // esta fase ni conoce ni declara en su tipo. `schema` (lo que devuelve el
+    // hook) nunca la incluye, asi que cualquier `{ ...schema, regression: X }`
+    // que un llamante escriba llega aqui SIN esa seccion.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: DEFAULT_SCHEMA.regression,
+      sprint: { tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] },
+    }));
+    const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
+
+    // Un renombrado normal (NO un reset) escrito a traves del hook, con la
+    // forma exacta que usa RegressionSchemaEditor: spread de `schema` (que no
+    // trae `sprint`) mas la seccion `regression` modificada.
+    act(() => {
+      result.current[1]({
+        ...result.current[0],
+        regression: {
+          ...result.current[0].regression,
+          ticketFields: result.current[0].regression.ticketFields.map((f) =>
+            f.id === 'squad' ? { ...f, label: 'Equipo' } : f
+          ),
+        },
+      });
+    });
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEMA)!);
+    expect(stored.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
+    expect(stored.regression.ticketFields.find((f: { id: string }) => f.id === 'squad').label).toBe('Equipo');
+  });
+
   it('cae al default de la seccion cuando la seccion falta en lo guardado', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({ version: 1 }));
     const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });

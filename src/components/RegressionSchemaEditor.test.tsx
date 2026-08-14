@@ -80,6 +80,23 @@ describe('RegressionSchemaEditor', () => {
     expect(localStorage.getItem(STORAGE_KEYS.SCHEMA)).toBeNull();
   });
 
+  it('anadir una plataforma la agrega al final con un id UUID', () => {
+    renderEditor();
+    fireEvent.change(screen.getByPlaceholderText('New platform name'), { target: { value: 'Android' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add platform' }));
+    const platforms = storedSchema().regression.platforms;
+    expect(platforms).toHaveLength(3);
+    expect(platforms[2].label).toBe('Android');
+    expect(platforms[2].id).not.toBe('Android');
+    expect(platforms[2].id.length).toBeGreaterThan(10);
+  });
+
+  it('anadir una plataforma con el nombre vacio no hace nada', () => {
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: 'Add platform' }));
+    expect(localStorage.getItem(STORAGE_KEYS.SCHEMA)).toBeNull();
+  });
+
   it('no deja ocultar la ultima entrada visible de una lista', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
       version: 1,
@@ -109,7 +126,24 @@ describe('RegressionSchemaEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     const next = storedSchema();
     expect(next.regression).toEqual(DEFAULT_SCHEMA.regression);
-    expect(next.sprint).toBeUndefined();
+    // Una seccion que esta fase ni conoce (Fase 5 anadira `sprint`) sobrevive
+    // al reset intacta: "Restaurar por defecto" toca solo `regression`.
+    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
+  });
+
+  it('un renombrado normal (no un reset) tambien preserva una seccion desconocida', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: DEFAULT_SCHEMA.regression,
+      sprint: { tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] },
+    }));
+    renderEditor();
+    const input = screen.getByDisplayValue('Squad');
+    fireEvent.change(input, { target: { value: 'Equipo' } });
+    fireEvent.blur(input);
+    const next = storedSchema();
+    expect(next.regression.ticketFields.find((f: { id: string }) => f.id === 'squad').label).toBe('Equipo');
+    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
   });
 
   it('cierra con el boton de cerrar', () => {
