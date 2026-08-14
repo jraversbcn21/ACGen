@@ -1,26 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { localTodayISO } from '../utils/dates';
+import { useSchema } from './useSchema';
 
 const STORAGE_KEY = 'acgen_regressions';
 
-// 'ios' es el id histórico de la pestaña APPS: se conserva para que los datos
-// existentes en localStorage sobrevivan al renombrado (mismo criterio que
-// 'webDesktop' → "WEB").
-export type PlatformId = 'ios' | 'webDesktop';
+// Los ids de plataforma y de campo son claves de almacenamiento definidas por
+// el esquema (`acgen_schema`), ya no uniones cerradas. 'ios' sigue siendo el id
+// historico de la pestana APPS y 'webDesktop' el de WEB: por eso los datos
+// existentes sobreviven a cualquier renombrado.
+export type PlatformId = string;
 
-export const PLATFORM_IDS: readonly PlatformId[] = ['ios', 'webDesktop'];
-
-export type TicketField = 'ticket' | 'fecha' | 'prioridad' | 'creador' | 'squad' | 'status';
-
-export interface RegressionTicket {
-  id: string;
-  ticket: string;
-  fecha: string;
-  prioridad: string;
-  creador: string;
-  squad: string;
-  status: string;
-}
+export type RegressionTicket = { id: string } & Record<string, string>;
 
 export interface Regression {
   id: string;
@@ -62,33 +52,29 @@ interface RegressionState {
 
 export const INITIAL_TICKET_ROWS = 3;
 
-function emptyTicket(): RegressionTicket {
-  return { id: crypto.randomUUID(), ticket: '', fecha: '', prioridad: '', creador: '', squad: '', status: '' };
+function emptyTicket(fieldIds: string[]): RegressionTicket {
+  const ticket: RegressionTicket = { id: crypto.randomUUID() };
+  for (const f of fieldIds) ticket[f] = '';
+  return ticket;
 }
 
-// Rellena campos añadidos después de que existieran datos guardados (p.ej.
-// `status`, incorporado tras el primer despliegue del modelo versionado).
-function normalizeTicket(t: Partial<RegressionTicket>): RegressionTicket {
-  return {
-    id: t.id ?? crypto.randomUUID(),
-    ticket: t.ticket ?? '',
-    fecha: t.fecha ?? '',
-    prioridad: t.prioridad ?? '',
-    creador: t.creador ?? '',
-    squad: t.squad ?? '',
-    status: t.status ?? '',
-  };
+// Anade las claves del esquema que falten SIN podar ninguna existente: los
+// campos retirados del esquema quedan huerfanos pero intactos.
+function normalizeTicket(t: Partial<RegressionTicket>, fieldIds: string[]): RegressionTicket {
+  const ticket: RegressionTicket = { ...(t as RegressionTicket), id: t.id ?? crypto.randomUUID() };
+  for (const f of fieldIds) if (typeof ticket[f] !== 'string') ticket[f] = '';
+  return ticket;
 }
 
 // Tolerante a entradas malformadas: nunca lanza (una excepción aquí caería en
 // el catch de hidratación y vaciaría TODO el estado — ver el guard de archived).
-function normalizeRegression(r: Partial<Regression> | null | undefined): Regression {
+function normalizeRegression(r: Partial<Regression> | null | undefined, fieldIds: string[]): Regression {
   return {
     id: r?.id ?? crypto.randomUUID(),
     version: r?.version ?? '',
     url: r?.url ?? '',
     fecha: r?.fecha ?? '',
-    tickets: Array.isArray(r?.tickets) ? r.tickets.map(normalizeTicket) : [],
+    tickets: Array.isArray(r?.tickets) ? r.tickets.map((t) => normalizeTicket(t, fieldIds)) : [],
   };
 }
 
@@ -96,20 +82,20 @@ function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
 }
 
-function emptyBoard(): Record<PlatformId, string[][]> {
-  return { ios: createEmptyGrid(), webDesktop: createEmptyGrid() };
+function emptyBoard(platformIds: string[]): Record<PlatformId, string[][]> {
+  return Object.fromEntries(platformIds.map((p) => [p, createEmptyGrid()]));
 }
 
-function emptyRegressions(): Record<PlatformId, Regression[]> {
-  return { ios: [], webDesktop: [] };
+function emptyRegressions(platformIds: string[]): Record<PlatformId, Regression[]> {
+  return Object.fromEntries(platformIds.map((p) => [p, []]));
 }
 
-export function ticketRowHasContent(t: RegressionTicket): boolean {
-  return [t.ticket, t.fecha, t.prioridad, t.creador, t.squad, t.status].some((v) => v.trim() !== '');
+export function ticketRowHasContent(t: RegressionTicket, fieldIds: string[]): boolean {
+  return fieldIds.some((f) => (t[f] ?? '').trim() !== '');
 }
 
-export function filledTicketCount(r: Regression): number {
-  return r.tickets.filter(ticketRowHasContent).length;
+export function filledTicketCount(r: Regression, fieldIds: string[]): number {
+  return r.tickets.filter((t) => ticketRowHasContent(t, fieldIds)).length;
 }
 
 function persist(state: RegressionState): void {
@@ -121,23 +107,37 @@ function persist(state: RegressionState): void {
 }
 
 export function useRegressions() {
+  const [schema] = useSchema();
+  // schema viene memoizado por useSchema, asi que estas listas son estables
+  // entre renders y sirven como dependencia de los useCallback.
+  const fieldIds = useMemo(
+    () => schema.regression.ticketFields.map((f) => f.id),
+    [schema]
+  );
+  const platformIds = useMemo(
+    () => schema.regression.platforms.map((p) => p.id),
+    [schema]
+  );
+
   const [state, setState] = useState<RegressionState>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { regressions: emptyRegressions(), archived: [] };
+      if (!raw) return { regressions: emptyRegressions(platformIds), archived: [] };
       const parsed = JSON.parse(raw);
       const archived: ArchivedItem[] = Array.isArray(parsed.archived)
         ? parsed.archived
             .filter((a: unknown) => typeof a === 'object' && a !== null)
             .map((a: ArchivedItem) =>
               isLegacyArchived(a)
-                ? { ...a, board: { ...emptyBoard(), ...(a.board || {}) } }
-                : { ...a, regression: normalizeRegression(a.regression) }
+                ? { ...a, board: { ...emptyBoard(platformIds), ...(a.board || {}) } }
+                : { ...a, regression: normalizeRegression(a.regression, fieldIds) }
             )
         : [];
-      const regressions = { ...emptyRegressions(), ...(parsed.regressions || {}) };
-      for (const p of PLATFORM_IDS) {
-        regressions[p] = (regressions[p] || []).map(normalizeRegression);
+      const regressions = { ...emptyRegressions(platformIds), ...(parsed.regressions || {}) };
+      // Object.keys y no platformIds: normaliza tambien las plataformas
+      // huerfanas (retiradas del esquema) en vez de dejarlas sin normalizar.
+      for (const p of Object.keys(regressions)) {
+        regressions[p] = (regressions[p] || []).map((r: Partial<Regression>) => normalizeRegression(r, fieldIds));
       }
       return {
         ...(parsed.board ? { board: parsed.board } : {}),
@@ -145,7 +145,7 @@ export function useRegressions() {
         archived,
       };
     } catch {
-      return { regressions: emptyRegressions(), archived: [] };
+      return { regressions: emptyRegressions(platformIds), archived: [] };
     }
   });
 
@@ -175,10 +175,10 @@ export function useRegressions() {
       version,
       url: data.url.trim(),
       fecha: data.fecha,
-      tickets: Array.from({ length: INITIAL_TICKET_ROWS }, () => emptyTicket()),
+      tickets: Array.from({ length: INITIAL_TICKET_ROWS }, () => emptyTicket(fieldIds)),
     };
     setState((prev) => mapPlatform(prev, platform, (list) => [regression, ...list]));
-  }, []);
+  }, [fieldIds]);
 
   const updateRegression = useCallback(
     (platform: PlatformId, id: string, patch: Partial<Pick<Regression, 'version' | 'url' | 'fecha'>>) => {
@@ -221,13 +221,13 @@ export function useRegressions() {
   const addTicket = useCallback((platform: PlatformId, regressionId: string) => {
     setState((prev) =>
       mapPlatform(prev, platform, (list) =>
-        list.map((r) => (r.id === regressionId ? { ...r, tickets: [...r.tickets, emptyTicket()] } : r))
+        list.map((r) => (r.id === regressionId ? { ...r, tickets: [...r.tickets, emptyTicket(fieldIds)] } : r))
       )
     );
-  }, []);
+  }, [fieldIds]);
 
   const updateTicket = useCallback(
-    (platform: PlatformId, regressionId: string, ticketId: string, field: TicketField, value: string) => {
+    (platform: PlatformId, regressionId: string, ticketId: string, field: string, value: string) => {
       setState((prev) =>
         mapPlatform(prev, platform, (list) =>
           list.map((r) =>
