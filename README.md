@@ -89,7 +89,7 @@ Editable desde el sidebar o, en la portada, desde la franja de configuracion, de
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (600 tests / 58 files) |
+| Tests | Vitest + React Testing Library (603 tests / 58 files) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

@@ -78,6 +78,34 @@ describe('useSchema', () => {
     expect(result.current[0].regression).toEqual(DEFAULT_SCHEMA.regression);
   });
 
+  it('cae al default de platforms cuando falta esa lista pero ticketFields si esta', () => {
+    const customTicketFields = DEFAULT_SCHEMA.regression.ticketFields.filter((f) => f.id !== 'status');
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: customTicketFields },
+    }));
+    const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
+    expect(result.current[0].regression.platforms).toEqual(DEFAULT_SCHEMA.regression.platforms);
+    expect(result.current[0].regression.ticketFields).toEqual(customTicketFields);
+  });
+
+  it('cae al default de ticketFields cuando ese valor guardado no es un array', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: null, platforms: DEFAULT_SCHEMA.regression.platforms },
+    }));
+    const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
+    expect(result.current[0].regression.ticketFields).toEqual(DEFAULT_SCHEMA.regression.ticketFields);
+    expect(result.current[0].regression.platforms).toEqual(DEFAULT_SCHEMA.regression.platforms);
+
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: 'no soy un array', platforms: DEFAULT_SCHEMA.regression.platforms },
+    }));
+    const { result: result2 } = renderHook(() => useSchema(), { wrapper: StrictMode });
+    expect(result2.current[0].regression.ticketFields).toEqual(DEFAULT_SCHEMA.regression.ticketFields);
+  });
+
   it('cae a los defaults con JSON corrupto', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, '{no es json');
     const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });

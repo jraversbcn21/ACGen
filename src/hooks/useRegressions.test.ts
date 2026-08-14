@@ -398,6 +398,21 @@ describe('useRegressions guiado por esquema', () => {
     expect(result.current.regressions['plat-nueva']).toEqual([]);
   });
 
+  it('GUARDIAN: un esquema guardado con regression.platforms ausente no revienta el hook (fallback por lista)', () => {
+    // Payload realista: `regression` existe (pasa el fallback por seccion)
+    // pero le falta `platforms` — p.ej. edicion manual o restauracion a medias.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: DEFAULT_SCHEMA.regression.ticketFields },
+    }));
+    localStorage.setItem('acgen_regressions', JSON.stringify(PRE_SCHEMA_PAYLOAD));
+
+    expect(() => renderHook(() => useRegressions(), { wrapper: StrictMode })).not.toThrow();
+    const { result } = renderHook(() => useRegressions(), { wrapper: StrictMode });
+    expect(result.current.regressions.ios[0].tickets[0].ticket).toBe('BSKWEB-1475');
+    expect(result.current.regressions.webDesktop).toEqual([]);
+  });
+
   it('ticketRowHasContent y filledTicketCount solo miran los ids que se le pasan', () => {
     const ticket = { id: 't1', ticket: '', fecha: '', prioridad: '', creador: '',
                      squad: '', status: 'oculto' } as RegressionTicket;

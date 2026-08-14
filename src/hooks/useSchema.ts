@@ -11,13 +11,28 @@ import { DEFAULT_SCHEMA, TrackerSchema } from '../types/schema';
  *
  * El fallback es POR SECCION a proposito: la Fase 5 anadira una seccion
  * `sprint` que los esquemas guardados por esta fase no tendran.
+ *
+ * Y dentro de la seccion, el fallback es POR LISTA: un `regression` guardado
+ * a mano (o restaurado a medias) puede traer `ticketFields` pero no
+ * `platforms`, o traer alguna de las dos con un valor que no es un array. Si
+ * el fallback fuera solo por seccion, ese objeto incompleto pasaria intacto
+ * y `useRegressions` reventaria en `.map` antes de que los guards de
+ * `visibleEntries()` pudieran ayudar.
  */
 export function useSchema(): [TrackerSchema, (value: TrackerSchema) => void] {
   const [stored, setStored] = useLocalStorage<TrackerSchema>(STORAGE_KEYS.SCHEMA, DEFAULT_SCHEMA);
+  const regression = stored?.regression;
   const schema = useMemo<TrackerSchema>(() => ({
     version: 1,
-    regression: stored?.regression ?? DEFAULT_SCHEMA.regression,
-  }), [stored]);
+    regression: {
+      ticketFields: Array.isArray(regression?.ticketFields)
+        ? regression.ticketFields
+        : DEFAULT_SCHEMA.regression.ticketFields,
+      platforms: Array.isArray(regression?.platforms)
+        ? regression.platforms
+        : DEFAULT_SCHEMA.regression.platforms,
+    },
+  }), [regression]);
   // `schema` (arriba) solo conoce las secciones de ESTA fase. Un llamante que
   // escriba `{ ...schema, regression: ... }` pasaria por aqui un objeto SIN la
   // seccion `sprint` que anadira la Fase 5 (u otra seccion futura), y un
