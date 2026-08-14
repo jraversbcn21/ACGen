@@ -41,6 +41,7 @@
   "sidebar.sprint": "Sprint",
   "sidebar.prompts": "Prompts",
   "sidebar.inicio": "Home",
+  "sidebar.profile": "Profile",
   "landing.eyebrow": "Quality Assurance",
   "landing.generators": "Generators",
   "landing.provider": "Provider",
@@ -243,5 +244,19 @@
   "backup.autoActive": "Auto-backup active",
   "backup.autoDisable": "Disable",
   "backup.autoReconnect": "Reconnect file",
-  "backup.autoError": "Could not write the auto-backup."
+  "backup.autoError": "Could not write the auto-backup.",
+  "profile.title": "Project profile",
+  "profile.hint": "These values are injected into every tool's prompt. Adjust them to your product: domain, environment, market, language and test-data conventions. Leave a field empty to omit it from the prompts.",
+  "profile.domain": "Domain / industry",
+  "profile.productType": "Product type",
+  "profile.markets": "Markets",
+  "profile.terminology": "Own terminology",
+  "profile.tone": "Tone",
+  "profile.environments": "Validation environment",
+  "profile.mainMarket": "Main market (code)",
+  "profile.outputLanguage": "Output language",
+  "profile.siteMap": "Site map / product areas",
+  "profile.testDataConventions": "Test data conventions",
+  "profile.reset": "Reset to defaults",
+  "profile.saved": "Saved!"
 }
