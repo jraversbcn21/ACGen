@@ -2,6 +2,7 @@ import type { Sprint, TabId } from '../hooks/useSprints';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 import { TrackerGrid } from './TrackerGrid';
+import type { TrackerColumn } from './TrackerGrid';
 
 const TABS: readonly TabId[] = ['resolved', 'created', 'reopened', 'highPriority', 'jsd'];
 
@@ -21,6 +22,14 @@ const TAB_HEADERS: Record<TabId, string[]> = {
   jsd: ['JSD', 'Fecha', 'Motivo'],
 };
 
+// Temporal: la Task 4 sustituye esta derivacion local por columnas resueltas
+// desde el esquema (visibleEntries), incluyendo el filtrado de ocultas.
+const TAB_COLUMNS: Record<TabId, TrackerColumn[]> = Object.fromEntries(
+  (Object.entries(TAB_HEADERS) as [TabId, string[]][]).map(([tab, headers]) => [
+    tab, headers.map((label, i) => ({ label, dataIndex: i })),
+  ]),
+) as Record<TabId, TrackerColumn[]>;
+
 interface SprintDashboardProps {
   sprint: Sprint;
   onUpdateGridCell: (tabId: TabId, row: number, col: number, value: string) => void;
@@ -37,7 +46,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
       <TrackerGrid
         tabs={TABS}
         tabLabels={TAB_LABELS}
-        tabHeaders={TAB_HEADERS}
+        tabColumns={TAB_COLUMNS}
         tabGrid={sprint.tabGrid}
         linkMode="jira"
         dragDisabled={sprint.archived}

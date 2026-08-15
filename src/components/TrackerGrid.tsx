@@ -32,10 +32,18 @@ function colToLetter(col: number): string {
   return letter;
 }
 
+/** Una columna ya resuelta por el llamante: etiqueta a pintar e indice en el
+ *  array de datos de la fila. El llamante YA filtro las ocultas — TrackerGrid
+ *  pinta lo que recibe, en ese orden, y no sabe nada del esquema. */
+export interface TrackerColumn {
+  label: string;
+  dataIndex: number;
+}
+
 export interface TrackerGridProps<T extends string> {
   tabs: readonly T[];
   tabLabels: Record<T, string>;
-  tabHeaders: Record<T, string[]>;
+  tabColumns: Record<T, TrackerColumn[]>;
   tabGrid: Record<T, string[][]>;
   linkMode: 'jira' | 'url';
   dragDisabled?: boolean;
@@ -50,7 +58,7 @@ export interface TrackerGridProps<T extends string> {
 export function TrackerGrid<T extends string>({
   tabs,
   tabLabels,
-  tabHeaders,
+  tabColumns,
   tabGrid,
   linkMode,
   dragDisabled = false,
@@ -63,6 +71,9 @@ export function TrackerGrid<T extends string>({
 }: TrackerGridProps<T>) {
   const noDrag = dragDisabled || readOnly;
   const [activeTab, setActiveTab] = useState<T>(tabs[0]);
+  // activeTab puede quedar apuntando a una pestana recien oculta o retirada del
+  // esquema; sin esto, `tabColumns[activeTab]` seria undefined y el render caeria.
+  const safeTab = tabs.includes(activeTab) ? activeTab : tabs[0];
   const [storedColWidths, setStoredColWidths] = useLocalStorage<Record<string, number>>(colWidthsStorageKey, {});
   // En readOnly (snapshots) el resize vive solo en memoria: arranca con los
   // anchos del board vivo pero nunca escribe en su clave compartida.
@@ -115,7 +126,7 @@ export function TrackerGrid<T extends string>({
       const { col, startX, startWidth } = resizeRef.current;
       const diff = e.clientX - startX;
       const newWidth = Math.max(MIN_COL_WIDTH, startWidth + diff);
-      setColWidths((prev) => ({ ...prev, [`${activeTab}-${col}`]: newWidth }));
+      setColWidths((prev) => ({ ...prev, [`${safeTab}-${col}`]: newWidth }));
     };
     const handleMouseUp = () => {
       resizeRef.current = null;
@@ -129,20 +140,36 @@ export function TrackerGrid<T extends string>({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, activeTab, setColWidths]);
+  }, [isResizing, safeTab, setColWidths]);
 
   const startResize = (e: React.MouseEvent, col: number) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentWidth = colWidths[`${activeTab}-${col}`] || 120;
+    const currentWidth = colWidths[`${safeTab}-${col}`] || 120;
     resizeRef.current = { col, startX: e.clientX, startWidth: currentWidth };
     setIsResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   };
 
-  const grid = useMemo(() => tabGrid[activeTab] || [], [tabGrid, activeTab]);
-  const colCount = grid[0]?.length || 6;
+  const grid = useMemo(() => tabGrid[safeTab] || [], [tabGrid, safeTab]);
+  const columns = useMemo(() => tabColumns[safeTab] ?? [], [tabColumns, safeTab]);
+  // colCount manda: las columnas de datos sin cabecera (la pestana JSD nace con
+  // 6 columnas y solo 3 rotulos) se siguen pintando. Derivarlo solo de las
+  // cabeceras haria desaparecer de la pantalla lo escrito en D, E y F.
+  const colCount = Math.max(columns.length, grid[0]?.length ?? 0, 1);
+  const displayColIndices = useMemo(() => {
+    const named = columns.map((c) => c.dataIndex);
+    // Los indices de datos mas alla de la ultima cabecera no tienen entrada en
+    // el esquema y no se pueden ocultar: se anaden siempre al final.
+    const maxNamed = named.length ? Math.max(...named) : -1;
+    for (let i = maxNamed + 1; i < colCount; i++) named.push(i);
+    return named;
+  }, [columns, colCount]);
+  const labelByIndex = useMemo(
+    () => new Map(columns.map((c) => [c.dataIndex, c.label])),
+    [columns],
+  );
 
   const filteredRowIndices = useMemo(() => {
     if (!debouncedQuery.trim()) return null;
@@ -162,7 +189,7 @@ export function TrackerGrid<T extends string>({
 
   const handleAddRow = () => {
     const newGrid = [...grid, Array.from({ length: colCount }, () => '')];
-    onSetTabGrid(activeTab, newGrid);
+    onSetTabGrid(safeTab, newGrid);
   };
 
   const getCellValue = (row: number, col: number) => {
@@ -225,7 +252,7 @@ export function TrackerGrid<T extends string>({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (dragSourceRow !== null && dragTargetRow !== null && dragSourceRow !== dragTargetRow) {
-      onMoveRow(activeTab, dragSourceRow, dragTargetRow);
+      onMoveRow(safeTab, dragSourceRow, dragTargetRow);
     }
     setDragSourceRow(null);
     setDragTargetRow(null);
@@ -337,8 +364,8 @@ export function TrackerGrid<T extends string>({
         <table style={{ borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-mono)', tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: 44 }} />
-            {Array.from({ length: colCount }, (_, ci) => {
-              const w = colWidths[`${activeTab}-${ci}`];
+            {displayColIndices.map((ci) => {
+              const w = colWidths[`${safeTab}-${ci}`];
               return <col key={ci} style={w ? { width: w } : undefined} />;
             })}
           </colgroup>
@@ -349,7 +376,7 @@ export function TrackerGrid<T extends string>({
                 width: 44, minWidth: 44, height: 28, background: 'var(--surface-2)',
                 border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
               }}></th>
-              {Array.from({ length: colCount }, (_, ci) => (
+              {displayColIndices.map((ci) => (
                 <th key={ci} style={{
                   position: 'sticky', top: 0, zIndex: 1,
                   height: 28, background: 'var(--surface-2)',
@@ -373,14 +400,14 @@ export function TrackerGrid<T extends string>({
                 width: 44, minWidth: 44, height: 26, background: 'var(--surface-2)',
                 border: '1px solid var(--border)', fontSize: 10, color: 'var(--text-3)',
               }}></th>
-              {Array.from({ length: colCount }, (_, ci) => (
+              {displayColIndices.map((ci) => (
                 <th key={ci} style={{
                   position: 'sticky', top: 28, zIndex: 1,
                   height: 26, background: 'var(--surface-2)',
                   border: '1px solid var(--border)', fontSize: 11, fontWeight: 700,
                   color: 'var(--text-2)', textAlign: 'left',
                   padding: '0 6px',
-                }}>{tabHeaders[activeTab][ci] || ''}</th>
+                }}>{labelByIndex.get(ci) ?? ''}</th>
               ))}
             </tr>
           </thead>
@@ -415,7 +442,7 @@ export function TrackerGrid<T extends string>({
                   )}
                   {ri + 1}
                 </td>
-                {Array.from({ length: colCount }, (_, ci) => {
+                {displayColIndices.map((ci, posC) => {
                   const value = getCellValue(ri, ci);
                   const linkUrl = ci === 0 ? getLinkUrl(value) : null;
                   const ticketKey = linkMode === 'jira' && linkUrl ? value.match(TICKET_KEY_PATTERN)![1] : null;
@@ -452,26 +479,28 @@ export function TrackerGrid<T extends string>({
                         }}
                         value={value}
                         readOnly={readOnly}
-                        onChange={(e) => onUpdateGridCell(activeTab, ri, ci, e.target.value)}
+                        onChange={(e) => onUpdateGridCell(safeTab, ri, ci, e.target.value)}
                         onKeyDown={(e) => {
                           const key = e.key;
                           let nextPos = pos;
-                          let tc = ci;
+                          let nextPosC = posC;
                           if (key === 'ArrowUp') nextPos--;
                           else if (key === 'ArrowDown') nextPos++;
                           else if (key === 'ArrowLeft') {
                             const input = e.currentTarget as HTMLInputElement;
                             if (input.selectionStart !== 0 || input.selectionEnd !== 0) return;
-                            tc--;
+                            nextPosC--;
                           } else if (key === 'ArrowRight') {
                             const input = e.currentTarget as HTMLInputElement;
                             const len = input.value.length;
                             if (input.selectionStart !== len || input.selectionEnd !== len) return;
-                            tc++;
+                            nextPosC++;
                           } else return;
-                          if (nextPos < 0 || nextPos >= displayRowIndices.length || tc < 0 || tc >= colCount) return;
+                          if (nextPos < 0 || nextPos >= displayRowIndices.length) return;
+                          if (nextPosC < 0 || nextPosC >= displayColIndices.length) return;
                           e.preventDefault();
                           const tr = key === 'ArrowUp' || key === 'ArrowDown' ? displayRowIndices[nextPos] : ri;
+                          const tc = displayColIndices[nextPosC];
                           cellRefs.current.get(`${tr}-${tc}`)?.focus();
                         }}
                         onFocus={() => setFocusedCell({ row: ri, col: ci })}
@@ -484,13 +513,13 @@ export function TrackerGrid<T extends string>({
                           const snapLinkMatch = text.match(/^(.+?)\s*-\s*(https?:\/\/[^\s]+\/browse\/([A-Z]+-\d+))/i);
                           if (snapLinkMatch) {
                             e.preventDefault();
-                            onUpdateGridCell(activeTab, ri, ci, `${snapLinkMatch[3].toUpperCase()} ${snapLinkMatch[1].trim()}`);
+                            onUpdateGridCell(safeTab, ri, ci, `${snapLinkMatch[3].toUpperCase()} ${snapLinkMatch[1].trim()}`);
                             return;
                           }
                           const urlMatch = text.match(/\/browse\/([A-Z]+-\d+)/i);
                           if (urlMatch) {
                             e.preventDefault();
-                            onUpdateGridCell(activeTab, ri, ci, urlMatch[1].toUpperCase());
+                            onUpdateGridCell(safeTab, ri, ci, urlMatch[1].toUpperCase());
                           }
                         } : undefined}
                         style={{

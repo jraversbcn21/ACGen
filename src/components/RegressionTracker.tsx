@@ -86,7 +86,9 @@ export function RegressionTracker() {
           <TrackerGrid
             tabs={platformIds}
             tabLabels={Object.fromEntries(platforms.map((p) => [p.id, resolveLabel(p, t)]))}
-            tabHeaders={Object.fromEntries(platformIds.map((p) => [p, LEGACY_HEADERS]))}
+            tabColumns={Object.fromEntries(platformIds.map((p) => [
+              p, LEGACY_HEADERS.map((label, i) => ({ label, dataIndex: i })),
+            ]))}
             tabGrid={snapshot.board}
             linkMode="url"
             readOnly
