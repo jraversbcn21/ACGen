@@ -20,6 +20,7 @@
 - **Ids nuevos con `crypto.randomUUID()`**; los ids por defecto son los históricos y NUNCA cambian.
 - **Paridad i18n ES/EN exacta**, fijada por `src/i18n/keyParity.test.ts`. Línea base: 301 claves.
 - **Idioma en tests:** `detectLang()` lee `navigator.language` y jsdom devuelve `en-US`, así que la app renderiza en **inglés** en los tests salvo que se fuerce lo contrario.
+- **`@testing-library/user-event` NO está instalado** y no se instala: el proyecto usa `fireEvent` + `waitFor` de `@testing-library/react`. Los fragmentos de test de este plan que escriben `userEvent.setup()` / `user.type()` / `user.click()` son un error de redacción — tradúcelos a `fireEvent.change()` / `fireEvent.click()` / `fireEvent.blur()`, mismas aserciones. Descubierto en la Task 2.
 - **Línea base verificada** el 2026-08-15 con `npx vitest run`: 603 tests en 58 ficheros, todos verdes.
 
 ---
