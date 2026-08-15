@@ -14,11 +14,21 @@ export interface SchemaEntry {
   hidden?: boolean;
 }
 
+/** Una pestana del Sprint Tracker: una entrada configurable que ademas lleva
+ *  su propia lista de columnas. El grid es posicional, asi que el indice de
+ *  `columns` es la columna de datos y por eso no se puede reordenar ni borrar. */
+export interface SprintTabSchema extends SchemaEntry {
+  columns: SchemaEntry[];
+}
+
 export interface TrackerSchema {
   version: 1;
   regression: {
     ticketFields: SchemaEntry[];
     platforms: SchemaEntry[];
+  };
+  sprint: {
+    tabs: SprintTabSchema[];
   };
 }
 
@@ -42,6 +52,56 @@ export const DEFAULT_SCHEMA: TrackerSchema = {
       { id: 'webDesktop', label: 'WEB' },
     ],
   },
+  sprint: {
+    tabs: [
+      {
+        id: 'resolved', labelKey: 'sprint.tabResolved',
+        columns: [
+          { id: 'ticket', label: 'Ticket' },
+          { id: 'fecha', labelKey: 'sprint.colFecha' },
+          { id: 'prioridad', labelKey: 'sprint.colPrioridad' },
+          { id: 'autor', labelKey: 'sprint.colAutor' },
+          { id: 'squad', label: 'Squad' },
+        ],
+      },
+      {
+        id: 'created', labelKey: 'sprint.tabCreated',
+        columns: [
+          { id: 'ticket', label: 'Ticket' },
+          { id: 'fecha', labelKey: 'sprint.colFecha' },
+          { id: 'prioridad', labelKey: 'sprint.colPrioridad' },
+          { id: 'autor', labelKey: 'sprint.colAutor' },
+          { id: 'squad', label: 'Squad' },
+        ],
+      },
+      {
+        id: 'reopened', label: 'ReOpen',
+        columns: [
+          { id: 'ticket', label: 'Ticket' },
+          { id: 'fecha', labelKey: 'sprint.colFecha' },
+          { id: 'motivo', labelKey: 'sprint.colMotivo' },
+          { id: 'squad', label: 'Squad' },
+        ],
+      },
+      {
+        id: 'highPriority', labelKey: 'sprint.tabHighPriority',
+        columns: [
+          { id: 'ticket', label: 'Ticket' },
+          { id: 'fecha', labelKey: 'sprint.colFecha' },
+          { id: 'motivo', labelKey: 'sprint.colMotivo' },
+          { id: 'squad', label: 'Squad' },
+        ],
+      },
+      {
+        id: 'jsd', label: 'JSD',
+        columns: [
+          { id: 'jsd', label: 'JSD' },
+          { id: 'fecha', labelKey: 'sprint.colFecha' },
+          { id: 'motivo', labelKey: 'sprint.colMotivo' },
+        ],
+      },
+    ],
+  },
 };
 
 export function resolveLabel(entry: SchemaEntry | undefined, t: (key: string) => string): string {
@@ -54,6 +114,6 @@ export function resolveLabel(entry: SchemaEntry | undefined, t: (key: string) =>
  *  escrito a mano en localStorage, p.ej. `regression: { ticketFields: [] }`
  *  sin `platforms`, o con la clave directamente omitida): sin este fallback
  *  `.filter` lanzaria sobre `undefined` y rompería el render entero. */
-export function visibleEntries(entries?: SchemaEntry[]): SchemaEntry[] {
+export function visibleEntries<T extends SchemaEntry>(entries?: T[]): T[] {
   return (entries ?? []).filter((e) => !e.hidden);
 }

@@ -41,14 +41,16 @@ describe('useSchema', () => {
   });
 
   it('preserva una seccion desconocida del esquema guardado en cualquier escritura, no solo en un reset', () => {
-    // Payload realista para cuando la Fase 5 exista: una seccion `sprint` que
-    // esta fase ni conoce ni declara en su tipo. `schema` (lo que devuelve el
-    // hook) nunca la incluye, asi que cualquier `{ ...schema, regression: X }`
+    // `sprint` ya NO es la seccion desconocida (la anadio la Fase 5, y
+    // useSchema la normaliza), asi que el papel de "seccion que este codigo ni
+    // conoce ni declara en su tipo" lo hace `epics`. `schema` (lo que devuelve
+    // el hook) nunca la incluye, asi que cualquier `{ ...schema, regression: X }`
     // que un llamante escriba llega aqui SIN esa seccion.
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
       version: 1,
       regression: DEFAULT_SCHEMA.regression,
-      sprint: { tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] },
+      sprint: { tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] },
+      epics: { lanes: ['a'] },
     }));
     const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
 
@@ -68,7 +70,8 @@ describe('useSchema', () => {
     });
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEMA)!);
-    expect(stored.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
+    expect(stored.epics).toEqual({ lanes: ['a'] });
+    expect(stored.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] });
     expect(stored.regression.ticketFields.find((f: { id: string }) => f.id === 'squad').label).toBe('Equipo');
   });
 
@@ -110,6 +113,48 @@ describe('useSchema', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, '{no es json');
     const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
     expect(result.current[0]).toEqual(DEFAULT_SCHEMA);
+  });
+
+  it('rellena la seccion sprint cuando el esquema guardado solo tiene regression', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: [{ id: 'ticket', label: 'T' }], platforms: [{ id: 'ios', label: 'APPS' }] },
+    }));
+    const { result } = renderHook(() => useSchema());
+    expect(result.current[0].sprint.tabs.map((t) => t.id))
+      .toEqual(['resolved', 'created', 'reopened', 'highPriority', 'jsd']);
+    expect(result.current[0].sprint.tabs[0].columns.map((c) => c.id))
+      .toEqual(['ticket', 'fecha', 'prioridad', 'autor', 'squad']);
+  });
+
+  it('cae al default cuando sprint.tabs no es un array', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({ version: 1, sprint: { tabs: 'roto' } }));
+    const { result } = renderHook(() => useSchema());
+    expect(result.current[0].sprint.tabs).toEqual(DEFAULT_SCHEMA.sprint.tabs);
+  });
+
+  it('normaliza una pestana sin columns (o con columns que no es un array) a []', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [{ id: 'resolved', label: 'R' }, { id: 'x', label: 'X', columns: 'roto' }] },
+    }));
+    const { result } = renderHook(() => useSchema());
+    // Sin esto, `tab.columns.filter` revienta el editor y con el la vista entera.
+    expect(result.current[0].sprint.tabs.map((t) => t.columns)).toEqual([[], []]);
+    expect(result.current[0].sprint.tabs.map((t) => t.id)).toEqual(['resolved', 'x']);
+  });
+
+  it('una escritura en sprint no pisa la seccion regression guardada', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: [{ id: 'custom', label: 'Mio' }], platforms: [{ id: 'ios', label: 'APPS' }] },
+    }));
+    const { result } = renderHook(() => useSchema());
+    act(() => {
+      result.current[1]({ ...result.current[0], sprint: { tabs: [] } });
+    });
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEMA)!);
+    expect(stored.regression.ticketFields).toEqual([{ id: 'custom', label: 'Mio' }]);
   });
 });
 
