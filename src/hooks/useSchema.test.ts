@@ -111,6 +111,37 @@ describe('useSchema', () => {
     const { result } = renderHook(() => useSchema(), { wrapper: StrictMode });
     expect(result.current[0]).toEqual(DEFAULT_SCHEMA);
   });
+
+  it('rellena la seccion sprint cuando el esquema guardado solo tiene regression', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: [{ id: 'ticket', label: 'T' }], platforms: [{ id: 'ios', label: 'APPS' }] },
+    }));
+    const { result } = renderHook(() => useSchema());
+    expect(result.current[0].sprint.tabs.map((t) => t.id))
+      .toEqual(['resolved', 'created', 'reopened', 'highPriority', 'jsd']);
+    expect(result.current[0].sprint.tabs[0].columns.map((c) => c.id))
+      .toEqual(['ticket', 'fecha', 'prioridad', 'autor', 'squad']);
+  });
+
+  it('cae al default cuando sprint.tabs no es un array', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({ version: 1, sprint: { tabs: 'roto' } }));
+    const { result } = renderHook(() => useSchema());
+    expect(result.current[0].sprint.tabs).toEqual(DEFAULT_SCHEMA.sprint.tabs);
+  });
+
+  it('una escritura en sprint no pisa la seccion regression guardada', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      regression: { ticketFields: [{ id: 'custom', label: 'Mio' }], platforms: [{ id: 'ios', label: 'APPS' }] },
+    }));
+    const { result } = renderHook(() => useSchema());
+    act(() => {
+      result.current[1]({ ...result.current[0], sprint: { tabs: [] } });
+    });
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEMA)!);
+    expect(stored.regression.ticketFields).toEqual([{ id: 'custom', label: 'Mio' }]);
+  });
 });
 
 describe('resolveLabel', () => {
