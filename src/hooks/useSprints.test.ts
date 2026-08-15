@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useSprints } from './useSprints';
+import { STORAGE_KEYS } from '../config/constants';
 
 beforeEach(() => {
   localStorage.clear();
@@ -353,5 +354,48 @@ describe('useSprints', () => {
 
     expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('PROJ-1');
     setItemSpy.mockRestore();
+  });
+
+  it('GUARDIAN: un payload pre-esquema hidrata identico sin clave acgen_schema', () => {
+    localStorage.removeItem(STORAGE_KEYS.SCHEMA);
+    localStorage.setItem('acgen_sprints', JSON.stringify([{
+      id: 's1', name: 'Sprint 25', startDate: '2026-08-01', endDate: null, archived: false,
+      jql: { resolved: 'q1', created: '', reopened: '', highPriority: '', jsd: '' },
+      tabGrid: { resolved: [['ACG-1', '2026-08-01', 'Alta', 'jorge', 'QA']] },
+    }]));
+    const { result } = renderHook(() => useSprints());
+    const s = result.current.sprints[0];
+    expect(Object.keys(s.tabGrid).sort())
+      .toEqual(['created', 'highPriority', 'jsd', 'reopened', 'resolved']);
+    expect(s.tabGrid.resolved[0]).toEqual(['ACG-1', '2026-08-01', 'Alta', 'jorge', 'QA']);
+    expect(s.tabGrid.created.length).toBe(20);
+    expect(s.jql.resolved).toBe('q1');
+  });
+
+  it('una pestana retirada del esquema conserva su grid en el objeto guardado', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [{ id: 'resolved', label: 'R', columns: [{ id: 'ticket', label: 'T' }] }] },
+    }));
+    localStorage.setItem('acgen_sprints', JSON.stringify([{
+      id: 's1', name: 'S', startDate: '2026-08-01', endDate: null, archived: false,
+      jql: {}, tabGrid: { resolved: [['a']], jsd: [['dato-huerfano']] },
+    }]));
+    const { result } = renderHook(() => useSprints());
+    expect(result.current.sprints[0].tabGrid.jsd).toEqual([['dato-huerfano']]);
+  });
+
+  it('un sprint nuevo nace con una pestana anadida en el esquema', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [
+        { id: 'resolved', label: 'R', columns: [{ id: 'ticket', label: 'T' }] },
+        { id: 'nueva', label: 'Nueva', columns: [{ id: 'ticket', label: 'T' }] },
+      ] },
+    }));
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('S1', '2026-08-01'); });
+    expect(result.current.sprints[0].tabGrid.nueva.length).toBe(20);
+    expect(result.current.sprints[0].jql.nueva).toBe('');
   });
 });
