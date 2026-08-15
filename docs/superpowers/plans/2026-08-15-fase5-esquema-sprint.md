@@ -957,8 +957,9 @@ export function SprintSchemaEditor({ onClose }: SprintSchemaEditorProps) {
     const name = newTabName.trim();
     if (!name) return;
     // Arranca con las columnas de la primera pestana por defecto para que no
-    // nazca vacia y sin columna que mostrar.
-    const columns = DEFAULT_SCHEMA.sprint.tabs[0].columns;
+    // nazca vacia y sin columna que mostrar. Se CLONAN: meter la referencia de
+    // DEFAULT_SCHEMA en el estado la dejaria compartida con la constante.
+    const columns = DEFAULT_SCHEMA.sprint.tabs[0].columns.map((c) => ({ ...c }));
     writeTabs([...tabs, { id: crypto.randomUUID(), label: name, columns }]);
     setNewTabName('');
   };
