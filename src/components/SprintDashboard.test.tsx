@@ -8,7 +8,7 @@ import type { Sprint } from '../hooks/useSprints';
 function makeSprint(overrides: Partial<Sprint> = {}): Sprint {
   return {
     id: 's1', name: 'Sprint 25', startDate: '2026-08-01', endDate: null, archived: false,
-    jql: {}, tabGrid: { resolved: [['', '', '', '', '']] }, ...overrides,
+    tabGrid: { resolved: [['', '', '', '', '']] }, ...overrides,
   };
 }
 

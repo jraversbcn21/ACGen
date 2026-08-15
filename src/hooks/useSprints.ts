@@ -9,7 +9,6 @@ const STORAGE_KEY = 'acgen_sprints';
  *  cerrada. Las pestanas retiradas del esquema conservan su grid en el objeto
  *  guardado — convencion "huerfano pero intacto". */
 export type TabId = string;
-export type SprintJql = Record<TabId, string>;
 
 export interface Sprint {
   id: string;
@@ -17,7 +16,6 @@ export interface Sprint {
   startDate: string;
   endDate: string | null;
   archived: boolean;
-  jql: SprintJql;
   tabGrid: Record<TabId, string[][]>;
 }
 
@@ -27,10 +25,6 @@ function createEmptyGrid(rows: number = 20, cols: number = 6): string[][] {
 
 function emptyTabGrid(tabIds: string[]): Record<TabId, string[][]> {
   return Object.fromEntries(tabIds.map((id) => [id, createEmptyGrid()]));
-}
-
-function emptyJql(tabIds: string[]): SprintJql {
-  return Object.fromEntries(tabIds.map((id) => [id, '']));
 }
 
 // Usado por los updaters que leen una grid concreta: el estado en crudo no
@@ -84,7 +78,6 @@ export function useSprints() {
       startDate,
       endDate: null,
       archived: false,
-      jql: emptyJql(tabIds),
       tabGrid: emptyTabGrid(tabIds),
     };
     setSprints((prev) => [sprint, ...prev]);
@@ -105,13 +98,6 @@ export function useSprints() {
   const unarchiveSprint = useCallback((id: string) => {
     updateSprint(id, { archived: false, endDate: null });
   }, [updateSprint]);
-
-  const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
-    setSprints((prev) => prev.map((s) => {
-      if (s.id !== id) return s;
-      return { ...s, jql: { ...s.jql, [tabId]: jql } };
-    }));
-  }, []);
 
   const updateGridCell = useCallback((id: string, tabId: TabId, row: number, col: number, value: string) => {
     setSprints((prev) => prev.map((s) => {
@@ -169,5 +155,5 @@ export function useSprints() {
     [sprints, tabIds],
   );
 
-  return { sprints: visibleSprints, addSprint, updateSprint, archiveSprint, unarchiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
+  return { sprints: visibleSprints, addSprint, updateSprint, archiveSprint, unarchiveSprint, updateGridCell, setTabGrid, moveRow, deleteSprint };
 }

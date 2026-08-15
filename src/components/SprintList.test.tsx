@@ -13,7 +13,6 @@ function makeSprint(partial: Partial<Sprint>): Sprint {
     startDate: '2026-07-20',
     endDate: null,
     archived: false,
-    jql: { resolved: '', created: '', reopened: '', highPriority: '', jsd: '' },
     tabGrid: { resolved: [], created: [], reopened: [], highPriority: [], jsd: [] },
     ...partial,
   };

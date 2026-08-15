@@ -46,7 +46,6 @@ describe('useSprints', () => {
     expect(sprints[0].endDate).toBeNull();
     expect(sprints[0].archived).toBe(false);
     expect(sprints[0].id).toBeTruthy();
-    expect(sprints[0].jql.resolved).toBe('');
     expect(sprints[0].tabGrid.resolved).toHaveLength(20);
     expect(sprints[0].tabGrid.resolved[0]).toHaveLength(6);
     expect(sprints[0].tabGrid.resolved[0][0]).toBe('');
@@ -75,18 +74,6 @@ describe('useSprints', () => {
       result.current.updateSprint(id, { name: 'Sprint 25' });
     });
     expect(result.current.sprints[0].name).toBe('Sprint 25');
-  });
-
-  it('updateTabJql sets JQL for a tab', () => {
-    const { result } = renderHook(() => useSprints());
-    act(() => {
-      result.current.addSprint('Sprint 24', '2026-07-08');
-    });
-    const id = result.current.sprints[0].id;
-    act(() => {
-      result.current.updateTabJql(id, 'resolved', 'project = PROJ AND status = Done');
-    });
-    expect(result.current.sprints[0].jql.resolved).toBe('project = PROJ AND status = Done');
   });
 
   it('updateGridCell sets a value at row,col', () => {
@@ -369,7 +356,9 @@ describe('useSprints', () => {
       .toEqual(['created', 'highPriority', 'jsd', 'reopened', 'resolved']);
     expect(s.tabGrid.resolved[0]).toEqual(['ACG-1', '2026-08-01', 'Alta', 'jorge', 'QA']);
     expect(s.tabGrid.created.length).toBe(20);
-    expect(s.jql.resolved).toBe('q1');
+    // `jql` es un campo muerto que el tipo ya no declara, pero sigue en los
+    // datos guardados de usuarios reales: la hidratacion no debe podarlo.
+    expect((s as unknown as { jql: Record<string, string> }).jql.resolved).toBe('q1');
   });
 
   it('una pestana retirada del esquema conserva su grid en el objeto guardado', () => {
@@ -379,7 +368,7 @@ describe('useSprints', () => {
     }));
     localStorage.setItem('acgen_sprints', JSON.stringify([{
       id: 's1', name: 'S', startDate: '2026-08-01', endDate: null, archived: false,
-      jql: {}, tabGrid: { resolved: [['a']], jsd: [['dato-huerfano']] },
+      tabGrid: { resolved: [['a']], jsd: [['dato-huerfano']] },
     }]));
     const { result } = renderHook(() => useSprints());
     expect(result.current.sprints[0].tabGrid.jsd).toEqual([['dato-huerfano']]);
@@ -396,7 +385,6 @@ describe('useSprints', () => {
     const { result } = renderHook(() => useSprints());
     act(() => { result.current.addSprint('S1', '2026-08-01'); });
     expect(result.current.sprints[0].tabGrid.nueva.length).toBe(20);
-    expect(result.current.sprints[0].jql.nueva).toBe('');
   });
 
   it('un sprint existente materializa una pestana anadida al esquema despues del mount', () => {
