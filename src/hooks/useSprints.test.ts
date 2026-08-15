@@ -398,4 +398,29 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.nueva.length).toBe(20);
     expect(result.current.sprints[0].jql.nueva).toBe('');
   });
+
+  it('un sprint existente materializa una pestana anadida al esquema despues del mount', () => {
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [{ id: 'resolved', label: 'R', columns: [{ id: 'ticket', label: 'T' }] }] },
+    }));
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('S1', '2026-08-01'); });
+    expect(result.current.sprints[0].tabGrid.nueva).toBeUndefined();
+
+    act(() => {
+      const nextSchema = JSON.stringify({
+        version: 1,
+        sprint: { tabs: [
+          { id: 'resolved', label: 'R', columns: [{ id: 'ticket', label: 'T' }] },
+          { id: 'nueva', label: 'Nueva', columns: [{ id: 'ticket', label: 'T' }] },
+        ] },
+      });
+      localStorage.setItem(STORAGE_KEYS.SCHEMA, nextSchema);
+      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.SCHEMA, newValue: nextSchema }));
+    });
+
+    expect(result.current.sprints[0].tabGrid.nueva).toBeDefined();
+    expect(result.current.sprints[0].tabGrid.nueva.length).toBe(20);
+  });
 });

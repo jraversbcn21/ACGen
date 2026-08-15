@@ -33,6 +33,15 @@ function emptyJql(tabIds: string[]): SprintJql {
   return Object.fromEntries(tabIds.map((id) => [id, '']));
 }
 
+// Usado por los updaters que leen una grid concreta: el estado en crudo no
+// materializa una pestana nueva del esquema hasta que algo la escribe (ver
+// visibleSprints mas abajo, que la materializa solo para lectura). Sin este
+// fallback, editar una celda de una pestana recien anadida seria un no-op
+// silencioso porque `grid.map` sobre `[]` no produce filas.
+function gridFor(s: Sprint, tabId: TabId): string[][] {
+  return s.tabGrid[tabId] || createEmptyGrid();
+}
+
 function persistSprints(sprints: Sprint[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sprints));
@@ -99,7 +108,7 @@ export function useSprints() {
   const updateGridCell = useCallback((id: string, tabId: TabId, row: number, col: number, value: string) => {
     setSprints((prev) => prev.map((s) => {
       if (s.id !== id) return s;
-      const grid = s.tabGrid[tabId] || [];
+      const grid = gridFor(s, tabId);
       const newGrid = grid.map((r, ri) => {
         if (ri !== row) return r;
         const newRow = [...r];
@@ -121,7 +130,7 @@ export function useSprints() {
   const moveRow = useCallback((id: string, tabId: TabId, fromRow: number, toRow: number) => {
     setSprints((prev) => prev.map((s) => {
       if (s.id !== id) return s;
-      const grid = s.tabGrid[tabId] || [];
+      const grid = gridFor(s, tabId);
       if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return s;
       if (fromRow === toRow) return s;
       const newGrid = [...grid];
@@ -141,5 +150,16 @@ export function useSprints() {
     }
   }, []);
 
-  return { sprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
+  // El esquema puede ganar una pestana DESPUES del mount (editor de esquema
+  // en vivo). El backfill del useState solo corrio una vez, asi que el
+  // estado en crudo puede no traer grid para ella todavia. Derivar aqui, en
+  // el retorno, materializa la invariante "todo sprint tiene grid para toda
+  // pestana del esquema" en cada render sin tocar el estado ni el efecto de
+  // persistencia — evita el bucle de reescritura en localStorage.
+  const visibleSprints = useMemo(
+    () => sprints.map((s) => ({ ...s, tabGrid: { ...emptyTabGrid(tabIds), ...(s.tabGrid || {}) } })),
+    [sprints, tabIds],
+  );
+
+  return { sprints: visibleSprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
 }
