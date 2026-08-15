@@ -1,34 +1,10 @@
+import { useMemo } from 'react';
 import type { Sprint, TabId } from '../hooks/useSprints';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
-import { TrackerGrid } from './TrackerGrid';
-import type { TrackerColumn } from './TrackerGrid';
-
-const TABS: readonly TabId[] = ['resolved', 'created', 'reopened', 'highPriority', 'jsd'];
-
-const TAB_LABELS: Record<TabId, string> = {
-  resolved: 'Resueltos',
-  created: 'Creados',
-  reopened: 'ReOpen',
-  highPriority: 'Prioridad Alta',
-  jsd: 'JSD',
-};
-
-const TAB_HEADERS: Record<TabId, string[]> = {
-  resolved: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
-  created: ['Ticket', 'Fecha', 'Prioridad', 'Autor', 'Squad'],
-  reopened: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
-  highPriority: ['Ticket', 'Fecha', 'Motivo', 'Squad'],
-  jsd: ['JSD', 'Fecha', 'Motivo'],
-};
-
-// Temporal: la Task 4 sustituye esta derivacion local por columnas resueltas
-// desde el esquema (visibleEntries), incluyendo el filtrado de ocultas.
-const TAB_COLUMNS: Record<TabId, TrackerColumn[]> = Object.fromEntries(
-  (Object.entries(TAB_HEADERS) as [TabId, string[]][]).map(([tab, headers]) => [
-    tab, headers.map((label, i) => ({ label, dataIndex: i })),
-  ]),
-) as Record<TabId, TrackerColumn[]>;
+import { useSchema } from '../hooks/useSchema';
+import { resolveLabel, visibleEntries } from '../types/schema';
+import { TrackerGrid, type TrackerColumn } from './TrackerGrid';
 
 interface SprintDashboardProps {
   sprint: Sprint;
@@ -40,13 +16,33 @@ interface SprintDashboardProps {
 
 export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
   const t = useT();
+  const [schema] = useSchema();
+
+  const visibleTabs = useMemo(() => visibleEntries(schema.sprint.tabs), [schema]);
+  const tabs = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
+  const tabLabels = useMemo(
+    () => Object.fromEntries(visibleTabs.map((tab) => [tab.id, resolveLabel(tab, t)])),
+    [visibleTabs, t],
+  ) as Record<TabId, string>;
+  // El indice en `columns` ES la columna de datos: se calcula ANTES de filtrar
+  // las ocultas, porque filtrar primero desplazaria en silencio los datos.
+  const tabColumns = useMemo(
+    () => Object.fromEntries(visibleTabs.map((tab) => [
+      tab.id,
+      (tab.columns ?? [])
+        .map((col, dataIndex) => ({ col, dataIndex }))
+        .filter(({ col }) => !col.hidden)
+        .map(({ col, dataIndex }) => ({ label: resolveLabel(col, t), dataIndex })),
+    ])),
+    [visibleTabs, t],
+  ) as Record<TabId, TrackerColumn[]>;
 
   return (
     <div className="sprint-dashboard">
       <TrackerGrid
-        tabs={TABS}
-        tabLabels={TAB_LABELS}
-        tabColumns={TAB_COLUMNS}
+        tabs={tabs}
+        tabLabels={tabLabels}
+        tabColumns={tabColumns}
         tabGrid={sprint.tabGrid}
         linkMode="jira"
         dragDisabled={sprint.archived}
