@@ -120,22 +120,25 @@ describe('RegressionSchemaEditor', () => {
           f.id === 'squad' ? { ...f, label: 'Equipo' } : f
         ),
       },
-      sprint: { tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] },
+      sprint: { tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] },
+      epics: { lanes: ['a'] },
     }));
     renderEditor();
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     const next = storedSchema();
     expect(next.regression).toEqual(DEFAULT_SCHEMA.regression);
-    // Una seccion que esta fase ni conoce (Fase 5 anadira `sprint`) sobrevive
-    // al reset intacta: "Restaurar por defecto" toca solo `regression`.
-    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
+    // La seccion `sprint` (Fase 5) y una que este codigo ni conoce sobreviven
+    // al reset intactas: "Restaurar por defecto" toca solo `regression`.
+    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] });
+    expect(next.epics).toEqual({ lanes: ['a'] });
   });
 
   it('un renombrado normal (no un reset) tambien preserva una seccion desconocida', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
       version: 1,
       regression: DEFAULT_SCHEMA.regression,
-      sprint: { tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] },
+      sprint: { tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] },
+      epics: { lanes: ['a'] },
     }));
     renderEditor();
     const input = screen.getByDisplayValue('Squad');
@@ -143,7 +146,8 @@ describe('RegressionSchemaEditor', () => {
     fireEvent.blur(input);
     const next = storedSchema();
     expect(next.regression.ticketFields.find((f: { id: string }) => f.id === 'squad').label).toBe('Equipo');
-    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', headers: [] }] });
+    expect(next.sprint).toEqual({ tabs: [{ id: 'resolved', label: 'Mio', columns: [] }] });
+    expect(next.epics).toEqual({ lanes: ['a'] });
   });
 
   it('cierra con el boton de cerrar', () => {

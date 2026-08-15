@@ -83,6 +83,19 @@ describe('SprintSchemaEditor', () => {
     screen.getAllByRole('checkbox').forEach((cb) => expect(cb).toBeDisabled());
   });
 
+  it('una pestana guardada sin columns no tumba el editor', () => {
+    // Esquema escrito a mano / backup a medias: `tabs` SI es un array, asi que
+    // el fallback por lista no salta. Antes reventaba en `tab.columns.filter` y
+    // el ErrorBoundary se llevaba la vista entera, con este boton dentro.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [{ id: 'resolved', label: 'R' }] },
+    }));
+    renderEditor();
+    expect(screen.getByDisplayValue('R')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset to defaults' })).toBeInTheDocument();
+  });
+
   it('Restaurar por defecto solo toca la seccion sprint', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({

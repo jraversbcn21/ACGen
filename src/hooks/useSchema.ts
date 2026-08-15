@@ -35,7 +35,15 @@ export function useSchema(): [TrackerSchema, (value: TrackerSchema) => void] {
         : DEFAULT_SCHEMA.regression.platforms,
     },
     sprint: {
-      tabs: Array.isArray(sprint?.tabs) ? sprint.tabs : DEFAULT_SCHEMA.sprint.tabs,
+      // Misma politica una capa mas abajo: una pestana puede llegar SIN
+      // `columns` (o con algo que no es un array) desde un esquema escrito a
+      // mano o un backup restaurado a medias. Normalizarla aqui es lo que
+      // evita que `tab.columns.filter` reviente en SprintSchemaEditor y se
+      // lleve por delante la vista entera del Sprint Tracker — incluido el
+      // boton "Restaurar por defecto", que vive dentro del componente caido.
+      tabs: Array.isArray(sprint?.tabs)
+        ? sprint.tabs.map((t) => (Array.isArray(t?.columns) ? t : { ...t, columns: [] }))
+        : DEFAULT_SCHEMA.sprint.tabs,
     },
   }), [regression, sprint]);
   // `schema` (arriba) solo conoce las secciones de ESTA fase. Un llamante que
