@@ -89,6 +89,35 @@ describe('SprintDashboard con esquema', () => {
     expect(screen.getByText('Clave')).toBeInTheDocument();
   });
 
+  it('ocultar la ULTIMA columna de la pestana la quita de verdad, y las columnas de datos sin cabecera siguen', () => {
+    // El caso real: el grid nace de 6 columnas fisicas y Resueltos declara 5.
+    // Ocultar Squad (la 5a, dataIndex 4) tiene que quitar su celda, no solo su
+    // rotulo; la 6a columna, que ninguna cabecera nombra, se sigue pintando.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [{ id: 'resolved', label: 'R', columns: [
+        { id: 'ticket', label: 'Ticket' }, { id: 'fecha', label: 'Fecha' },
+        { id: 'prioridad', label: 'Prioridad' }, { id: 'autor', label: 'Autor' },
+        { id: 'squad', label: 'Squad', hidden: true },
+      ] }] },
+    }));
+    renderDashboard({
+      sprint: makeSprint({ tabGrid: { resolved: [['ACG-1', 'f', 'p', 'a', 'QA-oculto', 'extra']] } }),
+    });
+    expect(screen.queryByText('Squad')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('QA-oculto')).not.toBeInTheDocument();
+    expect(document.querySelector('input[data-col="4"]')).toBeNull();
+    expect(screen.getByDisplayValue('extra')).toBeInTheDocument();
+  });
+
+  it('un esquema con tabs vacio cae a la primera pestana por defecto en vez de escribir bajo "undefined"', () => {
+    const onSetTabGrid = vi.fn();
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({ version: 1, sprint: { tabs: [] } }));
+    renderDashboard({ onSetTabGrid });
+    fireEvent.click(screen.getByRole('button', { name: '+ Row' }));
+    expect(onSetTabGrid).toHaveBeenCalledWith('resolved', expect.any(Array));
+  });
+
   it('la pestana oculta no se pinta', () => {
     localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
       version: 1,

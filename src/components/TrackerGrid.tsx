@@ -44,6 +44,10 @@ export interface TrackerGridProps<T extends string> {
   tabs: readonly T[];
   tabLabels: Record<T, string>;
   tabColumns: Record<T, TrackerColumn[]>;
+  /** Cuantas columnas DECLARA el llamante para cada pestana, ocultas incluidas.
+   *  Sin este numero TrackerGrid no puede distinguir "columna de datos extra,
+   *  sin rotulo, que hay que pintar" de "columna que el usuario oculto". */
+  tabColCount: Record<T, number>;
   tabGrid: Record<T, string[][]>;
   linkMode: 'jira' | 'url';
   dragDisabled?: boolean;
@@ -59,6 +63,7 @@ export function TrackerGrid<T extends string>({
   tabs,
   tabLabels,
   tabColumns,
+  tabColCount,
   tabGrid,
   linkMode,
   dragDisabled = false,
@@ -158,14 +163,17 @@ export function TrackerGrid<T extends string>({
   // 6 columnas y solo 3 rotulos) se siguen pintando. Derivarlo solo de las
   // cabeceras haria desaparecer de la pantalla lo escrito en D, E y F.
   const colCount = Math.max(columns.length, grid[0]?.length ?? 0, 1);
+  const declaredCount = tabColCount[safeTab] ?? 0;
   const displayColIndices = useMemo(() => {
     const named = columns.map((c) => c.dataIndex);
-    // Los indices de datos mas alla de la ultima cabecera no tienen entrada en
-    // el esquema y no se pueden ocultar: se anaden siempre al final.
+    // Los indices de datos mas alla de lo DECLARADO no tienen entrada en el
+    // esquema y no se pueden ocultar: se anaden siempre al final. Arrancar en
+    // declaredCount y no en maxNamed+1 es justo lo que impide que ocultar la
+    // ultima columna declarada la haga reaparecer aqui como columna sin rotulo.
     const maxNamed = named.length ? Math.max(...named) : -1;
-    for (let i = maxNamed + 1; i < colCount; i++) named.push(i);
+    for (let i = Math.max(maxNamed + 1, declaredCount); i < colCount; i++) named.push(i);
     return named;
-  }, [columns, colCount]);
+  }, [columns, colCount, declaredCount]);
   const labelByIndex = useMemo(
     () => new Map(columns.map((c) => [c.dataIndex, c.label])),
     [columns],
@@ -270,7 +278,7 @@ export function TrackerGrid<T extends string>({
           <button
             key={tab}
             type="button"
-            className={`btn-ghost ${activeTab === tab ? 'sprint-tab-active' : ''}`}
+            className={`btn-ghost ${safeTab === tab ? 'sprint-tab-active' : ''}`}
             onClick={() => { setActiveTab(tab); clearSearch(); }}
           >
             {tabLabels[tab]}

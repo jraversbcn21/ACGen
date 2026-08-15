@@ -89,6 +89,7 @@ export function RegressionTracker() {
             tabColumns={Object.fromEntries(platformIds.map((p) => [
               p, LEGACY_HEADERS.map((label, i) => ({ label, dataIndex: i })),
             ]))}
+            tabColCount={Object.fromEntries(platformIds.map((p) => [p, LEGACY_HEADERS.length]))}
             tabGrid={snapshot.board}
             linkMode="url"
             readOnly

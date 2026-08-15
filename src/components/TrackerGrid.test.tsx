@@ -18,6 +18,7 @@ function renderGrid(overrides: Partial<TrackerGridProps<Tab>> = {}) {
       one: [{ label: 'Ticket', dataIndex: 0 }, { label: 'Fecha', dataIndex: 1 }],
       two: [{ label: 'Ticket', dataIndex: 0 }, { label: 'Motivo', dataIndex: 1 }],
     },
+    tabColCount: { one: 2, two: 2 },
     tabGrid: { one: makeGrid(), two: makeGrid() },
     linkMode: 'jira',
     colWidthsStorageKey: 'test_grid_col_widths',
@@ -440,6 +441,7 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
     localStorage.setItem('test_grid_col_widths', JSON.stringify({ 'one-2': 300 }));
     renderGrid({
       tabColumns: { one: [{ label: 'A', dataIndex: 0 }, { label: 'C', dataIndex: 2 }], two: [] },
+      tabColCount: { one: 3, two: 0 },
       tabGrid: { one: [['a', 'b', 'c']], two: [] },
     });
     const cols = document.querySelectorAll('colgroup col');
@@ -450,6 +452,7 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
   it('las letras de columna van por indice de datos, no por posicion visual', () => {
     renderGrid({
       tabColumns: { one: [{ label: 'A', dataIndex: 0 }, { label: 'C', dataIndex: 2 }], two: [] },
+      tabColCount: { one: 3, two: 0 },
       tabGrid: { one: [['a', 'b', 'c']], two: [] },
     });
     const letters = Array.from(document.querySelectorAll('thead tr:first-child th'))
@@ -460,6 +463,7 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
   it('la flecha derecha salta la columna oculta', () => {
     renderGrid({
       tabColumns: { one: [{ label: 'A', dataIndex: 0 }, { label: 'C', dataIndex: 2 }], two: [] },
+      tabColCount: { one: 3, two: 0 },
       tabGrid: { one: [['a', 'b', 'c']], two: [] },
     });
     const first = document.querySelector('input[data-row="0"][data-col="0"]') as HTMLInputElement;
@@ -473,10 +477,36 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
     // La trampa de la fase: 3 cabeceras sobre 6 columnas de datos (el caso JSD).
     renderGrid({
       tabColumns: { one: [{ label: 'A', dataIndex: 0 }, { label: 'B', dataIndex: 1 }, { label: 'C', dataIndex: 2 }], two: [] },
+      tabColCount: { one: 3, two: 0 },
       tabGrid: { one: [['a', 'b', 'c', 'd', 'e', 'f']], two: [] },
     });
     expect(document.querySelectorAll('tbody input').length).toBe(6);
     expect((document.querySelector('input[data-col="5"]') as HTMLInputElement).value).toBe('f');
+  });
+
+  it('ocultar la ULTIMA columna declarada la quita, sin dejar de pintar las de datos sin cabecera', () => {
+    // Las dos mitades a la vez, porque arreglar una rompia la otra: el esquema
+    // declara 5 columnas y el usuario oculto la ultima (dataIndex 4), sobre un
+    // grid fisico de 6. La 4 tiene que desaparecer (era el bug: reaparecia como
+    // columna extra sin rotulo, editable en data-col="4"); la 5, que ninguna
+    // cabecera nombra, tiene que seguir pintandose.
+    renderGrid({
+      tabColumns: {
+        one: [
+          { label: 'A', dataIndex: 0 }, { label: 'B', dataIndex: 1 },
+          { label: 'C', dataIndex: 2 }, { label: 'D', dataIndex: 3 },
+        ],
+        two: [],
+      },
+      tabColCount: { one: 5, two: 0 },
+      tabGrid: { one: [['a', 'b', 'c', 'd', 'squad-oculto', 'sin-cabecera']], two: [] },
+    });
+    // No basta con que falte el rotulo: el VALOR no puede estar en pantalla.
+    expect(screen.queryByDisplayValue('squad-oculto')).not.toBeInTheDocument();
+    expect(document.querySelector('input[data-col="4"]')).toBeNull();
+    // ...y la columna de datos sin cabecera sigue ahi, editable.
+    expect(screen.getByDisplayValue('sin-cabecera')).toBeInTheDocument();
+    expect(document.querySelectorAll('tbody input').length).toBe(5);
   });
 
   it('la busqueda sigue encontrando por columnas ocultas', async () => {
@@ -486,6 +516,7 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
     // buscar por campos ocultos. Este test existe para que nadie lo "arregle".
     renderGrid({
       tabColumns: { one: [{ label: 'A', dataIndex: 0 }], two: [] },
+      tabColCount: { one: 2, two: 0 },
       tabGrid: { one: [['visible', 'oculto'], ['otra', 'fila']], two: [] },
     });
     fireEvent.change(screen.getByPlaceholderText('buscar'), { target: { value: 'oculto' } });

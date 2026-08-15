@@ -3,7 +3,7 @@ import type { Sprint, TabId } from '../hooks/useSprints';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 import { useSchema } from '../hooks/useSchema';
-import { resolveLabel, visibleEntries } from '../types/schema';
+import { DEFAULT_SCHEMA, resolveLabel, visibleEntries } from '../types/schema';
 import { TrackerGrid, type TrackerColumn } from './TrackerGrid';
 import { SprintSchemaEditor } from './SprintSchemaEditor';
 
@@ -20,7 +20,14 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
   const [schema] = useSchema();
   const [showSchema, setShowSchema] = useState(false);
 
-  const visibleTabs = useMemo(() => visibleEntries(schema.sprint.tabs), [schema]);
+  // Mismo criterio que el `safeTab` del Regression Tracker: un esquema escrito
+  // a mano puede dejar CERO pestanas visibles (`tabs: []`, o todas ocultas), y
+  // entonces TrackerGrid se quedaria con `tabs[0] === undefined` y "+ Fila"
+  // escribiria en el sprint bajo la clave literal "undefined".
+  const visibleTabs = useMemo(() => {
+    const shown = visibleEntries(schema.sprint.tabs);
+    return shown.length ? shown : [DEFAULT_SCHEMA.sprint.tabs[0]];
+  }, [schema]);
   const tabs = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
   const tabLabels = useMemo(
     () => Object.fromEntries(visibleTabs.map((tab) => [tab.id, resolveLabel(tab, t)])),
@@ -31,13 +38,20 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
   const tabColumns = useMemo(
     () => Object.fromEntries(visibleTabs.map((tab) => [
       tab.id,
-      (tab.columns ?? [])
+      tab.columns
         .map((col, dataIndex) => ({ col, dataIndex }))
         .filter(({ col }) => !col.hidden)
         .map(({ col, dataIndex }) => ({ label: resolveLabel(col, t), dataIndex })),
     ])),
     [visibleTabs, t],
   ) as Record<TabId, TrackerColumn[]>;
+  // Cuantas columnas declara el esquema, ocultas incluidas: sin esto TrackerGrid
+  // volveria a pintar como "columna extra sin rotulo" la que se acaba de ocultar
+  // al final de la pestana. (`useSchema` garantiza que `columns` es un array.)
+  const tabColCount = useMemo(
+    () => Object.fromEntries(visibleTabs.map((tab) => [tab.id, tab.columns.length])),
+    [visibleTabs],
+  ) as Record<TabId, number>;
 
   return (
     <div className="sprint-dashboard">
@@ -54,6 +68,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
         tabs={tabs}
         tabLabels={tabLabels}
         tabColumns={tabColumns}
+        tabColCount={tabColCount}
         tabGrid={sprint.tabGrid}
         linkMode="jira"
         dragDisabled={sprint.archived}
