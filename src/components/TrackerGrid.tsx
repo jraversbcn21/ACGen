@@ -33,7 +33,7 @@ function colToLetter(col: number): string {
 }
 
 /** Una columna ya resuelta por el llamante: etiqueta a pintar e indice en el
- *  array de datos de la fila. El llamante YA filtro las ocultas — TrackerGrid
+ *  array de datos de la fila. El llamante YA filtro las ocultas, TrackerGrid
  *  pinta lo que recibe, en ese orden, y no sabe nada del esquema. */
 export interface TrackerColumn {
   label: string;
