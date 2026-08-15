@@ -33,3 +33,9 @@ export { chromium };
 
 /** Primer argumento de linea de comandos, o el dev server por defecto. */
 export const targetUrl = process.argv[2] ?? 'http://localhost:5173';
+
+/** Ruta para capturas: al temporal del sistema, NUNCA al repo. Correr un script
+ *  de verificacion no debe dejar PNG sueltos en el arbol de trabajo. */
+export function shotPath(nombre) {
+  return `${process.env.TEMP ?? process.env.TMPDIR ?? '/tmp'}/acgen-${nombre}.png`;
+}

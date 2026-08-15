@@ -1,5 +1,5 @@
 // Verificacion manual de la Fase 5 en navegador real.
-import { chromium, targetUrl } from './_playwright.mjs';
+import { chromium, targetUrl, shotPath } from './_playwright.mjs';
 
 const URL = targetUrl;
 const browser = await chromium.launch();
@@ -165,10 +165,11 @@ check('13. Persiste tras recargar', trasRecarga === 'BLOQ-1', `vale "${trasRecar
 
 await page.getByRole('button', { name: 'Resueltos', exact: true }).click();
 await page.waitForTimeout(300);
-await page.screenshot({ path: 'fase5-final.png', fullPage: false });
+await page.screenshot({ path: shotPath('sprint-grid'), fullPage: false });
 await page.getByRole('button', { name: 'Pestañas y columnas' }).click();
 await page.waitForSelector('.modal-content');
-await page.screenshot({ path: 'fase5-editor.png', fullPage: false });
+await page.screenshot({ path: shotPath('sprint-editor'), fullPage: false });
+console.log('capturas en', shotPath('sprint-*'));
 
 console.log('\n=== OK ===');
 ok.forEach((o) => console.log('  ✓', o));
