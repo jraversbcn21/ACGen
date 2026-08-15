@@ -458,4 +458,43 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.nueva[0][0]).toBe('ACG-2');
     expect(result.current.sprints[0].tabGrid.nueva[1][0]).toBe('ACG-1');
   });
+
+  it('incluye las pestanas OCULTAS: ocultar es cosa del render, no de los datos', () => {
+    // Sin este guardian, un .filter(!hidden) en tabIds dejaria sin grid a las
+    // pestanas ocultas y sus datos irrecuperables al volver a mostrarlas.
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify({
+      version: 1,
+      sprint: { tabs: [
+        { id: 'resolved', label: 'R', columns: [{ id: 'ticket', label: 'T' }] },
+        { id: 'jsd', label: 'JSD', hidden: true, columns: [{ id: 'jsd', label: 'J' }] },
+      ] },
+    }));
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('S1', '2026-08-01'); });
+    expect(result.current.sprints[0].tabGrid.jsd).toBeDefined();
+    expect(result.current.sprints[0].tabGrid.jsd.length).toBe(20);
+  });
+
+  it('unarchiveSprint devuelve el sprint a activo y limpia su fecha de cierre', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('S1', '2026-08-01'); });
+    const id = result.current.sprints[0].id;
+    act(() => { result.current.archiveSprint(id); });
+    expect(result.current.sprints[0].archived).toBe(true);
+    expect(result.current.sprints[0].endDate).toBeTruthy();
+
+    act(() => { result.current.unarchiveSprint(id); });
+    expect(result.current.sprints[0].archived).toBe(false);
+    expect(result.current.sprints[0].endDate).toBeNull();
+  });
+
+  it('desarchivar conserva el grid intacto', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('S1', '2026-08-01'); });
+    const id = result.current.sprints[0].id;
+    act(() => { result.current.updateGridCell(id, 'resolved', 0, 0, 'ACG-1'); });
+    act(() => { result.current.archiveSprint(id); });
+    act(() => { result.current.unarchiveSprint(id); });
+    expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('ACG-1');
+  });
 });

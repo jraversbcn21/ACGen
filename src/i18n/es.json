@@ -143,6 +143,7 @@
   "sprint.archive": "Archivar Sprint",
   "sprint.archived": "Archivados",
   "sprint.archivedBadge": "Archivado",
+  "sprint.unarchive": "Desarchivar",
   "update.available": "Hay una nueva versión disponible",
   "update.reload": "Actualizar",
   "sprint.active": "Activo",

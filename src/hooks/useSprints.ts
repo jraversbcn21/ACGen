@@ -98,6 +98,14 @@ export function useSprints() {
     updateSprint(id, { archived: true, endDate: localTodayISO() });
   }, [updateSprint]);
 
+  // La vuelta atras de archivar. Existe porque archivar pasa el sprint a solo
+  // lectura: sin esta salida, una errata detectada despues de archivar se
+  // quedaria congelada para siempre. Limpia endDate para que el sprint vuelva
+  // a leerse como "En curso" y no arrastre una fecha de cierre que ya no vale.
+  const unarchiveSprint = useCallback((id: string) => {
+    updateSprint(id, { archived: false, endDate: null });
+  }, [updateSprint]);
+
   const updateTabJql = useCallback((id: string, tabId: TabId, jql: string) => {
     setSprints((prev) => prev.map((s) => {
       if (s.id !== id) return s;
@@ -161,5 +169,5 @@ export function useSprints() {
     [sprints, tabIds],
   );
 
-  return { sprints: visibleSprints, addSprint, updateSprint, archiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
+  return { sprints: visibleSprints, addSprint, updateSprint, archiveSprint, unarchiveSprint, updateTabJql, updateGridCell, setTabGrid, moveRow, deleteSprint };
 }
