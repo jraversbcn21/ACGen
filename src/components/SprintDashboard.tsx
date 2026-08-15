@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Sprint, TabId } from '../hooks/useSprints';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 import { useSchema } from '../hooks/useSchema';
 import { resolveLabel, visibleEntries } from '../types/schema';
 import { TrackerGrid, type TrackerColumn } from './TrackerGrid';
+import { SprintSchemaEditor } from './SprintSchemaEditor';
 
 interface SprintDashboardProps {
   sprint: Sprint;
@@ -17,6 +18,7 @@ interface SprintDashboardProps {
 export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMoveRow, onArchive }: SprintDashboardProps) {
   const t = useT();
   const [schema] = useSchema();
+  const [showSchema, setShowSchema] = useState(false);
 
   const visibleTabs = useMemo(() => visibleEntries(schema.sprint.tabs), [schema]);
   const tabs = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
@@ -39,6 +41,15 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
 
   return (
     <div className="sprint-dashboard">
+      {!sprint.archived && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button type="button" className="btn-ghost" onClick={() => setShowSchema(true)}
+            style={{ padding: '6px 14px', fontSize: 13 }}>
+            {t('schema.sprintOpen')}
+          </button>
+        </div>
+      )}
+      {showSchema && <SprintSchemaEditor onClose={() => setShowSchema(false)} />}
       <TrackerGrid
         tabs={tabs}
         tabLabels={tabLabels}
