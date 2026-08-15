@@ -8,7 +8,7 @@ import type { Sprint } from '../hooks/useSprints';
 function makeSprint(overrides: Partial<Sprint> = {}): Sprint {
   return {
     id: 's1', name: 'Sprint 25', startDate: '2026-08-01', endDate: null, archived: false,
-    jql: {}, tabGrid: { resolved: [['', '', '', '', '']] }, ...overrides,
+    tabGrid: { resolved: [['', '', '', '', '']] }, ...overrides,
   };
 }
 
@@ -128,5 +128,29 @@ describe('SprintDashboard con esquema', () => {
     }));
     renderDashboard();
     expect(screen.queryByRole('button', { name: 'JSD' })).not.toBeInTheDocument();
+  });
+
+  it('un sprint archivado es de SOLO LECTURA: ni celdas editables ni "+ Fila"', () => {
+    // El archivo es el registro historico. Antes solo se desactivaba el drag,
+    // asi que se podia corromper un sprint cerrado escribiendo en una celda.
+    renderDashboard({
+      sprint: makeSprint({ archived: true, endDate: '2026-08-15', tabGrid: { resolved: [['ACG-1', '', '', '', '']] } }),
+    });
+    // Se afirma el atributo, no que el handler no se llame: `fireEvent.change`
+    // dispara onChange saltandose `readOnly`, cosa que un usuario real no puede
+    // hacer. El atributo ES el contrato; el spy solo probaria un artefacto jsdom.
+    const celda = document.querySelector('input[data-row="0"][data-col="0"]') as HTMLInputElement;
+    expect(celda.readOnly).toBe(true);
+    expect(celda.value).toBe('ACG-1');
+    expect(screen.queryByRole('button', { name: /Fila|Row/ })).not.toBeInTheDocument();
+  });
+
+  it('un sprint activo sigue siendo editable', () => {
+    const onUpdateGridCell = vi.fn();
+    renderDashboard({ onUpdateGridCell });
+    const celda = document.querySelector('input[data-row="0"][data-col="0"]') as HTMLInputElement;
+    expect(celda.readOnly).toBe(false);
+    fireEvent.change(celda, { target: { value: 'ACG-9' } });
+    expect(onUpdateGridCell).toHaveBeenCalledWith('resolved', 0, 0, 'ACG-9');
   });
 });

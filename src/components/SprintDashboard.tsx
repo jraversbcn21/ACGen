@@ -72,6 +72,7 @@ export function SprintDashboard({ sprint, onUpdateGridCell, onSetTabGrid, onMove
         tabGrid={sprint.tabGrid}
         linkMode="jira"
         dragDisabled={sprint.archived}
+        readOnly={sprint.archived}
         colWidthsStorageKey={`${STORAGE_KEYS.SPRINT_COL_WIDTHS}_${sprint.id}`}
         searchPlaceholder={t('sprint.searchPlaceholder')}
         onUpdateGridCell={onUpdateGridCell}

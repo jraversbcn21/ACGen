@@ -13,7 +13,6 @@ function makeSprint(partial: Partial<Sprint>): Sprint {
     startDate: '2026-07-20',
     endDate: null,
     archived: false,
-    jql: { resolved: '', created: '', reopened: '', highPriority: '', jsd: '' },
     tabGrid: { resolved: [], created: [], reopened: [], highPriority: [], jsd: [] },
     ...partial,
   };
@@ -25,6 +24,7 @@ function renderList(sprints: Sprint[], overrides: Partial<{
   onDeleteSprint: (id: string) => void;
   onRenameSprint: (id: string, name: string) => void;
   onArchiveSprint: (id: string) => void;
+  onUnarchiveSprint: (id: string) => void;
 }> = {}) {
   return render(
     <I18nProvider>
@@ -34,6 +34,7 @@ function renderList(sprints: Sprint[], overrides: Partial<{
         onSelectSprint={overrides.onSelectSprint ?? vi.fn()}
         onDeleteSprint={overrides.onDeleteSprint ?? vi.fn()}
         onRenameSprint={overrides.onRenameSprint ?? vi.fn()}
+        onUnarchiveSprint={overrides.onUnarchiveSprint ?? vi.fn()}
         onArchiveSprint={overrides.onArchiveSprint ?? vi.fn()}
       />
     </I18nProvider>
@@ -192,5 +193,27 @@ describe('SprintList archiving', () => {
   it('active sprints keep the green circle icon', () => {
     renderList([makeSprint({ archived: false })]);
     expect(screen.getByText('🟢')).toBeInTheDocument();
+  });
+
+  it('shows Desarchivar only on archived sprints', () => {
+    renderList([
+      makeSprint({ id: 'active', name: 'Sprint activo', archived: false }),
+      makeSprint({ id: 'archived', name: 'Sprint archivado', archived: true, endDate: '2026-07-21' }),
+    ]);
+    expect(screen.getAllByRole('button', { name: 'Desarchivar' })).toHaveLength(1);
+  });
+
+  it('unarchives without a confirm dialog, and does not navigate into the sprint', () => {
+    // Sin confirm a proposito: desarchivar es reversible (basta con volver a
+    // archivar) y no destruye nada, al reves que Eliminar.
+    const onUnarchiveSprint = vi.fn();
+    const onSelectSprint = vi.fn();
+    renderList(
+      [makeSprint({ id: 'a1', name: 'Sprint viejo', archived: true, endDate: '2026-07-21' })],
+      { onUnarchiveSprint, onSelectSprint },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Desarchivar' }));
+    expect(onUnarchiveSprint).toHaveBeenCalledWith('a1');
+    expect(onSelectSprint).not.toHaveBeenCalled();
   });
 });

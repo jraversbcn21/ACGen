@@ -10,9 +10,10 @@ interface SprintListProps {
   onDeleteSprint: (id: string) => void;
   onRenameSprint: (id: string, name: string) => void;
   onArchiveSprint: (id: string) => void;
+  onUnarchiveSprint: (id: string) => void;
 }
 
-export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint, onArchiveSprint }: SprintListProps) {
+export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint, onArchiveSprint, onUnarchiveSprint }: SprintListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(localTodayISO);
@@ -81,7 +82,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.active')}
           </h3>
           {active.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} onUnarchive={onUnarchiveSprint} />
           ))}
         </>
       )}
@@ -92,7 +93,7 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
             {t('sprint.archived')}
           </h3>
           {archived.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} />
+            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} onUnarchive={onUnarchiveSprint} />
           ))}
         </>
       )}
@@ -106,12 +107,13 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   );
 }
 
-function SprintCard({ sprint, onSelect, onDelete, onRename, onArchive }: {
+function SprintCard({ sprint, onSelect, onDelete, onRename, onArchive, onUnarchive }: {
   sprint: Sprint;
   onSelect: (s: Sprint) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onArchive: (id: string) => void;
+  onUnarchive: (id: string) => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -168,7 +170,17 @@ function SprintCard({ sprint, onSelect, onDelete, onRename, onArchive }: {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
           {sprint.archived && (
-            <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archivedBadge')}</span>
+            <>
+              <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archivedBadge')}</span>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={(e) => { e.stopPropagation(); onUnarchive(sprint.id); }}
+                style={{ padding: '4px 10px', fontSize: 12 }}
+              >
+                {t('sprint.unarchive')}
+              </button>
+            </>
           )}
           {!sprint.archived && (
             <>
