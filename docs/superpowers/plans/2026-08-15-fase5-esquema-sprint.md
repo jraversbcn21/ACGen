@@ -308,14 +308,20 @@ it('las columnas de datos sin cabecera se siguen pintando', () => {
   expect((document.querySelector('input[data-col="5"]') as HTMLInputElement).value).toBe('f');
 });
 
-it('la busqueda ignora las columnas ocultas', async () => {
+it('la busqueda sigue encontrando por columnas ocultas', async () => {
+  // Decision de producto de Jorge (2026-08-15): ocultar es una preferencia de
+  // vista, no un borrado, asi que la busqueda sigue mirando la fila entera.
+  // A proposito DISTINTO del Regression Tracker, donde la Fase 4 dejo de
+  // buscar por campos ocultos. Este test existe para que nadie lo "arregle".
   const user = userEvent.setup();
   renderGrid({
     tabColumns: { one: [{ label: 'A', dataIndex: 0 }], two: [] },
     tabGrid: { one: [['visible', 'oculto'], ['otra', 'fila']], two: [] },
   });
   await user.type(screen.getByPlaceholderText('buscar'), 'oculto');
-  await waitFor(() => expect(document.querySelectorAll('tbody tr').length).toBe(0));
+  await waitFor(() => expect(document.querySelectorAll('tbody tr').length).toBe(1));
+  // La fila sale, aunque la celda que casa no este a la vista.
+  expect(screen.getByDisplayValue('visible')).toBeInTheDocument();
 });
 ```
 
@@ -383,7 +389,7 @@ Sustituye los cuatro `Array.from({ length: colCount }, (_, ci) => ...)` por `dis
 
 `handleAddRow` (línea 164) sigue usando `colCount`, correcto: la fila nueva nace con tantas celdas como columnas de datos.
 
-- [ ] **Step 5: Navegación por posición visual y búsqueda sin columnas ocultas**
+- [ ] **Step 5: Navegación por posición visual (la búsqueda no cambia)**
 
 En el `onKeyDown` (líneas 456-476), las flechas ←/→ pasan a moverse por posición visual — calcado de lo que ArrowUp/ArrowDown ya hacen con `displayRowIndices`:
 
@@ -413,14 +419,9 @@ En el `onKeyDown` (líneas 456-476), las flechas ←/→ pasan a moverse por pos
                         }}
 ```
 
-Y en `filteredRowIndices` (líneas 147-158), la búsqueda solo mira las columnas visibles — mismo criterio que la búsqueda del Regression Tracker, que en la Fase 4 dejó de encontrar por campos ocultos:
+**`filteredRowIndices` (líneas 147-158) NO se toca.** La búsqueda sigue recorriendo la fila entera con `row.some(...)`, incluidas las columnas ocultas — decisión de producto de Jorge del 2026-08-15: ocultar es una preferencia de vista, no un borrado, y seguir encontrando lo que has ocultado es lo que se espera.
 
-```ts
-      const matches = displayColIndices.some((ci) =>
-        (row[ci] || '').toLowerCase().includes(q));
-```
-
-Añade `displayColIndices` a las dependencias del `useMemo`.
+Esto es **deliberadamente distinto** del Regression Tracker, donde la Fase 4 sí dejó de buscar por campos ocultos. La divergencia está fijada por un test en el Step 1 y documentada en la Task 6; no la unifiques.
 
 - [ ] **Step 6: Actualiza los dos llamantes sin cambiar su comportamiento**
 
@@ -1090,8 +1091,9 @@ Cinco puntos, todos concretos:
 1. **Settings persistence**: `acgen_schema` ya no tiene la sección `sprint` "reservada" — descríbela: `sprint: { tabs: SprintTabSchema[] }`, cada pestaña con su lista de `columns`.
 2. **Quita** de "Pending items" la línea `Fase 5 of productization (Sprint Tracker configurable schema): ... not implemented yet.` y el párrafo que dice que la Fase 5 sigue pendiente.
 3. **Ficha de `TrackerGrid`**: la prop es `tabColumns: Record<T, {label, dataIndex}[]>`, el llamante resuelve y filtra, el componente no sabe nada del esquema; `colCount = Math.max(headers, datos, 1)` y por qué; qué va por índice de datos (todo) y qué por posición visual (solo ←/→).
-4. **Known issues**, dos limitaciones deliberadas nuevas: (a) no se pueden **borrar ni reordenar** columnas del Sprint — el grid es posicional y hacerlo exigiría migrarlo a filas keyed más migrar los anchos de índice a id; ocultar cubre el caso práctico. (b) Igual que en la Fase 4, **renombrar fija el texto en los dos idiomas** (el `label` gana sobre el `labelKey`).
-5. **Evolution history**: fila nueva para la Fase 5 con fecha 2026-08-15, los commits, el recuento de tests y de claves i18n (301 → 316), y si hubo o no verificación manual en navegador. **No escribas que está verificada en producción si no lo está** — ese fue exactamente el error que hubo que corregir en la Fase 4.
+4. **La divergencia de búsqueda entre los dos trackers**, en la ficha de `TrackerGrid` y en Known issues: en el **Sprint** la búsqueda mira la fila entera, columnas ocultas incluidas; en **Regression** la Fase 4 la acotó a los campos visibles. Es deliberado y decisión de Jorge (2026-08-15) — ocultar es una preferencia de vista, no un borrado. Escríbelo donde se vea, porque leído de refilón parece una inconsistencia y alguien la "arreglará".
+5. **Known issues**, dos limitaciones deliberadas nuevas: (a) no se pueden **borrar ni reordenar** columnas del Sprint — el grid es posicional y hacerlo exigiría migrarlo a filas keyed más migrar los anchos de índice a id; ocultar cubre el caso práctico. (b) Igual que en la Fase 4, **renombrar fija el texto en los dos idiomas** (el `label` gana sobre el `labelKey`).
+6. **Evolution history**: fila nueva para la Fase 5 con fecha 2026-08-15, los commits, el recuento de tests y de claves i18n (301 → 316), y si hubo o no verificación manual en navegador. **No escribas que está verificada en producción si no lo está** — ese fue exactamente el error que hubo que corregir en la Fase 4.
 
 - [ ] **Step 2: Comprueba si `README.md` lo menciona**
 
