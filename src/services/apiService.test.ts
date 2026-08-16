@@ -264,6 +264,54 @@ describe('isModelDecommissioned', () => {
   });
 });
 
+describe('streamWithGroq mid-stream SSE error events', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  /** SSE con HTTP 200 que entrega deltas y luego un evento de error (asi reporta
+   *  OpenRouter creditos agotados, errores del upstream o moderacion). */
+  function sseWithErrorEvent(errorPayload: Record<string, unknown>): Response {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const delta = JSON.stringify({ model: 'test-model', choices: [{ delta: { content: 'texto parcial ' } }] });
+        controller.enqueue(encoder.encode(`data: ${delta}\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorPayload)}\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n'));
+        controller.close();
+      },
+    });
+    return { ok: true, body } as unknown as Response;
+  }
+
+  async function consume(errorPayload: Record<string, unknown>): Promise<unknown> {
+    vi.stubGlobal('fetch', vi.fn(async () => sseWithErrorEvent(errorPayload)));
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+    try {
+      for await (const chunk of gen) { void chunk; }
+    } catch (e) {
+      return e;
+    }
+    return null;
+  }
+
+  it('un evento {error} a mitad de stream lanza con el mensaje del proveedor', async () => {
+    const err = await consume({ error: { code: 502, message: 'Provider returned error' } });
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe('Provider returned error');
+  });
+
+  it('un evento {error} con code 429 mapea a error.rateLimit como la ruta non-ok', async () => {
+    const err = await consume({ error: { code: 429, message: 'Rate limit exceeded' } });
+    expect((err as Error).message).toBe('error.rateLimit');
+    expect((err as Error & { cause?: unknown }).cause).toBe('Rate limit exceeded');
+  });
+
+  it('el flujo sin evento de error sigue intacto', async () => {
+    const out = await collect(['hola ', 'mundo']);
+    expect(out).toBe('hola mundo');
+  });
+});
+
 describe('i18n error keys', () => {
   it('validateTestCases throws the missing-fields key with params', () => {
     const items = [{ key: 'TC-1', summary: 's', priority: 'p', type: 't', preconditions: 'pre', testSteps: ['a'], expectedResult: '' }];
