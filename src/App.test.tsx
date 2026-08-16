@@ -1,6 +1,14 @@
-import { render, act } from '@testing-library/react';
+import { render, act, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App';
+import { streamWithGroq } from './services/apiService';
+
+vi.mock('./services/apiService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./services/apiService')>();
+  return { ...actual, streamWithGroq: vi.fn() };
+});
+
+const streamMock = vi.mocked(streamWithGroq);
 
 beforeEach(() => {
   localStorage.clear();
@@ -23,6 +31,46 @@ describe('App — hash navigation', () => {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
     expect(scrollSpy).toHaveBeenCalledWith(0, 0);
+  });
+});
+
+/**
+ * El prefill de encadenado debe ser one-shot: se entrega una vez a la vista
+ * destino y se limpia. Sin eso, cada revisita posterior de esa vista la
+ * remonta y reinyecta el texto viejo durante el resto de la sesion — incluso
+ * despues de un Limpiar explicito. Los tests de chain de las herramientas
+ * montan el componente una vez con el prop puesto y no pueden verlo.
+ */
+describe('App — chain prefill es one-shot', () => {
+  const goTo = (v: string) => act(() => {
+    window.location.hash = `#/${v}`;
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+
+  it('el texto encadenado no se reinyecta al revisitar la herramienta destino', async () => {
+    streamMock.mockImplementation(async function* () {
+      yield { token: 'Como usuario quiero pagar con tarjeta', done: false };
+      yield { token: '', done: true };
+    });
+    localStorage.setItem('acgen_key_groq', JSON.stringify('k'));
+    render(<App />);
+
+    goTo('userstory');
+    fireEvent.change(screen.getByPlaceholderText(/Como usuario/), { target: { value: 'pago con tarjeta' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generar' }));
+    const chainBtn = await screen.findByRole('button', { name: /Generar Criterios/ });
+
+    // El click encadena via navigate(), que solo cambia el hash; el evento se
+    // dispara a mano porque jsdom no lo emite de forma fiable.
+    fireEvent.click(chainBtn);
+    act(() => { window.dispatchEvent(new HashChangeEvent('hashchange')); });
+    expect(await screen.findByPlaceholderText(/Describe la funcionalidad/))
+      .toHaveValue('Como usuario quiero pagar con tarjeta');
+
+    // Marcharse y volver: la vista se remonta y NO debe reinyectar el texto.
+    goTo('bugreport');
+    goTo('acceptance');
+    expect(await screen.findByPlaceholderText(/Describe la funcionalidad/)).toHaveValue('');
   });
 });
 

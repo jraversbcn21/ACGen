@@ -189,6 +189,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
+    const prevForm = formData;
     const prevData = generatedData;
     const prevModel = generatedModel;
     setFormData(DEFAULT_FORM);
@@ -198,10 +199,11 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
     setCopied(false);
     setCopiedRowIndex(null);
     showToast(t('common.cleared'), () => {
+      setFormData(prevForm);
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
-  }, [generatedData, generatedModel, showToast, t]);
+  }, [formData, generatedData, generatedModel, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));

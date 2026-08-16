@@ -66,6 +66,10 @@ export function WorkspacePicker({
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Sin esto, reelegir el MISMO fichero tras un import fallido (el dropdown
+    // sigue abierto y el input retiene el nombre) no dispara change y el
+    // reintento se ignora en silencio. Mismo guard que BackupMenu.
+    e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {

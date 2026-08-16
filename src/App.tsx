@@ -107,6 +107,14 @@ export default function App() {
     window.location.hash = `#/${v}`;
   }, []);
 
+  // El prefill es one-shot: la vista destino lo consume en su efecto de mount
+  // (que corre antes que este, hijos primero) y aqui se limpia. Sin esto, cada
+  // remonte posterior de esa vista reinyectaria el texto encadenado viejo
+  // durante el resto de la sesion, incluso tras un Limpiar explicito.
+  useEffect(() => {
+    if (prefill && view === prefill.view) setPrefill(null);
+  }, [view, prefill]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
