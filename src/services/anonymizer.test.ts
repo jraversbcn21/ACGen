@@ -132,6 +132,15 @@ describe('deanonymize', () => {
     expect(result).toBe('Enviar a a@b.com con copia a [EMAIL_2]');
   });
 
+  it('restaura placeholders anidados: un email incrustado en una URL', () => {
+    // EMAIL corre antes que URL, asi que el valor de [URL_1] contiene el
+    // placeholder [EMAIL_1]; una sola pasada en orden de insercion lo dejaba
+    // sin restaurar en el texto final.
+    const input = 'El enlace https://shop.example.com/reset?email=user@corp.com devuelve 500.';
+    const { text, map } = anonymize(input);
+    expect(deanonymize(text, map)).toBe(input);
+  });
+
   it('round-trip: anonymize + deanonymize = identity', () => {
     const input = 'Ticket PROJ-5678: usuario jorge@test.com desde IP 192.168.1.100 en https://jira.internal.corp/browse/PROJ-5678. Tel: +34 600 000 000. Atendido por Sr. Martinez.';
     const { text, map } = anonymize(input);
@@ -206,5 +215,19 @@ describe('splitPendingPlaceholder', () => {
 
   it('holds back a lone opening bracket', () => {
     expect(splitPendingPlaceholder('final [')).toEqual(['final ', '[']);
+  });
+
+  it('con claves del mapa, retiene una cola que es prefijo de una clave renombrada', () => {
+    // El usuario puede renombrar [EMAIL_1] a texto libre en el modal de revision;
+    // el regex de placeholders por defecto no protege esas claves.
+    expect(splitPendingPlaceholder('aviso a CORREO', ['CORREO_CLIENTE'])).toEqual(['aviso a ', 'CORREO']);
+  });
+
+  it('con claves del mapa, emite el texto cuando la clave esta completa', () => {
+    expect(splitPendingPlaceholder('aviso a CORREO_CLIENTE ya', ['CORREO_CLIENTE'])).toEqual(['aviso a CORREO_CLIENTE ya', '']);
+  });
+
+  it('con claves del mapa, las claves por defecto [PREFIX_n] siguen protegidas', () => {
+    expect(splitPendingPlaceholder('Contacta a [EMA', ['[EMAIL_1]'])).toEqual(['Contacta a ', '[EMA']);
   });
 });

@@ -70,6 +70,21 @@ describe('BugReportTool — confidential mode', () => {
     expect(sentInput()).toContain('Plataforma:');
   });
 
+  it('la fecha inyectada no dispara el modal ni se enmascara (app-ios, descripcion limpia)', async () => {
+    // La fecha con guiones (dd-mm-yyyy) casaba con el regex PHONE: el modal
+    // saltaba en CADA generacion y el modelo recibia 'Fecha actual: [PHONE_1]'.
+    localStorage.setItem('acgen_confidential_bugreport', 'true');
+    renderTool({ description: 'La pantalla de pago se queda en blanco' });
+    fireEvent.change(document.getElementById('br-platform')!, { target: { value: 'app-ios' } });
+    generate();
+
+    // Sin nada sensible, no hay modal: se envia directo.
+    await waitFor(() => expect(streamMock).toHaveBeenCalledTimes(1));
+    expect(sentInput()).toMatch(/Fecha actual: \d{2}\/\d{2}\/\d{4}/);
+    expect(sentInput()).not.toContain('[PHONE');
+    expect(sentMap()).toBeUndefined();
+  });
+
   it('sends the raw assembled message when confidential mode is off', async () => {
     renderTool({ description: 'Error al pagar, avisar a jorge@example.com' });
     generate();

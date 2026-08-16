@@ -36,7 +36,11 @@ export function anonymize(text: string): { text: string; map: SubMap } {
 
 export function deanonymize(text: string, map: SubMap): string {
   let result = text;
-  for (const [placeholder, original] of Object.entries(map)) {
+  // Orden INVERSO de insercion: un patron posterior (URL) puede haber capturado
+  // el placeholder de uno anterior (EMAIL) dentro de su valor original. Restaurar
+  // el envoltorio primero reintroduce el placeholder interno, que las iteraciones
+  // siguientes (las de los patrones anteriores) si restauran.
+  for (const [placeholder, original] of Object.entries(map).reverse()) {
     result = result.split(placeholder).join(original);
   }
   return result;
@@ -74,8 +78,28 @@ const PARTIAL_PLACEHOLDER = /\[[A-Z]*(?:_\d*)?$/;
  * Splits streamed text into the part safe to emit and a tail that may still grow
  * into a placeholder. Without this, a placeholder split across two SSE chunks
  * (`[EMA` + `IL_1]`) would never match the restore map and would reach the user raw.
+ *
+ * Con `mapKeys` (las claves reales del mapa de restauracion) la retencion se hace
+ * contra ellas: los renames del modal de revision son texto libre sin forma
+ * `[PREFIX_n]`, y el regex por defecto no los protegia de partirse entre chunks.
+ * Las claves por defecto tambien son claves del mapa, asi que el regex solo se
+ * usa cuando no hay mapa.
  */
-export function splitPendingPlaceholder(text: string): [emit: string, pending: string] {
+export function splitPendingPlaceholder(text: string, mapKeys?: string[]): [emit: string, pending: string] {
+  if (mapKeys?.length) {
+    const maxHold = Math.max(...mapKeys.map((k) => k.length));
+    // De la cola mas larga a la mas corta: la primera que YA es una clave
+    // completa se emite (deanonymize la reemplaza); la primera que es prefijo
+    // propio de alguna clave se retiene por si el resto llega en el chunk siguiente.
+    for (let i = Math.min(text.length, maxHold); i > 0; i--) {
+      const tail = text.slice(-i);
+      if (mapKeys.includes(tail)) break;
+      if (mapKeys.some((k) => k.startsWith(tail))) {
+        return [text.slice(0, text.length - i), tail];
+      }
+    }
+    return [text, ''];
+  }
   const match = PARTIAL_PLACEHOLDER.exec(text);
   if (!match) return [text, ''];
   return [text.slice(0, match.index), text.slice(match.index)];

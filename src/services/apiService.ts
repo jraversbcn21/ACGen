@@ -267,6 +267,7 @@ export async function* streamWithGroq(
   let buffer = '';
   // Text held back because it may still grow into a placeholder split across chunks.
   let pending = '';
+  const anonymizeKeys = anonymizeMap ? Object.keys(anonymizeMap) : undefined;
   let lastModel: string | undefined;
 
   while (true) {
@@ -301,7 +302,7 @@ export async function* streamWithGroq(
             yield { token: rawToken, done: false, model: parsed.model };
           } else {
             pending += rawToken;
-            const [emit, rest] = splitPendingPlaceholder(pending);
+            const [emit, rest] = splitPendingPlaceholder(pending, anonymizeKeys);
             pending = rest;
             if (emit) {
               yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
