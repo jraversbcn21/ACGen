@@ -194,6 +194,29 @@ describe('useWorkspace', () => {
       expect(result.current.activeId).toBe(result.current.workspaces[0].id);
     });
 
+    it('un saveArtifact capturado antes de borrar el workspace activo no pierde el artefacto (closure congelado durante el stream)', () => {
+      // Las herramientas capturan onSaveArtifact al arrancar la generacion y lo
+      // llaman al COMPLETAR el stream, segundos despues. Si en medio el usuario
+      // borra el workspace activo, el guard del closure viejo aun lo veia valido
+      // y el map sobre la lista actual no casaba con nada: perdida silenciosa.
+      const { result } = renderHook(() => useWorkspace());
+      let wsId!: string;
+      act(() => {
+        wsId = result.current.createWorkspace('Sprint 32').id;
+      });
+      const staleSaveArtifact = result.current.saveArtifact;
+      act(() => {
+        result.current.deleteWorkspace(wsId);
+      });
+      act(() => {
+        staleSaveArtifact({ tool: 'testdata', input: 'in', output: 'out' }, 'Sin nombre');
+      });
+      expect(result.current.workspaces).toHaveLength(1);
+      expect(result.current.workspaces[0].name).toBe('Sin nombre');
+      expect(result.current.workspaces[0].artifacts).toHaveLength(1);
+      expect(result.current.workspaces[0].artifacts[0].output).toBe('out');
+    });
+
     it('does not lose the artifact when activeId points at a workspace that no longer exists', () => {
       localStorage.setItem('acgen_workspaces', JSON.stringify([]));
       localStorage.setItem('acgen_active_workspace', JSON.stringify('ghost-id'));

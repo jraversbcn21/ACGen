@@ -55,11 +55,24 @@ export function useWorkspace() {
 
   const saveArtifact = useCallback((artifact: Omit<Artifact, 'id' | 'timestamp'>, fallbackName: string) => {
     // activeId can point at a workspace that no longer exists (cleared/corrupt
-    // storage); addArtifact would silently no-op, so fall back to a fresh one.
-    const targetIsValid = activeId !== null && workspaces.some((w) => w.id === activeId);
+    // storage, o borrado DURANTE el stream); addArtifact would silently no-op,
+    // so fall back to a fresh one. El guard valida contra localStorage, no
+    // contra el estado del closure: las herramientas capturan este callback al
+    // arrancar la generacion y lo llaman al completar, segundos despues — el
+    // closure lleva la lista de entonces, mientras que useLocalStorage escribe
+    // localStorage sincronamente en cada update, asi que es lo realmente
+    // guardado en el momento de escribir.
+    let current: unknown;
+    try {
+      current = JSON.parse(localStorage.getItem(STORAGE_KEYS.WORKSPACES) ?? '[]');
+    } catch {
+      current = [];
+    }
+    const list = Array.isArray(current) ? (current as Workspace[]) : [];
+    const targetIsValid = activeId !== null && list.some((w) => w.id === activeId);
     const targetId = targetIsValid ? activeId : createWorkspace(fallbackName).id;
     addArtifact(targetId, artifact);
-  }, [activeId, workspaces, createWorkspace, addArtifact]);
+  }, [activeId, createWorkspace, addArtifact]);
 
   const exportWorkspace = useCallback((id: string): string | null => {
     const ws = workspaces.find((w) => w.id === id);
