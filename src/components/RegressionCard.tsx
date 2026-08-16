@@ -359,7 +359,11 @@ export function RegressionCard({
                           aria-label={t('common.delete')}
                           title={t('common.delete')}
                           onClick={() => {
-                            if (ticketRowHasContent(ticket, fieldIds) && !confirm(t('regression.deleteRowConfirm'))) return;
+                            // Todos los campos del esquema, no solo los visibles:
+                            // una fila con contenido solo en una columna oculta no
+                            // esta vacia, y borrarla sin confirm destruiria un dato
+                            // que "ocultar nunca borra" promete conservar.
+                            if (ticketRowHasContent(ticket, schema.regression.ticketFields.map((f) => f.id)) && !confirm(t('regression.deleteRowConfirm'))) return;
                             onDeleteTicket?.(ticket.id);
                           }}
                           style={{ padding: '2px 8px', fontSize: 12 }}

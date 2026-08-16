@@ -80,6 +80,15 @@ describe('TrackerGrid — jira mode (extracted Sprint Tracker behavior)', () => 
     expect(props.onUpdateGridCell).toHaveBeenCalledWith('one', 0, 0, 'ABC-999 Mi ticket');
   });
 
+  it('en readOnly, pegar una URL de Jira no escribe la celda (el paste dispara sobre inputs readonly en navegador real)', () => {
+    const props = renderGrid({ readOnly: true });
+    const inputs = document.querySelectorAll('tbody input');
+    fireEvent.paste(inputs[0], {
+      clipboardData: { getData: () => 'Mi ticket - https://jira.example.com/browse/ABC-999' },
+    });
+    expect(props.onUpdateGridCell).not.toHaveBeenCalled();
+  });
+
   it('"+ Fila" appends an empty row via onSetTabGrid', () => {
     const props = renderGrid();
     fireEvent.click(screen.getByText('+ Fila'));

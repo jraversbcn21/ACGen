@@ -516,7 +516,11 @@ export function TrackerGrid<T extends string>({
                           if (prev?.row === ri && prev?.col === ci) return null;
                           return prev;
                         })}
-                        onPaste={linkMode === 'jira' ? (e) => {
+                        // !readOnly: el evento paste dispara sobre un input readonly
+                        // (readonly solo bloquea la insercion por defecto) y este
+                        // handler escribe la celda directamente, saltandose el candado
+                        // de los sprints archivados.
+                        onPaste={linkMode === 'jira' && !readOnly ? (e) => {
                           const text = e.clipboardData.getData('text/plain');
                           const snapLinkMatch = text.match(/^(.+?)\s*-\s*(https?:\/\/[^\s]+\/browse\/([A-Z]+-\d+))/i);
                           if (snapLinkMatch) {
