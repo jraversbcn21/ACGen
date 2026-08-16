@@ -91,6 +91,26 @@ describe('RegressionCard', () => {
     expect(onDeleteTicket).toHaveBeenCalledWith('t1');
   });
 
+  it('borrar una fila cuyo unico contenido vive en una columna oculta SI pide confirm (ocultar nunca borra)', () => {
+    const schema = structuredClone(DEFAULT_SCHEMA);
+    schema.regression.ticketFields = schema.regression.ticketFields.map((f) =>
+      f.id === 'squad' ? { ...f, hidden: true } : f
+    );
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, JSON.stringify(schema));
+    const onDeleteTicket = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderCard({
+      onDeleteTicket,
+      regression: makeRegression({
+        tickets: [{ id: 't1', ticket: '', fecha: '', prioridad: '', creador: '', squad: 'Squad Pagos', status: '' }],
+      }),
+    });
+    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    fireEvent.click(screen.getByLabelText('Eliminar'));
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(onDeleteTicket).not.toHaveBeenCalled();
+  });
+
   it('editing a ticket cell calls onUpdateTicket with field and value', () => {
     const onUpdateTicket = vi.fn();
     renderCard({ onUpdateTicket });
