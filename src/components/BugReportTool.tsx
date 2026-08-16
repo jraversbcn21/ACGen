@@ -161,6 +161,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
+    const prevForm = formData;
     const prevOutput = output;
     const prevReasoning = reasoning;
     setFormData(DEFAULT_FORM);
@@ -169,10 +170,11 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setError(null);
     setCopied(false);
     showToast(t('common.cleared'), () => {
+      setFormData(prevForm);
       setOutput(prevOutput);
       setReasoning(prevReasoning);
     });
-  }, [output, reasoning, showToast, t]);
+  }, [formData, output, reasoning, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;
