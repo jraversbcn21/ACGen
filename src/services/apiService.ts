@@ -190,6 +190,32 @@ export function isModelDecommissioned(errorMessage: string | undefined, status: 
   );
 }
 
+/** Mapea un payload de error del proveedor (ruta HTTP non-ok o evento {error}
+ *  dentro del SSE) al mismo error i18n que ven los catch de las herramientas. */
+function mappedApiError(
+  errorBody: { error?: { message?: string; type?: string } } | null,
+  status: number,
+): Error {
+  const apiError: GroqApiError = {
+    message: errorBody?.error?.message ?? `Error HTTP ${status}`,
+    status,
+    code: errorBody?.error?.type,
+  };
+
+  const { message: upstreamMessage, ...meta } = apiError;
+
+  if (status === 401) {
+    return Object.assign(i18nError('error.apiKey'), { ...meta, cause: upstreamMessage });
+  }
+  if (status === 429) {
+    return Object.assign(i18nError('error.rateLimit'), { ...meta, cause: upstreamMessage });
+  }
+  if (isModelDecommissioned(apiError.message, status)) {
+    return Object.assign(i18nError('error.modelDecommissioned'), { ...meta, cause: upstreamMessage });
+  }
+  return Object.assign(new Error(apiError.message), apiError);
+}
+
 export async function* streamWithGroq(
   apiKey: string,
   model: string,
@@ -233,24 +259,7 @@ export async function* streamWithGroq(
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
-    const apiError: GroqApiError = {
-      message: errorBody?.error?.message ?? `Error HTTP ${response.status}`,
-      status: response.status,
-      code: errorBody?.error?.type,
-    };
-
-    const { message: upstreamMessage, ...meta } = apiError;
-
-    if (response.status === 401) {
-      throw Object.assign(i18nError('error.apiKey'), { ...meta, cause: upstreamMessage });
-    }
-    if (response.status === 429) {
-      throw Object.assign(i18nError('error.rateLimit'), { ...meta, cause: upstreamMessage });
-    }
-    if (isModelDecommissioned(apiError.message, response.status)) {
-      throw Object.assign(i18nError('error.modelDecommissioned'), { ...meta, cause: upstreamMessage });
-    }
-    throw Object.assign(new Error(apiError.message), apiError);
+    throw mappedApiError(errorBody, response.status);
   }
 
   const reader = response.body!.getReader();
@@ -275,23 +284,30 @@ export async function* streamWithGroq(
           }
           return;
         }
+        let parsed;
         try {
-          const parsed = JSON.parse(data);
-          const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
-          if (rawToken) {
-            lastModel = parsed.model ?? lastModel;
-            if (!anonymizeMap) {
-              yield { token: rawToken, done: false, model: parsed.model };
-            } else {
-              pending += rawToken;
-              const [emit, rest] = splitPendingPlaceholder(pending);
-              pending = rest;
-              if (emit) {
-                yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
-              }
+          parsed = JSON.parse(data);
+        } catch { continue; /* skip malformed chunks */ }
+        // OpenRouter reporta fallos a mitad de generacion (creditos agotados,
+        // error del upstream, moderacion) como un evento {error} sobre HTTP 200.
+        // Sin esto el stream "termina bien" y el texto truncado pasa por exito.
+        if (parsed.error) {
+          throw mappedApiError(parsed, typeof parsed.error.code === 'number' ? parsed.error.code : 0);
+        }
+        const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
+        if (rawToken) {
+          lastModel = parsed.model ?? lastModel;
+          if (!anonymizeMap) {
+            yield { token: rawToken, done: false, model: parsed.model };
+          } else {
+            pending += rawToken;
+            const [emit, rest] = splitPendingPlaceholder(pending);
+            pending = rest;
+            if (emit) {
+              yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
             }
           }
-        } catch { /* skip malformed chunks */ }
+        }
       }
     }
   }
