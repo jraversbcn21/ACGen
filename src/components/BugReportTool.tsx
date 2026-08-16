@@ -36,7 +36,10 @@ function getAvailableBrowsers(platform: PlatformId): string[] {
 
 function buildBugReportMessage(formData: BugReportFormData): string {
   const now = new Date();
-  const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+  // Con barras, como AcceptanceCriteria: la version con guiones casaba con el
+  // regex PHONE del anonimizador y en modo confidencial la fecha inyectada se
+  // enmascaraba como telefono en cada generacion.
+  const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   let userMessage = `Descripcion del bug: ${formData.description}\n\n`;
   userMessage += `Plataforma: ${formData.platform}\n`;
   userMessage += `Mercado: ${formData.market}\n`;

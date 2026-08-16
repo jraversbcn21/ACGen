@@ -74,6 +74,13 @@ describe('streamWithGroq deanonymization', () => {
     expect(out).toBe('texto colgando [EMA');
   });
 
+  it('restaura un placeholder renombrado a texto libre partido entre dos chunks', async () => {
+    // Los renames del modal de revision no tienen forma [PREFIX_n]; con streaming
+    // BPE lo normal es que un nombre multi-token llegue partido entre deltas.
+    const out = await collect(['Escribe a CORREO', '_CLIENTE hoy'], { 'CORREO_CLIENTE': 'jorge@example.com' });
+    expect(out).toBe('Escribe a jorge@example.com hoy');
+  });
+
   it('passes text through untouched when no map is given', async () => {
     const out = await collect(['texto [EMAIL_1] normal']);
     expect(out).toBe('texto [EMAIL_1] normal');
