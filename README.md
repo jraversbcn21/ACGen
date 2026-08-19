@@ -15,7 +15,7 @@ ACGen es una aplicacion web (SPA) que integra once herramientas para agilizar el
 
 - **Criterios de Aceptacion**: Genera criterios Dado/Cuando/Entonces desde requisitos o descripcion de tickets. Validacion automatica de formato. Historial persistente de las ultimas 10 generaciones.
 - **Test Case Generator**: Genera casos de prueba QA estructurados (JSON) con prioridad, tipo, pasos y resultado esperado. Exporta como tabla estructurada o PDF.
-- **Bug Report Generator**: Genera bug reports en formato estructurado con paneles, seleccion de plataforma (web/App Android/App iOS), campos dinamicos y campo de contexto adicional. Historial persistente de las ultimas 10 generaciones.
+- **Bug Report Generator**: Genera bug reports en formato estructurado con paneles, seleccion de plataforma (Web Desktop/Web Mobile/App Android/App iOS), campos dinamicos y campo de contexto adicional. Historial persistente de las ultimas 10 generaciones.
 - **Datos de Prueba**: Genera datos realistas (direcciones, facturacion, registros, tarjetas, cupones) adaptados a 217 mercados. Exporta como TSV o CSV (con proteccion contra inyeccion de formulas en Excel).
 - **Historia de Usuario**: Genera historias en formato Como/Quiero/Para con evaluacion de criterios INVEST.
 - **Refinador de Requisitos**: Detecta ambiguedades, contradicciones, informacion faltante y dependencias no declaradas en un requisito.
@@ -26,6 +26,7 @@ ACGen es una aplicacion web (SPA) que integra once herramientas para agilizar el
 - **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
 - **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
+- **Encadenar herramientas**: envia la salida de una herramienta como entrada de otra (p. ej. de Criterios a Test Case Generator, de Historia de Usuario a Refinador) sin copiar y pegar.
 - **Copia de seguridad**: exporta/importa todo el estado de la app en un único JSON, recordatorio automatico y copia continua a un fichero local (Chromium).
 - **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
 - **PWA**: instalable, con precache offline de los assets estaticos. Cuando hay un nuevo despliegue, un aviso "Hay una nueva version disponible" permite recargar a la ultima version con un clic.
