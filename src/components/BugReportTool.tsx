@@ -267,7 +267,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const browserOptions = getAvailableBrowsers(formData.platform);
 
   return (
-    <div>
+    <div className="br-root">
       {/* Compact fields row */}
       <div className="br-compact-row">
         <div className="br-compact-field">
@@ -386,16 +386,49 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       </div>
 
       {/* Bug description */}
-      <div style={{ marginTop: 16 }}>
-        <label htmlFor="br-description" className="field-label">{t('bugreport.description')}</label>
-        <textarea
-          id="br-description"
-          value={formData.description}
-          onChange={(e) => updateForm('description', e.target.value)}
-          placeholder={t('bugreport.descriptionPlaceholder')}
-          className="field-textarea"
-          style={{ minHeight: 120 }}
-        />
+      <div className="tool-split" style={{ marginTop: 16 }}>
+        <div className="tool-main">
+          <label htmlFor="br-description" className="field-label">{t('bugreport.description')}</label>
+          <textarea
+            id="br-description"
+            value={formData.description}
+            onChange={(e) => updateForm('description', e.target.value)}
+            placeholder={t('bugreport.descriptionPlaceholder')}
+            className="field-textarea"
+            style={{ minHeight: 'clamp(100px, 16vh, 140px)' }}
+          />
+        </div>
+        <div className="actions-col">
+          <ConfidentialToggle
+            view="bugreport"
+            text={buildBugReportMessage(formData)}
+            onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
+          />
+          <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setShowHistory(true)}
+          >
+            {t('bugreport.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={handleClear}
+            disabled={!formData.description && !output}
+          >
+            {t('common.clear')}
+          </button>
+          <GenerateButton
+            onClick={handleGenerate}
+            disabled={!canGenerate || isStreaming}
+            loading={isLoading || isStreaming}
+          />
+          {loadingStatus && (
+            <span className="loading-status">{loadingStatus}</span>
+          )}
+        </div>
       </div>
 
       {/* Output area */}
@@ -464,39 +497,6 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
             <div className="reasoning-body">{reasoning}</div>
           </details>
         )}
-      </div>
-
-      {/* Action buttons */}
-      <div className="actions-bar">
-        <ConfidentialToggle
-          view="bugreport"
-          text={buildBugReportMessage(formData)}
-          onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
-        />
-        <GenerateButton
-          onClick={handleGenerate}
-          disabled={!canGenerate || isStreaming}
-          loading={isLoading || isStreaming}
-        />
-        {loadingStatus && (
-          <span className="loading-status">{loadingStatus}</span>
-        )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => setShowHistory(true)}
-        >
-          {t('bugreport.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
-        </button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={handleClear}
-          disabled={!formData.description && !output}
-        >
-          {t('common.clear')}
-        </button>
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />

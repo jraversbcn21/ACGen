@@ -96,52 +96,58 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
 
   return (
     <div>
-      <div className="tool-layout">
-        <textarea
-          value={criteria}
-          onChange={(e) => setCriteria(e.target.value)}
-          placeholder={t('designvalidator.criteriaPlaceholder')}
-          className="field-textarea"
-          style={{ minHeight: 160 }}
-        />
-        <ImageDropzone
-          imageName={image?.name ?? null}
-          onImage={(dataUrl, name) => setImage({ dataUrl, name })}
-          onRemove={() => setImage(null)}
-          disabled={loading || isStreaming}
-        />
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0' }}>{t('designvalidator.privacyNote')}</p>
+      <div className="tool-layout tool-fill">
+        <div className="tool-split">
+          <div className="tool-main">
+            <textarea
+              value={criteria}
+              onChange={(e) => setCriteria(e.target.value)}
+              placeholder={t('designvalidator.criteriaPlaceholder')}
+              className="field-textarea"
+              style={{ minHeight: 'clamp(120px, 20vh, 180px)' }}
+            />
+            <ImageDropzone
+              imageName={image?.name ?? null}
+              onImage={(dataUrl, name) => setImage({ dataUrl, name })}
+              onRemove={() => setImage(null)}
+              disabled={loading || isStreaming}
+            />
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0' }}>{t('designvalidator.privacyNote')}</p>
 
-        {image && vision === 'no' && (
-          <div className="error-banner" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span>{t('designvalidator.needVision', { model })}</span>
-            {onSwitchToVisionModel && (
-              <button type="button" className="btn-ghost" onClick={onSwitchToVisionModel}>
-                {t('designvalidator.switchToVision')}
-              </button>
+            {image && vision === 'no' && (
+              <div className="error-banner" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span>{t('designvalidator.needVision', { model })}</span>
+                {onSwitchToVisionModel && (
+                  <button type="button" className="btn-ghost" onClick={onSwitchToVisionModel}>
+                    {t('designvalidator.switchToVision')}
+                  </button>
+                )}
+              </div>
+            )}
+            {image && vision === 'unknown' && (
+              <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.unknownVision')}</p>
+            )}
+            {image && vision !== 'no' && !apiKey.trim() && (
+              <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.missingKey')}</p>
             )}
           </div>
-        )}
-        {image && vision === 'unknown' && (
-          <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.unknownVision')}</p>
-        )}
-        {image && vision !== 'no' && !apiKey.trim() && (
-          <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.missingKey')}</p>
-        )}
-
-        <div className="actions-bar">
-          <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={loading || isStreaming}
-          />
-          <button type="button" className="btn-ghost" onClick={handleClear} disabled={!criteria && !image && !report}>
-            {t('common.clear')}
-          </button>
+          <div className="actions-col">
+            <button type="button" className="btn-ghost" onClick={handleClear} disabled={!criteria && !image && !report}>
+              {t('common.clear')}
+            </button>
+            <GenerateButton
+              onClick={handleGenerate}
+              disabled={!canGenerate || isStreaming}
+              loading={loading || isStreaming}
+            />
+          </div>
         </div>
 
-        {report && (
-          <div className="output-section" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="result-box">
+          {!report ? (
+            <span className="result-box-placeholder">{t('designvalidator.outputPlaceholder')}</span>
+          ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <section>
               <h3>{t('designvalidator.gaps')} ({report.carencias.length})</h3>
               {report.carencias.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
@@ -191,7 +197,8 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
               )}
             </section>
           </div>
-        )}
+          )}
+        </div>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />

@@ -96,41 +96,48 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
 
   return (
     <div>
-      <div className="tool-layout">
-        <textarea
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          placeholder={t('userstory.inputPlaceholder')}
-          className="field-textarea"
-          style={{ minHeight: 200 }}
-        />
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
-          {t('userstory.inputHint')}
-        </div>
-        <div className="actions-bar">
-          <ConfidentialToggle
-            view="userstory"
-            text={idea}
-            onReview={() => setConf(anonymize(idea))}
-          />
-          <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={loading || isStreaming}
-          />
-          <button type="button" className="btn-ghost" onClick={handleClear} disabled={!idea && !result}>
-            {t('common.clear')}
-          </button>
-        </div>
-        {result && (
-          <div className="output-section" style={{ marginTop: 16 }}>
-            <div data-testid="userstory-output" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, padding: '16px 0' }}>{result}</div>
-            {onChain && <ChainMenu sourceView="userstory" content={result} onChain={onChain} />}
+      <div className="tool-layout tool-fill">
+        <div className="tool-split">
+          <div className="tool-main">
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              placeholder={t('userstory.inputPlaceholder')}
+              className="field-textarea"
+              style={{ minHeight: 'clamp(140px, 24vh, 220px)' }}
+            />
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+              {t('userstory.inputHint')}
+            </div>
           </div>
-        )}
-        {(isStreaming || loading) && !result && (
-          <div style={{ marginTop: 16, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{stripMarkdown(streamText)}</div>
-        )}
+          <div className="actions-col">
+            <ConfidentialToggle
+              view="userstory"
+              text={idea}
+              onReview={() => setConf(anonymize(idea))}
+            />
+            <button type="button" className="btn-ghost" onClick={handleClear} disabled={!idea && !result}>
+              {t('common.clear')}
+            </button>
+            <GenerateButton
+              onClick={handleGenerate}
+              disabled={!canGenerate || isStreaming}
+              loading={loading || isStreaming}
+            />
+          </div>
+        </div>
+        <div className="result-box">
+          {result ? (
+            <>
+              <div data-testid="userstory-output" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{result}</div>
+              {onChain && <ChainMenu sourceView="userstory" content={result} onChain={onChain} />}
+            </>
+          ) : (isStreaming || loading) ? (
+            <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{stripMarkdown(streamText)}</div>
+          ) : (
+            <span className="result-box-placeholder">{t('userstory.outputPlaceholder')}</span>
+          )}
+        </div>
       </div>
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />

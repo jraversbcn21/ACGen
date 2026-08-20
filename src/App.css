@@ -529,6 +529,48 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px;
 }
 
+/* === SIDE ACTIONS (input izquierda, botonera en columna derecha) === */
+.tool-split { display: flex; gap: 20px; align-items: flex-start; }
+.tool-split > .tool-main { flex: 1; min-width: 0; }
+.actions-col { display: flex; flex-direction: column; gap: 10px; flex: 0 0 170px; }
+.actions-col .btn-primary, .actions-col .btn-ghost { width: 100%; }
+.actions-col .loading-status { text-align: center; }
+
+/* === RESULT BOX (caja de resultados siempre visible) === */
+.tool-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 128px);
+}
+.result-box {
+  flex: 1;
+  margin-top: 20px;
+  min-height: clamp(140px, 22vh, 240px);
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow-y: auto;
+}
+.result-box-placeholder {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+}
+
+/* === OUTPUT SECTION === */
+.output-section {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.output-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* === MODEL BADGE (output) === */
 .model-badge-new {
   font-size: 12px; color: var(--text-3); background: var(--surface-2);
@@ -623,6 +665,8 @@ body {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  /* llena el alto visible para que no quede espacio muerto bajo la caja de salida */
+  min-height: calc(100vh - 128px);
 }
 .criteria-right {
   display: flex;
@@ -631,10 +675,11 @@ body {
   min-width: 0;
 }
 .criteria-input-ta {
-  min-height: 80px;
+  min-height: clamp(120px, 22vh, 220px);
 }
 .criteria-output-ta {
-  min-height: 400px;
+  min-height: clamp(200px, 32vh, 400px);
+  flex: 1;
 }
 /* Bug Report compact row */
 .br-compact-row {
@@ -659,7 +704,20 @@ body {
 }
 
 .br-output-ta {
-  min-height: 470px;
+  min-height: clamp(220px, 36vh, 470px);
+  flex: 1;
+}
+/* La caja de resultados respira respecto al boton Generar y llena el alto sobrante */
+.br-root {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 128px);
+}
+.br-output-section {
+  margin-top: 28px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Test Data Tool */
@@ -793,6 +851,13 @@ body {
   .criteria-grid {
     grid-template-columns: 1fr;
   }
+  .criteria-left {
+    min-height: 0;
+  }
+  .tool-fill,
+  .br-root {
+    min-height: 0;
+  }
   .br-compact-field,
   .br-compact-field-wide {
     min-width: 100%;
@@ -800,6 +865,19 @@ body {
   }
   .td-form-row {
     grid-template-columns: 1fr;
+  }
+  .tool-split {
+    flex-direction: column;
+  }
+  .tool-split > .actions-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-basis: auto;
+    width: 100%;
+  }
+  .tool-split > .actions-col .btn-primary,
+  .tool-split > .actions-col .btn-ghost {
+    width: auto;
   }
 }
 
@@ -930,8 +1008,10 @@ td:hover .cell-open-link {
   padding: 32px 24px;
 }
 .app-layout .container {
-  max-width: none;
-  margin: 0;
+  /* tope en ultrapanoramicos (3440+): campos de 3000px son ilegibles */
+  max-width: 2100px;
+  width: 100%;
+  margin: 0 auto;
   padding: 28px 32px;
   overflow-y: auto;
   min-width: 0;
@@ -1057,3 +1137,15 @@ td:hover .cell-open-link {
 }
 .backup-confirm-actions .btn-primary,
 .backup-confirm-actions .btn-ghost { flex: 1; }
+
+/* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
+   Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
+   .container viven mas abajo que el resto y ganarian por cascada si este bloque
+   estuviera antes. */
+@media (max-width: 1200px) {
+  .app-layout .container { padding: 20px; }
+  .actions-col { flex-basis: 150px; }
+  .tool-split { gap: 14px; }
+  .sidebar { width: 190px; }
+  .criteria-grid { gap: 16px; }
+}
