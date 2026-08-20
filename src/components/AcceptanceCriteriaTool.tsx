@@ -231,7 +231,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
             onChange={(e) => setAdditionalContext(e.target.value)}
             placeholder={t('acceptance.additionalContextPlaceholder')}
             className="field-textarea"
-            style={{ minHeight: 60, marginTop: 8 }}
+            style={{ minHeight: 'clamp(60px, 12vh, 110px)', marginTop: 8 }}
           />
           <textarea
             id="criteria-output"
@@ -257,6 +257,33 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
           )}
         </div>
         <div className="criteria-right">
+          <div className="actions-col" style={{ maxWidth: 220, margin: '0 auto 16px' }}>
+            <ConfidentialToggle
+              view="acceptance"
+              text={buildEffectiveInput()}
+              onReview={() => setConf(anonymize(buildEffectiveInput()))}
+            />
+            <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => setShowHistory(true)}
+            >
+              {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={handleClear}
+              disabled={!requirements && !criteria}
+            >
+              {t('common.clear')}
+            </button>
+            <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
+            {loadingStatus && (
+              <span className="loading-status">{loadingStatus}</span>
+            )}
+          </div>
           {reasoning && (
             <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
               <summary>
@@ -306,33 +333,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
         </div>
       </div>
 
-      <div className="actions-bar">
-        <ConfidentialToggle
-          view="acceptance"
-          text={buildEffectiveInput()}
-          onReview={() => setConf(anonymize(buildEffectiveInput()))}
-        />
-        <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
-        {loadingStatus && (
-          <span className="loading-status">{loadingStatus}</span>
-        )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => setShowHistory(true)}
-        >
-          {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
-        </button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={handleClear}
-          disabled={!requirements && !criteria}
-        >
-          {t('common.clear')}
-        </button>
-      </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
       {showHistory && (

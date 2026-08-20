@@ -88,32 +88,38 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
 
   return (
     <div>
-      <div className="tool-layout">
-        <textarea
-          value={requirement}
-          onChange={(e) => setRequirement(e.target.value)}
-          placeholder={t('edgecase.inputPlaceholder')}
-          className="field-textarea"
-          style={{ minHeight: 200 }}
-        />
-        <div className="actions-bar">
-          <ConfidentialToggle
-            view="edgecase"
-            text={requirement}
-            onReview={() => setConf(anonymize(requirement))}
-          />
-          <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={loading || isStreaming}
-          />
-          <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && edgeCases.length === 0}>
-            {t('common.clear')}
-          </button>
+      <div className="tool-layout tool-fill">
+        <div className="tool-split">
+          <div className="tool-main">
+            <textarea
+              value={requirement}
+              onChange={(e) => setRequirement(e.target.value)}
+              placeholder={t('edgecase.inputPlaceholder')}
+              className="field-textarea"
+              style={{ minHeight: 'clamp(140px, 24vh, 220px)' }}
+            />
+          </div>
+          <div className="actions-col">
+            <ConfidentialToggle
+              view="edgecase"
+              text={requirement}
+              onReview={() => setConf(anonymize(requirement))}
+            />
+            <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && edgeCases.length === 0}>
+              {t('common.clear')}
+            </button>
+            <GenerateButton
+              onClick={handleGenerate}
+              disabled={!canGenerate || isStreaming}
+              loading={loading || isStreaming}
+            />
+          </div>
         </div>
 
-        {edgeCases.length > 0 && (
-          <div className="output-section" style={{ marginTop: 16 }}>
+        <div className="result-box">
+          {edgeCases.length === 0 ? (
+            <span className="result-box-placeholder">{t('edgecase.outputPlaceholder')}</span>
+          ) : (
             <div className="data-table-wrap">
               <table className="data-table">
                 <thead>
@@ -134,8 +140,8 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />

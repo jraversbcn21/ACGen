@@ -186,40 +186,41 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
 
   return (
     <div>
-      <div>
-        <label htmlFor="testcase-input" className="field-label">
-          {t('testcase.instructions')}
-        </label>
-        <textarea
-          id="testcase-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={t('testcase.inputPlaceholder')}
-          className="field-textarea"
-          style={{ minHeight: 200 }}
-        />
-      </div>
-
-      <div className="actions-bar">
-        <ConfidentialToggle
-          view="testcase"
-          text={input}
-          onReview={() => setConf(anonymize(input))}
-        />
-        <GenerateButton
-          onClick={handleGenerate}
-          disabled={!canGenerate || isStreaming}
-          loading={status === 'loading'}
-        />
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={handleClear}
-          disabled={!input && !hasOutput}
-        >
-          {t('common.clear')}
-        </button>
+      <div className="tool-split">
+        <div className="tool-main">
+          <label htmlFor="testcase-input" className="field-label">
+            {t('testcase.instructions')}
+          </label>
+          <textarea
+            id="testcase-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t('testcase.inputPlaceholder')}
+            className="field-textarea"
+            style={{ minHeight: 'clamp(140px, 24vh, 240px)' }}
+          />
+        </div>
+        <div className="actions-col">
+          <ConfidentialToggle
+            view="testcase"
+            text={input}
+            onReview={() => setConf(anonymize(input))}
+          />
+          <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={handleClear}
+            disabled={!input && !hasOutput}
+          >
+            {t('common.clear')}
+          </button>
+          <GenerateButton
+            onClick={handleGenerate}
+            disabled={!canGenerate || isStreaming}
+            loading={status === 'loading'}
+          />
+        </div>
       </div>
 
       {hasOutput && (
