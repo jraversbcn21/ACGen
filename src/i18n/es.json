@@ -74,7 +74,7 @@
   "landing.tool.sprinttrackerDesc": "Dashboard de tracking de tickets por sprint",
   "acceptance.inputLabel": "Funcionalidad o flujo",
   "acceptance.contextLabel": "Contexto adicional",
-  "acceptance.resultTitle": "Criterios de aceptacion",
+  "acceptance.resultTitle": "Resultado",
   "acceptance.inputPlaceholder": "Describe la funcionalidad o el flujo que necesita criterios de aceptacion...",
   "acceptance.history": "Historial",
   "acceptance.outputPlaceholder": "Los criterios de aceptacion apareceran aqui...",
