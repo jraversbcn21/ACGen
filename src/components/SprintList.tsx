@@ -2,8 +2,60 @@ import { useMemo, useState } from 'react';
 import type { Sprint } from '../hooks/useSprints';
 import { useT, useLang } from '../i18n/I18nContext';
 import { useSchema } from '../hooks/useSchema';
-import { DEFAULT_SCHEMA, resolveLabel, visibleEntries } from '../types/schema';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { STORAGE_KEYS } from '../config/constants';
+import { DEFAULT_SCHEMA, resolveLabel, visibleEntries, type SprintTabSchema } from '../types/schema';
 import { formatDate, localTodayISO } from '../utils/dates';
+import { jiraTicketUrl, parseCellDate } from '../utils/ticketLink';
+
+const RECENT_LIMIT = 6;
+
+interface ActivityRow {
+  key: string;
+  tabLabel: string;
+  ticket: string;
+  date: string;
+  squad: string;
+  ts: number | null;
+}
+
+/**
+ * Aplana las filas con contenido de todas las pestañas visibles. El indice de
+ * columna se busca por id SIN filtrar las ocultas: en este proyecto el indice
+ * del array de datos ES la identidad de la columna, y filtrar primero
+ * desplazaria en silencio los valores.
+ */
+function activityRows(sprint: Sprint, tabs: SprintTabSchema[], t: (k: string) => string): ActivityRow[] {
+  const rows: ActivityRow[] = [];
+  for (const tab of tabs) {
+    const idx = (id: string) => tab.columns.findIndex((c) => c.id === id);
+    // La primera columna identifica la fila: 'ticket' en casi todas, 'jsd' en JSD.
+    const iTicket = Math.max(idx('ticket'), idx('jsd'), 0);
+    const iDate = idx('fecha');
+    const iSquad = idx('squad');
+    const grid = sprint.tabGrid[tab.id] ?? [];
+    grid.forEach((row, r) => {
+      if (!row.some((cell) => cell?.trim())) return;
+      const date = iDate >= 0 ? (row[iDate] ?? '').trim() : '';
+      rows.push({
+        key: `${tab.id}-${r}`,
+        tabLabel: resolveLabel(tab, t),
+        ticket: (row[iTicket] ?? '').trim(),
+        date,
+        squad: iSquad >= 0 ? (row[iSquad] ?? '').trim() : '',
+        ts: parseCellDate(date),
+      });
+    });
+  }
+  // Sin fecha parseable no se puede saber si es reciente: van al final, en su
+  // orden original, en vez de colarse arriba con un NaN.
+  return rows.sort((a, b) => {
+    if (a.ts === null && b.ts === null) return 0;
+    if (a.ts === null) return 1;
+    if (b.ts === null) return -1;
+    return b.ts - a.ts;
+  });
+}
 
 interface SprintListProps {
   sprints: Sprint[];
@@ -39,6 +91,8 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   const t = useT();
   const { lang } = useLang();
   const [schema] = useSchema();
+  const [storedBaseUrl] = useLocalStorage(STORAGE_KEYS.TRACKER_BASE_URL, '');
+  const baseUrl = (storedBaseUrl || '').replace(/\/+$/, '');
 
   const active = sprints.filter((s) => !s.archived);
   const archived = sprints.filter((s) => s.archived);
@@ -63,6 +117,21 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
   }, [selected, visibleTabs, t]);
   const totalRows = tabCounts.reduce((acc, c) => acc + c.count, 0);
   const maxCount = Math.max(...tabCounts.map((c) => c.count), 1);
+
+  const activity = useMemo(
+    () => (selected ? activityRows(selected, visibleTabs, t) : []),
+    [selected, visibleTabs, t],
+  );
+
+  const squadCounts = useMemo(() => {
+    const acc = new Map<string, number>();
+    for (const row of activity) {
+      const key = row.squad || t('sprint.noSquad');
+      acc.set(key, (acc.get(key) ?? 0) + 1);
+    }
+    return [...acc.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+  }, [activity, t]);
+  const maxSquad = Math.max(...squadCounts.map((s) => s.count), 1);
 
   const sprintRowTotal = (s: Sprint) =>
     visibleTabs.reduce((acc, tab) => acc + countRows(s.tabGrid[tab.id]), 0);
@@ -288,6 +357,52 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
                   ))}
                 </div>
               </section>
+
+              <section className="sp-panel">
+                <div className="sp-panel-head">
+                  <span className="sp-panel-title">{t('sprint.recentActivity')}</span>
+                </div>
+                <div className="sp-panel-body">
+                  {activity.length === 0 ? (
+                    <p className="sp-act-empty">{t('sprint.noActivity')}</p>
+                  ) : (
+                    activity.slice(0, RECENT_LIMIT).map((row) => {
+                      const url = jiraTicketUrl(baseUrl, row.ticket);
+                      return (
+                        <div key={row.key} className="sp-act-row">
+                          <span className="sp-act-ticket">
+                            {url ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer">{row.ticket}</a>
+                            ) : row.ticket || '—'}
+                          </span>
+                          <span className="sp-act-tab">{row.tabLabel}</span>
+                          <span className="sp-act-date">{row.date}</span>
+                          <span className="sp-act-squad">{row.squad}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              {squadCounts.length > 0 && (
+                <section className="sp-panel">
+                  <div className="sp-panel-head">
+                    <span className="sp-panel-title">{t('sprint.bySquad')}</span>
+                  </div>
+                  <div className="sp-panel-body">
+                    {squadCounts.map((squad) => (
+                      <div key={squad.label} className="sp-bar-row">
+                        <span className="sp-bar-label">{squad.label}</span>
+                        <div className="sp-bar-track">
+                          <div className="sp-bar-fill" style={{ width: `${(squad.count / maxSquad) * 100}%` }} />
+                        </div>
+                        <span className="sp-bar-value">{squad.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </>
           )}
         </div>

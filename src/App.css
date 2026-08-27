@@ -1758,6 +1758,22 @@ td:hover .cell-open-link {
 .sp-bar-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--accent); border-radius: 999px; }
 .sp-bar-value { font-size: 13px; color: var(--text-2); font-family: var(--font-mono); text-align: right; }
 
+/* actividad reciente */
+.sp-act-row {
+  display: grid; grid-template-columns: minmax(90px, 130px) minmax(80px, 140px) 100px 1fr;
+  align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px; min-width: 0;
+}
+.sp-act-row > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-act-ticket { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+.sp-act-ticket a { color: var(--accent); text-decoration: none; }
+.sp-act-ticket a:hover { text-decoration: underline; }
+.sp-act-tab { color: var(--text-2); }
+.sp-act-date { color: var(--text-3); font-family: var(--font-mono); font-size: 12.5px; }
+.sp-act-squad { color: var(--text-3); }
+.sp-act-empty { font-size: 12.5px; color: var(--text-3); margin: 10px 0; }
+
 /* lista lateral */
 .sp-side {
   min-width: 0; min-height: 0; display: flex; flex-direction: column;

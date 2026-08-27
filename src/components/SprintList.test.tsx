@@ -279,6 +279,61 @@ describe('SprintList redesigned layout', () => {
     expect(screen.getByText('No hay ningún sprint activo')).toBeInTheDocument();
   });
 
+  it('lists recent activity newest first, with unparseable dates last', () => {
+    renderList([makeSprint({
+      id: 's1',
+      name: 'Sprint 1',
+      tabGrid: {
+        // columnas de 'resolved': ticket, fecha, prioridad, autor, squad
+        resolved: [
+          ['ACG-100', '19/07/2026', 'Alta', 'jorge', 'Checkout'],
+          ['ACG-300', 'pendiente', 'Alta', 'jorge', 'Home'],
+          ['ACG-200', '21/07/2026', 'Baja', 'ana', 'Home'],
+        ],
+        created: [], reopened: [], highPriority: [], jsd: [],
+      },
+    })]);
+    const tickets = [...document.querySelectorAll('.sp-act-ticket')].map((e) => e.textContent);
+    expect(tickets).toEqual(['ACG-200', 'ACG-100', 'ACG-300']);
+  });
+
+  it('links a ticket to Jira only when the tracker base URL is configured', () => {
+    const grid = {
+      resolved: [['ACG-100', '19/07/2026', 'Alta', 'jorge', 'Checkout']],
+      created: [], reopened: [], highPriority: [], jsd: [],
+    };
+    const { unmount } = renderList([makeSprint({ id: 's1', tabGrid: grid })]);
+    expect(document.querySelector('.sp-act-ticket a')).toBeNull();
+    unmount();
+
+    localStorage.setItem('acgen_tracker_base_url', JSON.stringify('https://jira.example.com'));
+    renderList([makeSprint({ id: 's1', tabGrid: grid })]);
+    expect(document.querySelector('.sp-act-ticket a')).toHaveAttribute('href', 'https://jira.example.com/browse/ACG-100');
+  });
+
+  it('groups the squad breakdown and labels blank squads', () => {
+    renderList([makeSprint({
+      id: 's1',
+      tabGrid: {
+        resolved: [
+          ['ACG-1', '19/07/2026', 'Alta', 'jorge', 'Checkout'],
+          ['ACG-2', '19/07/2026', 'Alta', 'jorge', 'Checkout'],
+          ['ACG-3', '19/07/2026', 'Alta', 'ana', ''],
+        ],
+        created: [], reopened: [], highPriority: [], jsd: [],
+      },
+    })]);
+    expect(screen.getByText('Por squad')).toBeInTheDocument();
+    const labels = [...document.querySelectorAll('.sp-bar-label')].map((e) => e.textContent);
+    // Ordenado por conteo: Checkout (2) antes que Sin squad (1).
+    expect(labels.slice(-2)).toEqual(['Checkout', 'Sin squad']);
+  });
+
+  it('shows the noActivity hint when the sprint has no rows', () => {
+    renderList([makeSprint({ id: 's1' })]);
+    expect(screen.getByText('Todavía no hay filas en este sprint')).toBeInTheDocument();
+  });
+
   it('bar panel counts only rows with real content', () => {
     renderList([makeSprint({
       id: 's1',

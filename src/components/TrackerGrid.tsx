@@ -3,11 +3,10 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import { useT } from '../i18n/I18nContext';
 import { parseUrlCell } from '../utils/trackerLinks';
+import { TICKET_KEY_PATTERN, ABSOLUTE_HTTP_URL, jiraTicketUrl } from '../utils/ticketLink';
 
-const TICKET_KEY_PATTERN = /^([A-Z]+-\d+)\b/;
 const MIN_COL_WIDTH = 50;
 const LEGACY_JIRA_BASE_URL_KEY = 'acgen_jira_base_url';
-const ABSOLUTE_HTTP_URL = /^https?:\/\//i;
 
 // La clave antigua se escribió con useLocalStorage (JSON.stringify); se lee
 // igual y se deja intacta — mismo criterio que los datos huérfanos de Android.
@@ -231,11 +230,7 @@ export function TrackerGrid<T extends string>({
   };
 
   const getLinkUrl = (value: string): string | null => {
-    if (linkMode === 'jira') {
-      if (!ABSOLUTE_HTTP_URL.test(baseUrl)) return null;
-      const m = value.match(TICKET_KEY_PATTERN);
-      return m ? `${baseUrl}/browse/${m[1]}` : null;
-    }
+    if (linkMode === 'jira') return jiraTicketUrl(baseUrl, value);
     return parseUrlCell(value)?.url ?? null;
   };
 
