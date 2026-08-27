@@ -12,6 +12,13 @@ page.on('dialog', (d) => d.accept());
 const ok = [], fail = [];
 const check = (n, c, d = '') => (c ? ok : fail).push(`${n}${d ? ` — ${d}` : ''}`);
 
+// El rediseño de la lista separa seleccionar (item lateral) de abrir (hero):
+// clicar el nombre ya no navega, hay que pasar por "Abrir tablero".
+const openBoard = async (name) => {
+  await page.locator('.sp-item-name', { hasText: name }).first().click();
+  await page.getByRole('button', { name: /Abrir tablero|Open board/ }).click();
+};
+
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
@@ -21,7 +28,7 @@ await page.getByPlaceholder('Sprint 25').fill('Sprint de prueba');
 await page.getByRole('button', { name: /^Crear$/ }).click();
 
 // Escribe un dato y vuelve a la lista.
-await page.getByText('Sprint de prueba', { exact: true }).click();
+await openBoard('Sprint de prueba');
 await page.waitForSelector('table');
 await page.locator('input[data-row="0"][data-col="0"]').fill('ACG-1');
 await page.waitForTimeout(300);
@@ -34,7 +41,7 @@ await page.waitForTimeout(400);
 check('1. Aparece el boton Desarchivar', await page.getByRole('button', { name: 'Desarchivar' }).isVisible());
 
 // Entra al archivado: debe ser de solo lectura.
-await page.getByText('Sprint de prueba', { exact: true }).click();
+await openBoard('Sprint de prueba');
 await page.waitForSelector('table');
 const celda = page.locator('input[data-row="0"][data-col="0"]');
 check('2. El dato sigue ahi', (await celda.inputValue()) === 'ACG-1');
@@ -62,7 +69,7 @@ check('8. archived=false y endDate limpia', sprint.archived === false && sprint.
 check('9. El grid sobrevivio al ciclo', sprint.tabGrid.resolved[0][0] === 'ACG-1', sprint.tabGrid.resolved[0][0]);
 
 // Y vuelve a ser editable.
-await page.getByText('Sprint de prueba', { exact: true }).click();
+await openBoard('Sprint de prueba');
 await page.waitForSelector('table');
 check('10. Editable otra vez', !(await page.locator('input[data-row="0"][data-col="0"]').evaluate((el) => el.readOnly)));
 

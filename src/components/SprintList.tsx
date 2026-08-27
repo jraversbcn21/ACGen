@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Sprint } from '../hooks/useSprints';
 import { useT, useLang } from '../i18n/I18nContext';
+import { useSchema } from '../hooks/useSchema';
+import { DEFAULT_SCHEMA, resolveLabel, visibleEntries } from '../types/schema';
 import { formatDate, localTodayISO } from '../utils/dates';
 
 interface SprintListProps {
@@ -13,11 +15,57 @@ interface SprintListProps {
   onUnarchiveSprint: (id: string) => void;
 }
 
+// Una fila "cuenta" si alguna celda tiene contenido real.
+function countRows(grid: string[][] | undefined): number {
+  return (grid ?? []).filter((row) => row.some((cell) => cell?.trim())).length;
+}
+
+// Dias transcurridos desde el inicio, contando el dia de inicio como dia 1.
+function dayNumber(startDate: string): number {
+  const start = new Date(`${startDate}T00:00:00`);
+  const today = new Date(`${localTodayISO()}T00:00:00`);
+  const diff = Math.floor((today.getTime() - start.getTime()) / 86400000);
+  return Math.max(1, diff + 1);
+}
+
 export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint, onArchiveSprint, onUnarchiveSprint }: SprintListProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(localTodayISO);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const t = useT();
+  const { lang } = useLang();
+  const [schema] = useSchema();
+
+  const active = sprints.filter((s) => !s.archived);
+  const archived = sprints.filter((s) => s.archived);
+
+  // Seleccion derivada: lo clicado si sigue existiendo; si no, el primer activo.
+  const selected = (selectedId ? sprints.find((s) => s.id === selectedId) : undefined) ?? active[0] ?? null;
+
+  // Mismo criterio `safeTab` que SprintDashboard: un esquema manual puede dejar
+  // cero pestanas visibles y aqui las barras se quedarian sin filas que contar.
+  const visibleTabs = useMemo(() => {
+    const shown = visibleEntries(schema.sprint.tabs);
+    return shown.length ? shown : [DEFAULT_SCHEMA.sprint.tabs[0]];
+  }, [schema]);
+
+  const tabCounts = useMemo(() => {
+    if (!selected) return [];
+    return visibleTabs.map((tab) => ({
+      id: tab.id,
+      label: resolveLabel(tab, t),
+      count: countRows(selected.tabGrid[tab.id]),
+    }));
+  }, [selected, visibleTabs, t]);
+  const totalRows = tabCounts.reduce((acc, c) => acc + c.count, 0);
+  const maxCount = Math.max(...tabCounts.map((c) => c.count), 1);
+
+  const sprintRowTotal = (s: Sprint) =>
+    visibleTabs.reduce((acc, tab) => acc + countRows(s.tabGrid[tab.id]), 0);
 
   const handleAdd = () => {
     if (!name.trim()) return;
@@ -27,45 +75,98 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
     setShowForm(false);
   };
 
-  const active = sprints.filter((s) => !s.archived);
-  const archived = sprints.filter((s) => s.archived);
+  const saveRename = () => {
+    if (selected && renameValue.trim()) onRenameSprint(selected.id, renameValue.trim());
+    setIsRenaming(false);
+  };
+
+  const q = query.trim().toLowerCase();
+  const matches = (s: Sprint) => !q || s.name.toLowerCase().includes(q);
+  const filteredActive = active.filter(matches);
+  const filteredArchived = archived.filter(matches);
+  const noMatches = q.length > 0 && filteredActive.length === 0 && filteredArchived.length === 0;
+
+  const datesLine = (s: Sprint) =>
+    `${formatDate(s.startDate, lang)} — ${s.archived ? formatDate(s.endDate, lang) : t('sprint.enCurso')}`;
+
+  const renderItem = (s: Sprint) => {
+    const isSelected = selected?.id === s.id;
+    const dot = isSelected ? 'sp-dot-current' : s.archived ? 'sp-dot-archived' : 'sp-dot-active';
+    return (
+      <div
+        key={s.id}
+        className={`sp-item ${isSelected ? 'sp-item-selected' : ''}`}
+        onClick={() => { setSelectedId(s.id); setIsRenaming(false); }}
+      >
+        <span className={`sp-dot ${dot}`} aria-hidden="true" />
+        <div className="sp-item-text">
+          <div className="sp-item-name">{s.name}</div>
+          <div className="sp-item-meta">{datesLine(s)} · {t('sprint.rows', { n: String(sprintRowTotal(s)) })}</div>
+        </div>
+        <div className="sp-item-actions">
+          {s.archived && (
+            <button
+              type="button"
+              className="sp-mini"
+              onClick={(e) => { e.stopPropagation(); onUnarchiveSprint(s.id); }}
+            >
+              {t('sprint.unarchive')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="sp-mini"
+            onClick={(e) => { e.stopPropagation(); if (confirm(t('sprint.deleteConfirm'))) onDeleteSprint(s.id); }}
+          >
+            {t('common.delete')}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div>
-      <div className="actions-bar" style={{ justifyContent: 'flex-start' }}>
-        <button type="button" className="btn-primary" onClick={() => setShowForm(true)} style={{ minWidth: 180 }}>
-          {t('sprint.newSprint')}
-        </button>
-      </div>
+    <div className="sp-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('sprint.title')}</h1>
+          <p className="tool-sub">
+            {t('sprint.subtitle', { active: String(active.length), archived: String(archived.length) })}
+          </p>
+        </div>
+        <div className="tool-head-aside">
+          <button type="button" className="btn-primary" onClick={() => setShowForm(true)}>
+            {t('sprint.newSprint')}
+          </button>
+        </div>
+      </header>
 
       {showForm && (
-        <div style={{
-          marginTop: 16, padding: 16,
-          border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-          background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12,
-        }}>
-          <div>
-            <label htmlFor="sprint-name" className="field-label">{t('sprint.name')}</label>
-            <input
-              id="sprint-name"
-              type="text"
-              className="field-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('sprint.namePlaceholder')}
-            />
+        <div className="sp-form">
+          <div className="sp-form-row">
+            <div>
+              <label htmlFor="sprint-name" className="field-label">{t('sprint.name')}</label>
+              <input
+                id="sprint-name"
+                type="text"
+                className="field-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('sprint.namePlaceholder')}
+              />
+            </div>
+            <div>
+              <label htmlFor="sprint-start" className="field-label">{t('sprint.startDate')}</label>
+              <input
+                id="sprint-start"
+                type="date"
+                className="field-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="sprint-start" className="field-label">{t('sprint.startDate')}</label>
-            <input
-              id="sprint-start"
-              type="date"
-              className="field-input"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="sp-form-actions">
             <button type="button" className="btn-primary" onClick={handleAdd} style={{ minWidth: 120 }}>
               {t('sprint.create')}
             </button>
@@ -76,140 +177,157 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
         </div>
       )}
 
-      {active.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 28, marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>
-            {t('sprint.active')}
-          </h3>
-          {active.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} onUnarchive={onUnarchiveSprint} />
-          ))}
-        </>
-      )}
+      <div className="sp-grid">
+        <div className="sp-main">
+          {!selected ? (
+            <div className="sp-empty">
+              <p className="sp-empty-title">{t('sprint.noCurrent')}</p>
+              <p className="sp-empty-sub">{t('sprint.noCurrentHint')}</p>
+            </div>
+          ) : (
+            <>
+              <section className="sp-hero">
+                <div className="sp-hero-top">
+                  <div className="sp-hero-id">
+                    <div className="sp-hero-flags">
+                      {selected.archived ? (
+                        <span className="badge badge-info">{t('sprint.archivedBadge')}</span>
+                      ) : (
+                        <>
+                          <span className="sp-hero-badge">{t('sprint.current')}</span>
+                          <span className="sp-hero-day">{t('sprint.day', { n: String(dayNumber(selected.startDate)) })}</span>
+                        </>
+                      )}
+                    </div>
+                    {isRenaming ? (
+                      <input
+                        type="text"
+                        className="field-input sp-hero-name-input"
+                        value={renameValue}
+                        autoFocus
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveRename();
+                          if (e.key === 'Escape') setIsRenaming(false);
+                        }}
+                        onBlur={saveRename}
+                      />
+                    ) : (
+                      <div className="sp-hero-name">{selected.name}</div>
+                    )}
+                    <div className="sp-hero-dates">{datesLine(selected)}</div>
+                  </div>
+                  <div className="sp-hero-actions">
+                    <button type="button" className="btn-primary" onClick={() => onSelectSprint(selected)}>
+                      {t('sprint.openBoard')}
+                    </button>
+                    {!selected.archived && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() => { setRenameValue(selected.name); setIsRenaming(true); }}
+                        >
+                          {t('sprint.rename')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() => { if (confirm(t('sprint.archiveConfirm'))) onArchiveSprint(selected.id); }}
+                        >
+                          {t('common.archive')}
+                        </button>
+                      </>
+                    )}
+                    {selected.archived && (
+                      <button type="button" className="btn-ghost" onClick={() => onUnarchiveSprint(selected.id)}>
+                        {t('sprint.unarchive')}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => { if (confirm(t('sprint.deleteConfirm'))) onDeleteSprint(selected.id); }}
+                    >
+                      {t('common.delete')}
+                    </button>
+                  </div>
+                </div>
+                <div className="sp-metrics">
+                  <div className="sp-metric">
+                    <span className="sp-metric-label">{t('sprint.startDate')}</span>
+                    <span className="sp-metric-value">{formatDate(selected.startDate, lang)}</span>
+                  </div>
+                  <div className="sp-metric">
+                    <span className="sp-metric-label">{t('common.rows')}</span>
+                    <span className="sp-metric-value">{totalRows}</span>
+                  </div>
+                  <div className="sp-metric">
+                    <span className="sp-metric-label">{t('schema.tabs')}</span>
+                    <span className="sp-metric-value">{visibleTabs.length}</span>
+                  </div>
+                </div>
+              </section>
 
-      {archived.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 28, marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--text-3)' }}>
-            {t('sprint.archived')}
-          </h3>
-          {archived.map((s) => (
-            <SprintCard key={s.id} sprint={s} onSelect={onSelectSprint} onDelete={onDeleteSprint} onRename={onRenameSprint} onArchive={onArchiveSprint} onUnarchive={onUnarchiveSprint} />
-          ))}
-        </>
-      )}
+              <section className="sp-panel">
+                <div className="sp-panel-head">
+                  <span className="sp-panel-title">{t('sprint.rowsPerTab')}</span>
+                  <span className="sp-panel-sub">
+                    {t('sprint.rowsTotal', { rows: String(totalRows), tabs: String(visibleTabs.length) })}
+                  </span>
+                </div>
+                <div className="sp-panel-body">
+                  {tabCounts.map((tab) => (
+                    <div key={tab.id} className="sp-bar-row">
+                      <span className="sp-bar-label">{tab.label}</span>
+                      <div className="sp-bar-track">
+                        <div className="sp-bar-fill" style={{ width: `${(tab.count / maxCount) * 100}%` }} />
+                      </div>
+                      <span className="sp-bar-value">{tab.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
 
-      {sprints.length === 0 && (
-        <p style={{ marginTop: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-          {t('sprint.noSprints')}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function SprintCard({ sprint, onSelect, onDelete, onRename, onArchive, onUnarchive }: {
-  sprint: Sprint;
-  onSelect: (s: Sprint) => void;
-  onDelete: (id: string) => void;
-  onRename: (id: string, name: string) => void;
-  onArchive: (id: string) => void;
-  onUnarchive: (id: string) => void;
-}) {
-  const t = useT();
-  const { lang } = useLang();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(sprint.name);
-
-  const saveRename = () => {
-    if (editName.trim()) onRename(sprint.id, editName.trim());
-    setIsEditing(false);
-  };
-
-  return (
-    <div
-      className="sprint-card"
-      style={{
-        padding: '14px 18px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-        background: sprint.archived ? 'var(--surface-2)' : 'var(--surface)',
-        borderLeft: sprint.archived ? undefined : '3px solid var(--accent)',
-        marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        transition: 'box-shadow .18s var(--ease)',
-        cursor: 'pointer',
-      }}
-      onClick={() => onSelect(sprint)}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-          {sprint.archived ? '\uD83D\uDD34' : '\uD83D\uDFE2'}
-        </span>
-        <div>
-          {isEditing ? (
+        <aside className="sp-side">
+          <div className="sp-side-head">
+            <span className="sp-side-title">{t('sprint.allSprints')}</span>
             <input
               type="text"
               className="field-input"
-              value={editName}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveRename();
-                if (e.key === 'Escape') setIsEditing(false);
-              }}
-              onBlur={saveRename}
-              style={{ fontSize: 15, fontWeight: 700, padding: '2px 6px' }}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('sprint.searchSprint')}
             />
-          ) : (
-            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{sprint.name}</div>
-          )}
-          <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-            {formatDate(sprint.startDate, lang)} &mdash; {sprint.archived ? formatDate(sprint.endDate, lang) : t('sprint.enCurso')}
           </div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-          {sprint.archived && (
-            <>
-              <span className="badge badge-info" style={{ fontSize: 11 }}>{t('sprint.archivedBadge')}</span>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={(e) => { e.stopPropagation(); onUnarchive(sprint.id); }}
-                style={{ padding: '4px 10px', fontSize: 12 }}
-              >
-                {t('sprint.unarchive')}
-              </button>
-            </>
-          )}
-          {!sprint.archived && (
-            <>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={(e) => { e.stopPropagation(); setEditName(sprint.name); setIsEditing(true); }}
-                style={{ padding: '4px 10px', fontSize: 12 }}
-              >
-                {t('common.edit')}
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={(e) => { e.stopPropagation(); if (confirm(t('sprint.archiveConfirm'))) onArchive(sprint.id); }}
-                style={{ padding: '4px 10px', fontSize: 12 }}
-              >
-                {t('common.archive')}
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={(e) => { e.stopPropagation(); if (confirm(t('sprint.deleteConfirm'))) onDelete(sprint.id); }}
-            style={{ padding: '4px 10px', fontSize: 12 }}
-          >
-            {t('common.delete')}
-        </button>
+          <div className="sp-side-body">
+            {filteredActive.length > 0 && (
+              <>
+                <h3 className="sp-side-group">{t('sprint.active')}</h3>
+                {filteredActive.map(renderItem)}
+              </>
+            )}
+            {filteredArchived.length > 0 && (
+              <>
+                <h3 className="sp-side-group">{t('sprint.archived')}</h3>
+                {filteredArchived.map(renderItem)}
+              </>
+            )}
+            {noMatches && (
+              <div className="sp-empty">
+                <p className="sp-empty-title">{t('sprint.noMatches')}</p>
+              </div>
+            )}
+            {sprints.length === 0 && (
+              <div className="sp-empty">
+                <p className="sp-empty-title">{t('sprint.noSprints')}</p>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

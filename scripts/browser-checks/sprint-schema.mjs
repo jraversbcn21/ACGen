@@ -12,6 +12,12 @@ const ok = [];
 const fail = [];
 const check = (nombre, cond, detalle = '') => (cond ? ok : fail).push(`${nombre}${detalle ? ` — ${detalle}` : ''}`);
 
+// El rediseño de la lista separa seleccionar (item lateral) de abrir (hero).
+const openBoard = async (name) => {
+  await page.locator(".sp-item-name", { hasText: name }).first().click();
+  await page.getByRole("button", { name: /Abrir tablero|Open board/ }).click();
+};
+
 async function cabeceras() {
   return (await page.locator('thead tr:nth-child(2) th').allTextContents()).slice(1);
 }
@@ -43,7 +49,7 @@ async function abrirSprint() {
     await page.getByPlaceholder('Sprint 25').fill('Sprint de prueba');
     await page.getByRole('button', { name: /^Crear$/ }).click();
   }
-  await page.getByText('Sprint de prueba', { exact: true }).click();
+  await openBoard('Sprint de prueba');
   await page.waitForSelector('table');
 }
 
@@ -156,7 +162,7 @@ check('12. Pestana nueva navegable y editable', hayPestana);
 
 // 13. Persistencia tras recarga.
 await page.reload({ waitUntil: 'networkidle' });
-await page.getByText('Sprint de prueba', { exact: true }).click();
+await openBoard('Sprint de prueba');
 await page.waitForSelector('table');
 await page.getByRole('button', { name: 'Bloqueados', exact: true }).click();
 await page.waitForTimeout(300);
