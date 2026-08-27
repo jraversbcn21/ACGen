@@ -106,6 +106,7 @@
   "testdata.subtitle": "Generate realistic records per market, exportable to CSV",
   "testdata.parameters": "Parameters",
   "testdata.emptyHint": "Set the parameters and press Generate to create test records",
+  "testcase.emptyHint": "Describe the functionality and press Generate to create the test cases",
   "testdata.dataType": "Data type",
   "testdata.market": "Market",
   "testdata.quantity": "Quantity",

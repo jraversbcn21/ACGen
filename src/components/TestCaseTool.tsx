@@ -267,7 +267,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           {!hasOutput ? (
             <div className="tc-empty">
               <span className="tc-empty-title">{t('testcase.generatedCases')}</span>
-              <span className="tc-empty-sub">{t('testcase.inputPlaceholder')}</span>
+              <span className="tc-empty-sub">{t('testcase.emptyHint')}</span>
             </div>
           ) : (
           <div className="data-table-wrap">

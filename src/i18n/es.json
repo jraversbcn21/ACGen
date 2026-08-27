@@ -106,6 +106,7 @@
   "testdata.subtitle": "Genera registros realistas por mercado, exportables a CSV",
   "testdata.parameters": "Parametros",
   "testdata.emptyHint": "Configura los parametros y pulsa Generar para crear registros de prueba",
+  "testcase.emptyHint": "Describe la funcionalidad y pulsa Generar para crear los casos de prueba",
   "testdata.dataType": "Tipo de dato",
   "testdata.market": "Mercado",
   "testdata.quantity": "Cantidad",
