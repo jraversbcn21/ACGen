@@ -1624,6 +1624,67 @@ td:hover .cell-open-link {
   .dv-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
+/* === CONVERTER: barra de conversion + dos paneles (7a) === */
+.cv-root { display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 128px); }
+
+.cv-bar {
+  flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.cv-bar-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3); flex: none;
+}
+.cv-bar-select { flex: 0 0 200px; min-width: 160px; }
+.cv-bar-select .field-select { height: 40px; font-size: 13px; }
+.cv-swap {
+  flex: none; width: 38px; height: 38px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px;
+  color: var(--text-2); cursor: pointer;
+  transition: color .15s var(--ease), border-color .15s var(--ease);
+}
+.cv-swap:hover { color: var(--text); border-color: var(--border-strong); }
+.cv-bar-spacer { flex: 1 1 auto; min-width: 0; }
+.cv-bar-sep { flex: none; width: 1px; height: 26px; background: var(--border); }
+.cv-bar .btn-ghost { flex: none; }
+.cv-bar .btn-primary { flex: none; min-width: 180px; }
+
+.cv-panes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cv-pane {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.cv-pane-head {
+  /* min-height iguala las dos cabeceras: la de Resultado lleva botones y crece 9px */
+  flex: none; min-height: 51px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 10px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.cv-pane-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.cv-pane-format {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-3);
+  margin-left: 8px;
+}
+.cv-pane-actions { display: flex; gap: 6px; }
+.cv-pane-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.cv-pane-body { flex: 1; min-height: 0; display: flex; padding: 4px; }
+.cv-pane-ta {
+  flex: 1; min-height: 0; height: 100%;
+  border: none; background: transparent; resize: none;
+}
+.cv-pane-ta:focus { box-shadow: none; }
+
+@media (max-width: 900px) {
+  .cv-root { min-height: 0; }
+  .cv-panes { grid-template-columns: 1fr; }
+  .cv-pane { min-height: 40vh; }
+  .cv-bar-select { flex: 1 1 140px; }
+  .cv-bar .btn-primary { flex: 1 1 100%; min-width: 0; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
