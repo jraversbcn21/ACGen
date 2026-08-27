@@ -257,11 +257,23 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   const columns = hasOutput ? Object.keys(generatedData[0]) : [];
 
   return (
-    <div>
-      {/* Form grid */}
-      <div className="td-form-grid">
-        {/* Row 1: Data type + Market + Quantity */}
-        <div className="td-form-row">
+    <div className="td-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('testdata.title')}</h1>
+          <p className="tool-sub">{t('testdata.subtitle')}</p>
+        </div>
+        {generatedModel && (
+          <div className="tool-head-aside">
+            <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
+          </div>
+        )}
+      </header>
+
+      {/* Parametros */}
+      <div className="td-card">
+        <span className="td-card-title">{t('testdata.parameters')}</span>
+        <div className="td-params-grid">
           <div className="td-form-field">
             <label htmlFor="td-data-type" className="field-label">{t('testdata.dataType')}</label>
             <div className="input-wrap">
@@ -304,10 +316,6 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
               <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
             </div>
           </div>
-        </div>
-
-        {/* Row 2: Contexto adicional */}
-        <div className="td-form-row-single">
           <div className="td-form-field">
             <label htmlFor="td-context" className="field-label">{t('testdata.additionalContext')} ({t('common.optional')})</label>
             <input
@@ -322,46 +330,48 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="actions-bar" style={{ marginTop: '24px' }}>
+      {/* Acciones */}
+      <div className="td-actions-bar">
         <ConfidentialToggle
           view="testdata"
           text={buildTestDataMessage(formData)}
           onReview={() => setConf(anonymize(buildTestDataMessage(formData)))}
         />
-        <GenerateButton
-          onClick={handleGenerate}
-          disabled={!canGenerate || isStreaming}
-          loading={isLoading}
-        />
-        {loadingStatus && (
-          <span className="loading-status">{loadingStatus}</span>
-        )}
-        <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={handleClear}
-          disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput}
-        >
-          {t('common.clear')}
-        </button>
+        <div className="td-actions-bar-right">
+          {loadingStatus && (
+            <span className="loading-status">{loadingStatus}</span>
+          )}
+          <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={handleClear}
+            disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput}
+          >
+            {t('common.clear')}
+          </button>
+          <span className="td-actions-sep" aria-hidden="true" />
+          <GenerateButton
+            onClick={handleGenerate}
+            disabled={!canGenerate || isStreaming}
+            loading={isLoading}
+          />
+        </div>
       </div>
 
-      {/* Output area */}
-      {hasOutput && (
-        <div className="td-output-section">
-          {generatedModel && (
-            <div className="output-header" style={{ marginBottom: '12px' }}>
-              <span className="field-label">{t('testdata.generatedData')}</span>
-              <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
-            </div>
-          )}
-          <div className="td-actions-bar">
+      {/* Resultado */}
+      <div className="td-panel">
+        <div className="td-panel-head">
+          <span className="td-panel-title">
+            {t('testdata.generatedData')}
+            {hasOutput && <span className="history-count">{generatedData.length}</span>}
+          </span>
+          <div className="td-panel-actions">
             <button
               type="button"
               className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyTable}
+              disabled={!hasOutput}
             >
               {copied ? t('common.copied') : t('testdata.copyAllTable')}
             </button>
@@ -369,42 +379,53 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
               type="button"
               className="btn-ghost"
               onClick={handleDownloadCsv}
+              disabled={!hasOutput}
             >
               {t('testdata.exportCsv')}
             </button>
           </div>
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  {columns.map(col => (
-                    <th key={col}>{LABEL_MAP[col] || col}</th>
-                  ))}
-                  <th className="td-copy-col"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {generatedData.map((row, idx) => (
-                  <tr key={idx}>
-                    {columns.map(col => (
-                      <td key={col}>{row[col]}</td>
-                    ))}
-                    <td className="td-copy-col">
-                      <button
-                        type="button"
-                        className="td-copy-row-btn"
-                        onClick={() => handleCopyRow(row, idx)}
-                      >
-                        {copiedRowIndex === idx ? '\u2713' : t('common.copy')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
-      )}
+
+        <div className="td-panel-body">
+          {!hasOutput ? (
+            <div className="td-empty">
+              <span className="td-empty-title">{t('testdata.generatedData')}</span>
+              <span className="td-empty-sub">{t('testdata.additionalContextPlaceholder')}</span>
+            </div>
+          ) : (
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {columns.map(col => (
+                      <th key={col}>{LABEL_MAP[col] || col}</th>
+                    ))}
+                    <th className="td-copy-col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generatedData.map((row, idx) => (
+                    <tr key={idx}>
+                      {columns.map(col => (
+                        <td key={col}>{row[col]}</td>
+                      ))}
+                      <td className="td-copy-col">
+                        <button
+                          type="button"
+                          className="td-copy-row-btn"
+                          onClick={() => handleCopyRow(row, idx)}
+                        >
+                          {copiedRowIndex === idx ? '\u2713' : t('common.copy')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />

@@ -1346,6 +1346,80 @@ td:hover .cell-open-link {
   .br-desc-ta { flex: none; resize: vertical; }
 }
 
+/* === TEST DATA: tarjeta de parametros + tabla (4a) === */
+.td-root {
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: calc(100vh - 128px);
+}
+.td-card {
+  flex: none;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.td-card-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.td-params-grid {
+  display: grid; grid-template-columns: 1.4fr 1.2fr 110px 2fr; gap: 12px;
+}
+.td-params-grid .td-form-field .field-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.td-params-grid .field-input,
+.td-params-grid .field-select,
+.td-params-grid .sselect-trigger { height: 40px; font-size: 13px; }
+
+.td-actions-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.td-actions-bar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.td-actions-bar .btn-primary { min-width: 200px; }
+.td-actions-sep { width: 1px; height: 26px; background: var(--border); }
+
+.td-panel {
+  flex: 1; min-height: clamp(220px, 34vh, 520px);
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.td-panel-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.td-panel-title { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; color: var(--text); }
+.td-panel-actions { display: flex; align-items: center; gap: 6px; }
+.td-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.td-panel-body { flex: 1; min-height: 0; overflow: auto; }
+.td-panel-body .data-table-wrap { border: none; border-radius: 0; background: transparent; }
+.td-panel-body .data-table th { position: sticky; top: 0; z-index: 1; }
+.td-empty {
+  box-sizing: border-box; height: 100%; min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 24px; text-align: center;
+}
+.td-empty-title { font-size: 14px; color: var(--text-2); }
+.td-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 400px; }
+
+@media (max-width: 900px) {
+  .td-root { min-height: 0; }
+  .td-params-grid { grid-template-columns: 1fr 1fr; }
+  .td-actions-bar { flex-direction: column; align-items: stretch; }
+  .td-actions-bar .btn-primary { min-width: 0; width: 100%; }
+  .td-actions-sep { display: none; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
