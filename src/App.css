@@ -1489,6 +1489,126 @@ td:hover .cell-open-link {
   .us-field-ta, .us-free-ta { flex: none; resize: vertical; }
 }
 
+/* === DESIGN VALIDATOR: entrada a la izquierda, informe a la derecha (6a) === */
+.dv-root { display: flex; flex-direction: column; min-height: calc(100vh - 128px); }
+.dv-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(340px, 400px) 1fr; gap: 18px;
+}
+.dv-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+.dv-field { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.dv-field--grow { flex: 1 1 auto; }
+.dv-label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+.dv-label .hint { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.dv-criteria-ta { flex: 1; min-height: clamp(120px, 20vh, 300px); resize: none; }
+.dv-note { font-size: 12px; color: var(--text-3); margin: 0; }
+
+.dv-vision-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; padding: 4px 11px; border-radius: 999px;
+  background: var(--success-bg); color: var(--success);
+}
+
+.dv-card {
+  flex: none; display: flex; gap: 8px;
+  padding: 12px 13px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.dv-card .btn-ghost { flex: 0 0 auto; padding: 9px 16px; }
+.dv-card .btn-primary { flex: 1; min-width: 0; }
+
+.dv-panel {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.dv-panel-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 10px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.dv-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.dv-counts { display: flex; gap: 6px; }
+.dv-count {
+  font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px;
+}
+.dv-count-gaps { background: var(--danger-bg); color: var(--danger); }
+.dv-count-contra { background: var(--warning-bg); color: var(--warning); }
+.dv-count-sug { background: var(--accent-weak); color: var(--accent); }
+.dv-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px; }
+
+.dv-report { display: flex; flex-direction: column; gap: 18px; }
+.dv-section { display: flex; flex-direction: column; gap: 8px; }
+.dv-section-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-2); margin: 0;
+}
+.dv-row {
+  display: grid; grid-template-columns: 200px 1fr; gap: 14px;
+  padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px;
+}
+.dv-row-key { color: var(--text); font-weight: 600; }
+.dv-row-body { display: flex; flex-direction: column; gap: 4px; color: var(--text-2); }
+.dv-row-evidence { font-size: 12px; color: var(--text-3); }
+.dv-none { font-size: 13px; color: var(--text-3); margin: 0; }
+
+.dv-suggestion {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 11px 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.dv-suggestion-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dv-suggestion-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.dv-suggestion-head .btn-ghost { padding: 4px 11px; font-size: 12px; }
+.dv-suggestion-body {
+  white-space: pre-wrap; margin: 0;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: var(--text-2);
+}
+
+.dv-empty {
+  box-sizing: border-box; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center;
+}
+.dv-empty-title { font-size: 14px; color: var(--text-2); }
+.dv-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 360px; }
+
+/* dropzone con miniatura */
+.dz {
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  padding: 10px; background: var(--surface);
+}
+.dz-filled { display: flex; align-items: center; gap: 12px; }
+.dz-thumb {
+  width: 92px; height: 68px; flex: none; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  object-fit: cover; display: block;
+}
+.dz-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dz-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dz-dims { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); }
+.dz-filled .btn-ghost { flex: none; padding: 7px 13px; font-size: 12.5px; }
+.dz-empty { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dz-empty-icon { color: var(--text-3); flex: none; }
+.dz-empty-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dz-empty-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.dz-hint { font-size: 12px; color: var(--text-3); }
+.dz-file-input { font-size: 12px; color: var(--text-2); max-width: 100%; }
+.dz-error { font-size: 12px; color: var(--danger); margin: 6px 0 0; }
+
+@media (max-width: 900px) {
+  .dv-root { min-height: 0; }
+  .dv-grid { grid-template-columns: 1fr; }
+  .dv-panel { min-height: 55vh; }
+  .dv-criteria-ta { flex: none; resize: vertical; }
+  .dv-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
