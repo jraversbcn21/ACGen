@@ -13,29 +13,45 @@ function renderGuidance(lang: 'es' | 'en' = 'es') {
   );
 }
 
+/** El modo por defecto es Guiado; la plantilla Como/Quiero/Para vive en la pestana Texto libre. */
+function irATextoLibre(lang: 'es' | 'en' = 'es') {
+  fireEvent.click(screen.getByRole('tab', { name: lang === 'es' ? /texto libre/i : /free text/i }));
+}
+
 describe('UserStoryTool input guidance', () => {
   afterEach(() => localStorage.clear());
 
-  it('shows the Como/Quiero/Para skeleton placeholder (es)', () => {
+  it('el modo guiado ofrece los tres campos rol/accion/beneficio (es)', () => {
     renderGuidance('es');
+    expect(screen.getByPlaceholderText(/cliente registrado/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/carrito conserve mis articulos/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/completar la compra/)).toBeInTheDocument();
+  });
+
+  it('shows the Como/Quiero/Para skeleton placeholder in free text (es)', () => {
+    renderGuidance('es');
+    irATextoLibre('es');
     const textarea = screen.getByPlaceholderText(/Como usuario/);
     expect(textarea).toHaveAttribute('placeholder', 'Como usuario...\nQuiero [funcionalidad]...\nPara [beneficio]...');
   });
 
   it('shows the equivalent skeleton placeholder (en)', () => {
     renderGuidance('en');
+    irATextoLibre('en');
     const textarea = screen.getByPlaceholderText(/As a user/);
     expect(textarea).toHaveAttribute('placeholder', 'As a user...\nI want [functionality]...\nSo that [benefit]...');
   });
 
   it('renders a persistent hint below the field that survives typing (es)', () => {
     renderGuidance('es');
-    expect(screen.getByText(/También puedes describirlo en texto libre/)).toBeInTheDocument();
+    irATextoLibre('es');
+    expect(screen.getAllByText(/También puedes describirlo en texto libre/).length).toBeGreaterThan(0);
   });
 
   it('renders the persistent hint translated (en)', () => {
     renderGuidance('en');
-    expect(screen.getByText(/You can also describe it in free text/)).toBeInTheDocument();
+    irATextoLibre('en');
+    expect(screen.getAllByText(/You can also describe it in free text/).length).toBeGreaterThan(0);
   });
 });
 
@@ -75,7 +91,9 @@ function renderTool(props: Partial<Parameters<typeof UserStoryTool>[0]> = {}) {
 }
 
 async function generar() {
-  fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'guardar favoritos' } });
+  // Modo guiado: rol y accion son los dos campos que habilitan Generar.
+  fireEvent.change(screen.getByPlaceholderText(/cliente registrado/), { target: { value: 'cliente registrado' } });
+  fireEvent.change(screen.getByPlaceholderText(/carrito conserve mis articulos/), { target: { value: 'guardar favoritos' } });
   fireEvent.click(screen.getByRole('button', { name: /generar/i }));
 }
 
@@ -88,6 +106,15 @@ describe('UserStoryTool', () => {
       yield { token: RESPUESTA, done: false };
       yield { token: '', done: true };
     });
+  });
+
+  it('compone la entrada desde los tres campos del modo guiado', async () => {
+    renderTool();
+    await generar();
+
+    await waitFor(() => expect(streamMock).toHaveBeenCalled());
+    const enviado = streamMock.mock.calls.at(-1)![2] as string;
+    expect(enviado).toBe('Como cliente registrado, quiero guardar favoritos');
   });
 
   it('muestra el resultado sin sintaxis de markdown a la vista', async () => {
