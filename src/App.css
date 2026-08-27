@@ -1196,6 +1196,84 @@ td:hover .cell-open-link {
 .backup-confirm-actions .btn-primary,
 .backup-confirm-actions .btn-ghost { flex: 1; }
 
+/* === TOOL HEAD (titulo de herramienta, reutilizable en todas las vistas) === */
+.tool-head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+  padding-bottom: 12px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tool-head-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tool-title {
+  margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em; color: var(--text);
+}
+.tool-sub { margin: 0; font-size: 13.5px; color: var(--text-3); }
+.tool-head-aside { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* === TEST CASE TOOL === */
+.tc-root {
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: calc(100vh - 128px);
+}
+.tc-field { display: flex; flex-direction: column; gap: 6px; }
+.tc-label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+.tc-label .hint { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.tc-input-ta { min-height: clamp(120px, 20vh, 200px); }
+
+/* barra de acciones a todo el ancho, sin columna derecha vacia */
+.tc-actions-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.tc-actions-bar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tc-actions-bar .btn-primary { min-width: 200px; }
+.tc-actions-sep { width: 1px; height: 26px; background: var(--border); }
+
+/* panel de resultado siempre visible, llena el alto sobrante */
+.tc-panel {
+  flex: 1; min-height: clamp(220px, 34vh, 520px);
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.tc-panel-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.tc-panel-title { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; color: var(--text); }
+.tc-panel-actions { display: flex; align-items: center; gap: 6px; }
+.tc-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.tc-panel-body { flex: 1; min-height: 0; overflow: auto; }
+.tc-panel-body .data-table-wrap { border: none; border-radius: 0; background: transparent; }
+.tc-panel-body .data-table th { position: sticky; top: 0; z-index: 1; }
+.tc-empty {
+  height: 100%; min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 24px; text-align: center;
+}
+.tc-empty-title { font-size: 14px; color: var(--text-2); }
+.tc-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 380px; }
+
+@media (max-width: 768px) {
+  .tool-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .tc-root { min-height: 0; }
+  .tc-actions-bar { flex-direction: column; align-items: stretch; }
+  .tc-actions-bar-right { justify-content: stretch; }
+  .tc-actions-bar .btn-primary { min-width: 0; width: 100%; }
+  .tc-actions-sep { display: none; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
