@@ -185,27 +185,40 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [testCases, t]);
 
   return (
-    <div>
-      <div className="tool-split">
-        <div className="tool-main">
-          <label htmlFor="testcase-input" className="field-label">
-            {t('testcase.instructions')}
-          </label>
-          <textarea
-            id="testcase-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t('testcase.inputPlaceholder')}
-            className="field-textarea"
-            style={{ minHeight: 'clamp(140px, 24vh, 240px)' }}
-          />
+    <div className="tc-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('testcase.title')}</h1>
+          <p className="tool-sub">{t('landing.tool.testcaseDesc')}</p>
         </div>
-        <div className="actions-col">
-          <ConfidentialToggle
-            view="testcase"
-            text={input}
-            onReview={() => setConf(anonymize(input))}
-          />
+        {generatedModel && (
+          <div className="tool-head-aside">
+            <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
+          </div>
+        )}
+      </header>
+
+      <div className="tc-field">
+        <label htmlFor="testcase-input" className="tc-label">
+          {t('testcase.instructions')}
+          <span className="hint">⌘⏎</span>
+        </label>
+        <textarea
+          id="testcase-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={t('testcase.inputPlaceholder')}
+          className="field-textarea tc-input-ta"
+        />
+      </div>
+
+      <div className="tc-actions-bar">
+        <ConfidentialToggle
+          view="testcase"
+          text={input}
+          onReview={() => setConf(anonymize(input))}
+        />
+        <div className="tc-actions-bar-right">
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
           <button
             type="button"
@@ -215,6 +228,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           >
             {t('common.clear')}
           </button>
+          <span className="tc-actions-sep" aria-hidden="true" />
           <GenerateButton
             onClick={handleGenerate}
             disabled={!canGenerate || isStreaming}
@@ -223,20 +237,18 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         </div>
       </div>
 
-      {hasOutput && (
-        <div className="output-section">
-          <div className="output-header">
-            <span className="field-label">{t('testcase.generatedCases')}</span>
-            {generatedModel && (
-              <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8 }}>
+      <div className="tc-panel">
+        <div className="tc-panel-head">
+          <span className="tc-panel-title">
+            {t('testcase.generatedCases')}
+            {hasOutput && <span className="history-count">{testCases.length}</span>}
+          </span>
+          <div className="tc-panel-actions">
             <button
               type="button"
               className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
               onClick={handleCopyJira}
+              disabled={!hasOutput}
             >
               {copied ? t('common.copied') : t('testcase.exportJira')}
             </button>
@@ -244,11 +256,20 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
               type="button"
               className="btn-ghost"
               onClick={handleDownloadPdf}
+              disabled={!hasOutput}
             >
               {t('testcase.exportPdf')}
             </button>
           </div>
+        </div>
 
+        <div className="tc-panel-body">
+          {!hasOutput ? (
+            <div className="tc-empty">
+              <span className="tc-empty-title">{t('testcase.generatedCases')}</span>
+              <span className="tc-empty-sub">{t('testcase.inputPlaceholder')}</span>
+            </div>
+          ) : (
           <div className="data-table-wrap">
             <table className="data-table">
               <thead>
@@ -283,8 +304,9 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
               </tbody>
             </table>
           </div>
+          )}
         </div>
-      )}
+      </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
