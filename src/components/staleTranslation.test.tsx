@@ -40,7 +40,8 @@ describe.each(TOOLS)('$name — language switching', ({ Tool }) => {
     );
 
     // Type something so the Clear button becomes enabled, while still in Spanish.
-    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'algo' } });
+    // Todos los campos: UserStoryTool arranca en modo guiado y exige rol + accion.
+    screen.getAllByRole('textbox').forEach((el) => fireEvent.change(el, { target: { value: 'algo' } }));
     expect(screen.getByRole('button', { name: /limpiar/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'switch-to-en' }));

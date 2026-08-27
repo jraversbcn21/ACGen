@@ -56,6 +56,8 @@ describe('App — chain prefill es one-shot', () => {
     render(<App />);
 
     goTo('userstory');
+    // La tool arranca en modo guiado; el textarea libre es el que encadena texto ya redactado.
+    fireEvent.click(screen.getByRole('tab', { name: 'Texto libre' }));
     fireEvent.change(screen.getByPlaceholderText(/Como usuario/), { target: { value: 'pago con tarjeta' } });
     fireEvent.click(screen.getByRole('button', { name: 'Generar' }));
     const chainBtn = await screen.findByRole('button', { name: /Generar Criterios/ });
