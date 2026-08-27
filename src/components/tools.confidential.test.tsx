@@ -55,6 +55,10 @@ describe.each(TOOLS)('$name — confidential mode', ({ Tool, storageKey }) => {
         <Tool apiKey="test-key" model="test-model" />
       </I18nProvider>,
     );
+    // UserStoryTool arranca en modo guiado (tres campos); el texto sensible va
+    // en la pestana Texto libre, que es su entrada principal equivalente.
+    const freeTab = screen.queryByRole('tab', { name: /texto libre/i });
+    if (freeTab) fireEvent.click(freeTab);
     // The first textbox is the tool's main input in every one of these tools.
     fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: text } });
   }

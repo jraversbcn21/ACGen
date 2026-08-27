@@ -1420,6 +1420,75 @@ td:hover .cell-open-link {
   .td-actions-sep { display: none; }
 }
 
+/* === USER STORY: formulario guiado + historia (5b) === */
+.us-root { display: flex; flex-direction: column; min-height: calc(100vh - 128px); }
+.us-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(320px, 380px) 1fr; gap: 18px;
+}
+.us-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+.us-tabs {
+  flex: none; display: flex; gap: 6px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.us-tab {
+  flex: 1; padding: 8px 0; border: none; border-radius: 8px;
+  background: transparent; color: var(--text-2);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s var(--ease), color .15s var(--ease);
+}
+.us-tab:hover { color: var(--text); }
+.us-tab.us-tab-active { background: var(--accent); color: var(--accent-contrast); }
+
+.us-fields { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.us-field { display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+.us-field--grow { flex: 1 1 0; }
+.us-field .field-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.us-field .field-label .hint { color: var(--text-3); font-weight: 400; }
+.us-field .field-input { height: 40px; }
+.us-field-ta { flex: 1; min-height: 64px; resize: none; }
+.us-free-ta { flex: 1; min-height: clamp(160px, 30vh, 420px); resize: none; }
+.us-hint { font-size: 12px; color: var(--text-3); }
+
+.us-card {
+  flex: none; display: flex; flex-direction: column; gap: 11px;
+  padding: 12px 13px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.us-card-actions { display: flex; gap: 8px; }
+.us-card-actions .btn-ghost { flex: 0 0 auto; padding: 9px 16px; }
+.us-card-actions .btn-primary { flex: 1; min-width: 0; }
+
+.us-panel {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.us-panel-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 10px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.us-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.us-panel-actions { display: flex; align-items: center; gap: 6px; }
+.us-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.us-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px; }
+.us-output { white-space: pre-wrap; line-height: 1.8; color: var(--text); }
+.us-empty {
+  box-sizing: border-box; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center;
+}
+.us-empty-title { font-size: 14px; color: var(--text-2); }
+.us-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 340px; }
+
+@media (max-width: 900px) {
+  .us-root { min-height: 0; }
+  .us-grid { grid-template-columns: 1fr; }
+  .us-panel { min-height: 55vh; }
+  .us-field-ta, .us-free-ta { flex: none; resize: vertical; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
