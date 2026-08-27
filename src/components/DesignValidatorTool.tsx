@@ -95,43 +95,72 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
   }, [showToast, t]);
 
   return (
-    <div>
-      <div className="tool-layout tool-fill">
-        <div className="tool-split">
-          <div className="tool-main">
+    <div className="dv-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('designvalidator.title')}</h1>
+          <p className="tool-sub">{t('designvalidator.subtitle')}</p>
+        </div>
+        {vision === 'yes' && (
+          <div className="tool-head-aside">
+            <span className="dv-vision-chip">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              {t('designvalidator.visionReady')}
+            </span>
+          </div>
+        )}
+      </header>
+
+      <div className="dv-grid">
+        {/* ---------- IZQUIERDA: criterios + imagen + acciones ---------- */}
+        <div className="dv-side">
+          <div className="dv-field dv-field--grow">
+            <label htmlFor="dv-criteria" className="dv-label">
+              {t('designvalidator.criteriaLabel')}
+              <span className="hint">⌘⏎</span>
+            </label>
             <textarea
+              id="dv-criteria"
               value={criteria}
               onChange={(e) => setCriteria(e.target.value)}
               placeholder={t('designvalidator.criteriaPlaceholder')}
-              className="field-textarea"
-              style={{ minHeight: 'clamp(120px, 20vh, 180px)' }}
+              className="field-textarea dv-criteria-ta"
             />
+          </div>
+
+          <div className="dv-field">
+            <span className="dv-label">{t('designvalidator.imageLabel')}</span>
             <ImageDropzone
               imageName={image?.name ?? null}
+              imageUrl={image?.dataUrl ?? null}
               onImage={(dataUrl, name) => setImage({ dataUrl, name })}
               onRemove={() => setImage(null)}
               disabled={loading || isStreaming}
             />
-            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0' }}>{t('designvalidator.privacyNote')}</p>
-
-            {image && vision === 'no' && (
-              <div className="error-banner" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span>{t('designvalidator.needVision', { model })}</span>
-                {onSwitchToVisionModel && (
-                  <button type="button" className="btn-ghost" onClick={onSwitchToVisionModel}>
-                    {t('designvalidator.switchToVision')}
-                  </button>
-                )}
-              </div>
-            )}
-            {image && vision === 'unknown' && (
-              <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.unknownVision')}</p>
-            )}
-            {image && vision !== 'no' && !apiKey.trim() && (
-              <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{t('designvalidator.missingKey')}</p>
-            )}
+            <p className="dv-note">{t('designvalidator.privacyNote')}</p>
           </div>
-          <div className="actions-col">
+
+          {image && vision === 'no' && (
+            <div className="error-banner" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span>{t('designvalidator.needVision', { model })}</span>
+              {onSwitchToVisionModel && (
+                <button type="button" className="btn-ghost" onClick={onSwitchToVisionModel}>
+                  {t('designvalidator.switchToVision')}
+                </button>
+              )}
+            </div>
+          )}
+          {image && vision === 'unknown' && (
+            <p className="dv-note">{t('designvalidator.unknownVision')}</p>
+          )}
+          {image && vision !== 'no' && !apiKey.trim() && (
+            <p className="dv-note">{t('designvalidator.missingKey')}</p>
+          )}
+
+          <div className="dv-card">
             <button type="button" className="btn-ghost" onClick={handleClear} disabled={!criteria && !image && !report}>
               {t('common.clear')}
             </button>
@@ -143,63 +172,78 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
           </div>
         </div>
 
-        <div className="result-box">
-          {!report ? (
-            <span className="result-box-placeholder">{t('designvalidator.outputPlaceholder')}</span>
-          ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <section>
-              <h3>{t('designvalidator.gaps')} ({report.carencias.length})</h3>
-              {report.carencias.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
-                <div className="data-table-wrap">
-                  <table className="data-table">
-                    <thead><tr><th>{t('designvalidator.colFlow')}</th><th>{t('designvalidator.colDescription')}</th></tr></thead>
-                    <tbody>
-                      {report.carencias.map((c, i) => (
-                        <tr key={i}><td>{c.flujo}</td><td>{c.descripcion}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-            <section>
-              <h3>{t('designvalidator.contradictions')} ({report.contradicciones.length})</h3>
-              {report.contradicciones.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
-                <div className="data-table-wrap">
-                  <table className="data-table">
-                    <thead><tr><th>{t('designvalidator.colCriterion')}</th><th>{t('designvalidator.colEvidence')}</th><th>{t('designvalidator.colDescription')}</th></tr></thead>
-                    <tbody>
-                      {report.contradicciones.map((c, i) => (
-                        <tr key={i}><td>{c.criterio}</td><td>{c.evidenciaDiseno}</td><td>{c.descripcion}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-            <section>
-              <h3>{t('designvalidator.suggestions')} ({report.sugerencias.length})</h3>
-              {report.sugerencias.length === 0 ? <p>{t('designvalidator.noFindings')}</p> : (
-                report.sugerencias.map((s, i) => (
-                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <strong>{s.titulo}</strong>
-                      <button type="button" className="btn-ghost" style={{ fontSize: 12 }} onClick={() => copySuggestion(s)}>
-                        {t('common.copy')}
-                      </button>
-                    </div>
-                    <p style={{ whiteSpace: 'pre-wrap', margin: '6px 0 0', fontSize: 13 }}>
-                      {`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`}
-                    </p>
-                  </div>
-                ))
-              )}
-            </section>
+        {/* ---------- DERECHA: informe ---------- */}
+        <div className="dv-panel">
+          <div className="dv-panel-head">
+            <span className="dv-panel-title">{t('designvalidator.report')}</span>
+            {report && (
+              <div className="dv-counts">
+                <span className="dv-count dv-count-gaps">{report.carencias.length} · {t('designvalidator.gaps')}</span>
+                <span className="dv-count dv-count-contra">{report.contradicciones.length} · {t('designvalidator.contradictions')}</span>
+                <span className="dv-count dv-count-sug">{report.sugerencias.length} · {t('designvalidator.suggestions')}</span>
+              </div>
+            )}
           </div>
-          )}
+
+          <div className="dv-panel-body">
+            {!report ? (
+              <div className="dv-empty">
+                <span className="dv-empty-title">{t('designvalidator.outputPlaceholder')}</span>
+                <span className="dv-empty-sub">{t('designvalidator.emptyHint')}</span>
+              </div>
+            ) : (
+              <div className="dv-report">
+                <section className="dv-section">
+                  <h3 className="dv-section-title">{t('designvalidator.gaps')} ({report.carencias.length})</h3>
+                  {report.carencias.length === 0 ? <p className="dv-none">{t('designvalidator.noFindings')}</p> : (
+                    report.carencias.map((c, i) => (
+                      <div className="dv-row" key={i}>
+                        <span className="dv-row-key">{c.flujo}</span>
+                        <span className="dv-row-body">{c.descripcion}</span>
+                      </div>
+                    ))
+                  )}
+                </section>
+
+                <section className="dv-section">
+                  <h3 className="dv-section-title">{t('designvalidator.contradictions')} ({report.contradicciones.length})</h3>
+                  {report.contradicciones.length === 0 ? <p className="dv-none">{t('designvalidator.noFindings')}</p> : (
+                    report.contradicciones.map((c, i) => (
+                      <div className="dv-row" key={i}>
+                        <span className="dv-row-key">{c.criterio}</span>
+                        <span className="dv-row-body">
+                          {c.descripcion}
+                          <span className="dv-row-evidence">{t('designvalidator.colEvidence')}: {c.evidenciaDiseno}</span>
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </section>
+
+                <section className="dv-section">
+                  <h3 className="dv-section-title">{t('designvalidator.suggestions')} ({report.sugerencias.length})</h3>
+                  {report.sugerencias.length === 0 ? <p className="dv-none">{t('designvalidator.noFindings')}</p> : (
+                    report.sugerencias.map((s, i) => (
+                      <div className="dv-suggestion" key={i}>
+                        <div className="dv-suggestion-head">
+                          <span className="dv-suggestion-title">{s.titulo}</span>
+                          <button type="button" className="btn-ghost" onClick={() => copySuggestion(s)}>
+                            {t('common.copy')}
+                          </button>
+                        </div>
+                        <p className="dv-suggestion-body">
+                          {`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </section>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
     </div>

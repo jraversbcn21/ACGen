@@ -4,16 +4,23 @@ import { fileToProcessedDataUrl } from '../utils/image';
 
 interface ImageDropzoneProps {
   imageName: string | null;
+  /** DataUrl de la imagen ya procesada: se usa para la miniatura. */
+  imageUrl?: string | null;
   onImage: (dataUrl: string, fileName: string) => void;
   onRemove: () => void;
   disabled?: boolean;
 }
 
-export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageDropzoneProps) {
+export function ImageDropzone({ imageName, imageUrl, onImage, onRemove, disabled }: ImageDropzoneProps) {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!imageUrl) setDims(null);
+  }, [imageUrl]);
 
   const handleFile = useCallback(async (file: File | null | undefined) => {
     if (!file || disabled) return;
@@ -58,35 +65,60 @@ export function ImageDropzone({ imageName, onImage, onRemove, disabled }: ImageD
   return (
     <div
       data-testid="image-dropzone"
-      style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: 12, opacity: disabled ? 0.6 : 1 }}
+      className="dz"
+      style={{ opacity: disabled ? 0.6 : 1 }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); handleFile(firstImageFile(e.dataTransfer?.files)); }}
     >
       {imageName ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13 }}>{imageName}</span>
+        <div className="dz-filled">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={imageName}
+              className="dz-thumb"
+              onLoad={(e) => setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+            />
+          ) : (
+            <span className="dz-thumb" />
+          )}
+          <span className="dz-meta">
+            <span className="dz-name">{imageName}</span>
+            {dims && <span className="dz-dims">{dims.w} × {dims.h}</span>}
+          </span>
           <button type="button" className="btn-ghost" onClick={onRemove} disabled={disabled} aria-label={t('designvalidator.removeImage')}>
             {t('designvalidator.removeImage')}
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor="design-image-input" style={{ fontSize: 13 }}>
-            {t('designvalidator.attachImage')}
-          </label>
+        <div className="dz-empty">
+          <span className="dz-empty-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+              <circle cx="8.5" cy="9.5" r="1.3" />
+              <path d="m3.5 16 4.5-4 3.5 3.2" />
+              <path d="m13.5 14.5 2 2 4-4" />
+            </svg>
+          </span>
+          <span className="dz-empty-text">
+            <label htmlFor="design-image-input" className="dz-empty-label">
+              {t('designvalidator.attachImage')}
+            </label>
+            <span className="dz-hint">{t('designvalidator.dropHint')}</span>
+          </span>
           <input
             id="design-image-input"
             ref={inputRef}
             type="file"
             accept="image/*"
+            className="dz-file-input"
             disabled={disabled || processing}
             onChange={(e) => { handleFile(e.target.files?.[0]); if (inputRef.current) inputRef.current.value = ''; }}
           />
-          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{t('designvalidator.dropHint')}</span>
         </div>
       )}
-      {processing && <span style={{ fontSize: 12 }}>{t('designvalidator.processing')}</span>}
-      {error && <p style={{ fontSize: 12, color: 'var(--danger, #c00)', marginTop: 6 }}>{error}</p>}
+      {processing && <span className="dz-hint">{t('designvalidator.processing')}</span>}
+      {error && <p className="dz-error">{error}</p>}
     </div>
   );
 }
