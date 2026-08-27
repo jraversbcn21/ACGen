@@ -218,73 +218,92 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
     <div>
       <div className="criteria-grid">
         <div className="criteria-left">
-          <textarea
-            id="requirements"
-            value={requirements}
-            onChange={(e) => setRequirements(e.target.value)}
-            placeholder={t('acceptance.inputPlaceholder')}
-            className="field-textarea criteria-input-ta"
-          />
-          <textarea
-            id="additional-context"
-            value={additionalContext}
-            onChange={(e) => setAdditionalContext(e.target.value)}
-            placeholder={t('acceptance.additionalContextPlaceholder')}
-            className="field-textarea"
-            style={{ minHeight: 'clamp(60px, 12vh, 110px)', marginTop: 8 }}
-          />
-          <textarea
-            id="criteria-output"
-            value={isStreaming ? streamText : criteria}
-            onChange={(e) => setCriteria(e.target.value)}
-            className="field-textarea criteria-output-ta"
-            readOnly={isStreaming}
-            placeholder={!criteria ? t('acceptance.outputPlaceholder') : ''}
-          />
-          {criteria && (
-            <div className="copy-row">
-              <button
-                type="button"
-                className="btn-ghost btn-copy"
-                onClick={handleCopy}
-              >
-                {copied ? t('common.copied') : t('acceptance.copyCriteria')}
-              </button>
-            </div>
-          )}
-          {criteria && onChain && (
-            <ChainMenu sourceView="acceptance" content={criteria} onChain={onChain} />
-          )}
-        </div>
-        <div className="criteria-right">
-          <div className="actions-col" style={{ maxWidth: 220, margin: '0 auto 16px' }}>
+          <div className="criteria-field criteria-field--grow">
+            <label className="criteria-label" htmlFor="requirements">
+              {t('acceptance.inputLabel')}
+              <span className="hint">{t('common.required')}</span>
+            </label>
+            <textarea
+              id="requirements"
+              value={requirements}
+              onChange={(e) => setRequirements(e.target.value)}
+              placeholder={t('acceptance.inputPlaceholder')}
+              className="field-textarea criteria-input-ta"
+            />
+          </div>
+          <div className="criteria-field">
+            <label className="criteria-label" htmlFor="additional-context">
+              {t('acceptance.contextLabel')}
+              <span className="hint">{t('common.optional')}</span>
+            </label>
+            <textarea
+              id="additional-context"
+              value={additionalContext}
+              onChange={(e) => setAdditionalContext(e.target.value)}
+              placeholder={t('acceptance.additionalContextPlaceholder')}
+              className="field-textarea criteria-context-ta"
+            />
+          </div>
+          <div className="criteria-actions">
             <ConfidentialToggle
               view="acceptance"
               text={buildEffectiveInput()}
               onReview={() => setConf(anonymize(buildEffectiveInput()))}
             />
-            <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setShowHistory(true)}
-            >
-              {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
-            </button>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={handleClear}
-              disabled={!requirements && !criteria}
-            >
-              {t('common.clear')}
-            </button>
+            <div className="criteria-actions-row">
+              <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setShowHistory(true)}
+              >
+                {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
+              </button>
+            </div>
             <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
             {loadingStatus && (
               <span className="loading-status">{loadingStatus}</span>
             )}
           </div>
+        </div>
+        <div className="criteria-right">
+          <div className="criteria-panel-head">
+            <span className="criteria-panel-title">{t('acceptance.resultTitle')}</span>
+            <div className="criteria-panel-actions">
+              {criteria && (
+                <button
+                  type="button"
+                  className="btn-ghost btn-copy"
+                  onClick={handleCopy}
+                >
+                  {copied ? t('common.copied') : t('acceptance.copyCriteria')}
+                </button>
+              )}
+              {criteria && onChain && (
+                <ChainMenu sourceView="acceptance" content={criteria} onChain={onChain} />
+              )}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={handleClear}
+                disabled={!requirements && !criteria}
+              >
+                {t('common.clear')}
+              </button>
+            </div>
+          </div>
+          <div className="criteria-panel-body">
+            <textarea
+              id="criteria-output"
+              value={isStreaming ? streamText : criteria}
+              onChange={(e) => setCriteria(e.target.value)}
+              className="field-textarea criteria-output-ta"
+              readOnly={isStreaming}
+              placeholder={!criteria ? t('acceptance.outputPlaceholder') : ''}
+            />
+          </div>
           {reasoning && (
+            <div className="criteria-reasoning">
             <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
               <summary>
                 <span className="reasoning-label">Razonamiento del modelo</span>
@@ -329,6 +348,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
               </summary>
               <div className="reasoning-body">{reasoning}</div>
             </details>
+            </div>
           )}
         </div>
       </div>

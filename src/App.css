@@ -654,33 +654,73 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-/* Criteria tool — asymmetric grid */
+/* Criteria tool — entrada compacta a la izquierda, resultado a la derecha */
 .criteria-grid {
   display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 24px;
+  grid-template-columns: minmax(340px, 400px) 1fr;
+  gap: 20px;
+  align-items: stretch;
+  min-height: calc(100vh - 128px);
 }
+
+/* --- columna izquierda: entradas + acciones --- */
 .criteria-left {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
-  /* llena el alto visible para que no quede espacio muerto bajo la caja de salida */
-  min-height: calc(100vh - 128px);
+  min-height: 0;
 }
+.criteria-field { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.criteria-field--grow { flex: 1 1 auto; }
+.criteria-label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+.criteria-label .hint { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.criteria-input-ta { flex: 1; min-height: clamp(140px, 24vh, 300px); resize: none; }
+.criteria-context-ta { flex: 0 0 clamp(90px, 15vh, 150px); min-height: 0; resize: none; }
+
+/* tarjeta de acciones al pie de la entrada */
+.criteria-actions {
+  flex: none;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.criteria-actions-row { display: flex; gap: 8px; }
+.criteria-actions-row .btn-ghost { flex: 1; min-width: 0; padding: 9px 10px; }
+.criteria-actions .btn-primary { width: 100%; min-width: 0; }
+.criteria-actions .loading-status { text-align: center; }
+
+/* --- columna derecha: panel de resultado a toda la altura --- */
 .criteria-right {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
-.criteria-input-ta {
-  min-height: clamp(120px, 22vh, 220px);
+.criteria-panel-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
 }
+.criteria-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.criteria-panel-actions { display: flex; align-items: center; gap: 6px; }
+.criteria-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.criteria-panel-body { flex: 1; min-height: 0; display: flex; padding: 4px; }
 .criteria-output-ta {
-  min-height: clamp(200px, 32vh, 400px);
-  flex: 1;
+  flex: 1; min-height: 0; height: 100%;
+  border: none; background: transparent; resize: none;
 }
+.criteria-output-ta:focus { box-shadow: none; }
+.criteria-reasoning { flex: none; padding: 12px; border-top: 1px solid var(--border); }
 /* Bug Report compact row */
 .br-compact-row {
   display: flex;
@@ -850,9 +890,18 @@ body {
 @media (max-width: 768px) {
   .criteria-grid {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
   .criteria-left {
     min-height: 0;
+  }
+  .criteria-right {
+    min-height: 60vh;
+  }
+  .criteria-input-ta,
+  .criteria-context-ta {
+    flex: none;
+    resize: vertical;
   }
   .tool-fill,
   .br-root {
