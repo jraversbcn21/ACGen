@@ -98,6 +98,42 @@ describe('RefinerTool — resumen de hallazgos', () => {
   });
 });
 
+describe('RefinerTool — salida en texto plano', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('acgen_lang', JSON.stringify('es'));
+    streamMock.mockReset();
+  });
+
+  it('quita la sintaxis markdown de la respuesta sin perder las viñetas', async () => {
+    await renderAndRefine(`## Analisis
+
+**Ambiguedades**
+- termino vago: *rapido*
+- falta el criterio de exito`);
+
+    await waitFor(() => expect(document.querySelector('.rf-output')).not.toBeNull());
+    const salida = document.querySelector('.rf-output')!.textContent!;
+    expect(salida).not.toContain('**');
+    expect(salida).not.toContain('##');
+    expect(salida).toContain('termino vago: rapido');
+    // Las viñetas se conservan: son la estructura del analisis.
+    expect(salida).toContain('- falta el criterio de exito');
+  });
+
+  it('el resumen sigue contando bien una vez limpiado el markdown', async () => {
+    await renderAndRefine(`**Ambiguedades**
+- una
+- dos
+
+**Contradicciones**
+- tres`);
+
+    await waitFor(() => expect(chips()).toHaveLength(2));
+    expect(chips()).toEqual(['Ambiguedades2', 'Contradicciones1']);
+  });
+});
+
 describe('RefinerTool — panel antes/despues', () => {
   beforeEach(() => {
     localStorage.clear();

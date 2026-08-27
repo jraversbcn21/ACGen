@@ -10,6 +10,7 @@ import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
+import { stripMarkdown } from '../utils/stripMarkdown';
 import type { ViewType } from '../config/constants';
 import type { ProjectProfile } from '../types/context';
 
@@ -68,8 +69,13 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('refiner'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
-        setResult(fullText);
-        onSaveArtifact?.(effectiveInput, fullText);
+        // Se limpia aqui y no al pintar para que lo que ves, copias, encadenas
+        // y se guarda en el historial sea el mismo texto plano — mismo criterio
+        // que UserStoryTool. El resumen de hallazgos sigue funcionando: la
+        // limpieza quita `**`/`###` pero conserva las viñetas que cuenta.
+        const limpio = stripMarkdown(fullText);
+        setResult(limpio);
+        onSaveArtifact?.(effectiveInput, limpio);
       });
     } catch (err) {
       const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
