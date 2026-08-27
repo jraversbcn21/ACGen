@@ -9,7 +9,13 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
 
+Un equipo de QA escribe los mismos criterios de aceptacion, los mismos casos de prueba y los mismos bug reports decenas de veces por sprint, y lleva el seguimiento en hojas de calculo que nadie mantiene igual. ACGen junta ese trabajo repetitivo en un sitio.
+
 ACGen es una aplicacion web (SPA) que integra once herramientas para agilizar el trabajo diario de equipos QA: ocho generadores impulsados por IA (multi-proveedor: Groq, OpenRouter o cualquier endpoint compatible con OpenAI), dos herramientas de seguimiento 100% offline (Sprint Tracker y Regression Tracker), y un validador de criterios contra diseño con capacidad de vision. Deploy 100% estatico, sin backend propio.
+
+### Todo ocurre en tu navegador
+
+No hay backend, ni base de datos, ni cuenta de usuario. **Tu API key se guarda solo en el `localStorage` de tu navegador** y viaja unicamente al proveedor de IA que tu elijas; los sprints y las regresiones no salen de tu maquina, y las dos herramientas de seguimiento funcionan sin conexion. Para cuando aun asi haya que enviar algo delicado, el **modo confidencial** anonimiza emails, telefonos, nombres y tickets antes de la llamada, y te deja revisar y editar cada sustitucion antes de confirmar.
 
 ## Caracteristicas
 
@@ -17,17 +23,21 @@ ACGen es una aplicacion web (SPA) que integra once herramientas para agilizar el
 - **Test Case Generator**: Genera casos de prueba QA estructurados (JSON) con prioridad, tipo, pasos y resultado esperado. Exporta como tabla estructurada o PDF.
 - **Bug Report Generator**: Genera bug reports en formato estructurado con paneles, seleccion de plataforma (Web Desktop/Web Mobile/App Android/App iOS), campos dinamicos y campo de contexto adicional. Historial persistente de las ultimas 10 generaciones.
 - **Datos de Prueba**: Genera datos realistas (direcciones, facturacion, registros, tarjetas, cupones) adaptados a 217 mercados. Exporta como TSV o CSV (con proteccion contra inyeccion de formulas en Excel).
-- **Historia de Usuario**: Genera historias en formato Como/Quiero/Para con evaluacion de criterios INVEST.
-- **Refinador de Requisitos**: Detecta ambiguedades, contradicciones, informacion faltante y dependencias no declaradas en un requisito.
+- **Historia de Usuario**: Genera historias en formato Como/Quiero/Para con evaluacion de criterios INVEST. Modo guiado con tres campos o texto libre.
+- **Refinador de Requisitos**: Detecta ambiguedades, contradicciones, informacion faltante y dependencias no declaradas en un requisito, con el original al lado para comparar y un resumen de cuantos hallazgos hay por categoria.
 - **Casos Limite**: Genera edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos, red).
-- **Conversor de Formatos**: Convierte texto entre Gherkin, Markdown, Jira wiki, Azure DevOps y texto plano.
-- **Sprint Tracker**: Hoja de calculo offline por sprint con pestanas y columnas configurables (5 pestanas y sus columnas por defecto: Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico. Pestanas y columnas se renombran, anaden y ocultan desde el boton "Pestanas y columnas"; ocultar no borra el dato, solo deja de mostrarlo.
+- **Conversor de Formatos**: Convierte texto entre Gherkin, Markdown, Jira wiki, Azure DevOps y texto plano, con intercambio de formatos en un clic y descarga del resultado.
+- **Sprint Tracker**: Hoja de calculo offline por sprint con pestanas y columnas configurables (5 pestanas y sus columnas por defecto: Resueltos, Creados, ReOpen, Prioridad Alta, JSD): filas reordenables por drag-and-drop, busqueda con debounce, columnas redimensionables, enlaces a tickets (Ctrl+click), pegado desde SnapLink y archivado historico. Pestanas y columnas se renombran, anaden y ocultan desde el boton "Pestanas y columnas"; ocultar no borra el dato, solo deja de mostrarlo. La portada resume el sprint en curso —dia, filas por pestana, actividad reciente y reparto por squad— junto a una lista lateral con buscador.
 - **Regression Tracker**: Lista de regresiones versionadas (Version + URL + Fecha) por plataforma (APPS, WEB por defecto, ampliable), reordenables por drag-and-drop, cada una desplegable en una tabla de tickets con columnas redimensionables. Tanto las plataformas como las columnas de la tabla (por defecto Ticket, Fecha, Prioridad, Creador, Squad, Status) son configurables desde el boton "Columnas": se pueden renombrar, anadir campos o plataformas nuevas y ocultar los que no se usen; ocultar no borra el dato, solo deja de mostrarlo. Buscador con resalte de coincidencias sobre versiones, enlaces y tickets. Enlaces arbitrarios (SharePoint, Zephyr, Confluence...) muestran solo el nombre en reposo y el valor completo al editar; Ctrl+click abre la URL exacta. Archivado individual por regresion, con historial mixto (los snapshots antiguos del tablero libre se siguen abriendo en solo lectura).
 - **Modo confidencial**: anonimiza automaticamente datos sensibles (emails, telefonos, nombres...) antes de enviarlos al proveedor de IA, con revision y edicion de las sustituciones antes de confirmar.
 - **Multi-proveedor**: Groq (por defecto), OpenRouter o cualquier endpoint compatible con OpenAI (Custom), configurable por herramienta.
 - **Workspaces**: agrupa artefactos generados (input/output) por proyecto, con export/import a JSON.
 - **Encadenar herramientas**: envia la salida de una herramienta como entrada de otra (p. ej. de Criterios a Test Case Generator, de Historia de Usuario a Refinador) sin copiar y pegar.
 - **Copia de seguridad**: exporta/importa todo el estado de la app en un único JSON, recordatorio automatico y copia continua a un fichero local (Chromium).
+- **Respuesta en streaming**: el texto del modelo se pinta segun llega, sin pantallas de espera en blanco.
+- **Ver ejemplo**: entrada y salida pregeneradas en Criterios, Casos de Prueba, Bug Report y Datos de Prueba, **para probar la app sin API key**.
+- **Prompts editables**: cada herramienta usa un prompt por defecto que se puede reescribir y restaurar desde el editor de Prompts.
+- **Ctrl+Enter** genera desde cualquier herramienta, y **Limpiar ofrece deshacer** en vez de pedir confirmacion.
 - **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
 - **PWA**: instalable, con precache offline de los assets estaticos. Cuando hay un nuevo despliegue, un aviso "Hay una nueva version disponible" permite recargar a la ultima version con un clic.
 - **Tema oscuro**: Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
@@ -50,22 +60,22 @@ Genera bug reports en formato estructurado con paneles. Cuatro plataformas (Web 
 Genera datos de prueba realistas y con formato valido para cada mercado. Cinco tipos de dato: direcciones de envio, datos de facturacion, registros de usuario, tarjetas de pago (con numeros de prueba de Adyen) y codigos promocionales. La salida se muestra en una tabla HTML con cabeceras en espanol, y permite copiar filas individuales, copiar la tabla completa en formato TSV, o descargar CSV compatible con Excel.
 
 ### Historia de Usuario
-Genera una historia de usuario en formato **Como / Quiero / Para** a partir de una idea o necesidad, junto con una evaluacion de los seis criterios INVEST (Independiente, Negociable, Valiosa, Estimable, Pequena, Testeable) y criterios de aceptacion preliminares en formato Dado/Cuando/Entonces. La salida se muestra en texto plano, sin simbolos de markdown a la vista.
+Genera una historia de usuario en formato **Como / Quiero / Para**, junto con una evaluacion de los seis criterios INVEST (Independiente, Negociable, Valiosa, Estimable, Pequena, Testeable) y criterios de aceptacion preliminares en formato Dado/Cuando/Entonces. Dos modos de entrada: **Guiado**, que compone la historia desde tres campos (rol, accion, beneficio), y **Texto libre**, para pegar una idea sin estructurar y dejar que la IA le de forma. Un texto encadenado desde otra herramienta abre el modo libre automaticamente. La salida se muestra en texto plano, sin simbolos de markdown a la vista.
 
 ### Refinador de Requisitos
-Analiza un requisito o historia de usuario y detecta ambiguedades, contradicciones, informacion faltante, dependencias no declaradas y sugiere preguntas concretas para refinarlo con los stakeholders.
+Analiza un requisito o historia de usuario y detecta ambiguedades, contradicciones, informacion faltante, dependencias no declaradas y sugiere preguntas concretas para refinarlo con los stakeholders. La pantalla enfrenta el requisito **Antes** (con contador de caracteres) y el analisis **Despues**, para comparar sin cambiar de pestana, y remata con una tarjeta **"Que ha encontrado"** que cuenta cuantos hallazgos hay en cada categoria. La salida se muestra en texto plano, igual que en Historia de Usuario.
 
 ### Casos Limite
 Genera una lista de edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos y roles, red y conectividad) a partir de un requisito.
 
 ### Conversor de Formatos
-Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido.
+Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido. Barra **"Convertir de → a"** con los dos formatos y un boton para **intercambiarlos**, que ademas mueve el resultado a la entrada: convertir de vuelta o seguir encadenando no exige copiar y pegar. Origen y resultado se ven en paralelo, y el resultado se copia o se **descarga** con la extension que le corresponde (`.feature`, `.md` o `.txt`).
 
 ### Validador de Diseño
-Valida criterios de aceptacion contra un diseno visual: adjunta una captura de pantalla del flujo, proporciona los criterios, y la herramienta genera un informe JSON estructurado con carencias, contradicciones y sugerencias. Downscalea automaticamente las imagenes a 1568px (maximo 4MB) y utiliza un modelo con capacidad de vision para el analisis multimodal. **Requiere un modelo con soporte de vision**: se recomienda OpenRouter con `gemini-2.5-flash` o un endpoint Custom compatible; Groq actualmente no dispone de modelos con vision. Las imagenes nunca se persisten en localStorage.
+Valida criterios de aceptacion contra un diseno visual: adjunta una captura de pantalla del flujo, proporciona los criterios, y la herramienta genera un informe JSON estructurado con carencias, contradicciones y sugerencias. Downscalea automaticamente las imagenes a 1568px (maximo 4MB) y utiliza un modelo con capacidad de vision para el analisis multimodal. La imagen se adjunta desde el disco, pegandola con Ctrl+V o arrastrandola sobre la caja. El informe llega con contadores de flujos sin cubrir / contradicciones / criterios sugeridos, y cada sugerencia se copia con un clic en formato Dado/Cuando/Entonces. **Requiere un modelo con soporte de vision**: se recomienda OpenRouter con `google/gemini-2.5-flash` o un endpoint Custom compatible; Groq actualmente no dispone de modelos con vision. Si el modelo activo no ve, la pantalla lo avisa y ofrece cambiar de modelo en un clic. Las imagenes nunca se persisten en localStorage, y **el modo confidencial no esta disponible aqui**: el anonimizador solo procesa texto y no puede enmascarar una imagen.
 
 ### Sprint Tracker
-Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene una hoja de calculo editable organizada en pestanas (5 pestanas y sus columnas por defecto: Resueltos, Creados, ReOpen, Prioridad Alta, JSD): columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea (incluye tambien el contenido de columnas ocultas), navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Tanto las pestanas como sus columnas son configurables desde el boton "Pestanas y columnas": se pueden renombrar, anadir pestanas o columnas nuevas y ocultar las que no se usen; ocultar no borra el dato, solo deja de mostrarlo, y vuelve tal cual al mostrar la entrada de nuevo. Los sprints activos se pueden renombrar en linea (boton Editar) y archivar directamente desde la lista (boton Archivar, con confirmacion): el sprint pasa a Archivado con su fecha de cierre y queda en SOLO LECTURA (celdas no editables, sin anadir filas ni editar el esquema), que es lo que se espera de un registro historico. El boton Desarchivar lo devuelve a activo y limpia su fecha de cierre, para que una errata detectada despues de cerrarlo no quede congelada. Funciona completamente offline. Los datos viven en localStorage.
+Reemplaza el seguimiento manual en Excel de tickets por sprint. Cada sprint tiene una hoja de calculo editable organizada en pestanas (5 pestanas y sus columnas por defecto: Resueltos, Creados, ReOpen, Prioridad Alta, JSD): columnas redimensionables, filas reordenables por drag-and-drop, busqueda instantanea (incluye tambien el contenido de columnas ocultas), navegacion con teclado y enlaces directos al tracker (Ctrl+click sobre la clave del ticket). Tanto las pestanas como sus columnas son configurables desde el boton "Pestanas y columnas": se pueden renombrar, anadir pestanas o columnas nuevas y ocultar las que no se usen; ocultar no borra el dato, solo deja de mostrarlo, y vuelve tal cual al mostrar la entrada de nuevo. La portada de la herramienta no es una lista sin mas: destaca el **sprint actual** con su dia en curso, sus fechas, cuantas filas lleva cada pestana, la **actividad reciente** (los ultimos tickets movidos, enlazados al tracker si hay URL configurada) y el **reparto por squad**; al lado, una lista lateral con buscador para saltar entre sprints. Clicar un sprint lo selecciona en la portada y **"Abrir tablero"** entra en su hoja de calculo. Renombrar, archivar y eliminar viven en las acciones del sprint seleccionado. Al archivar, el sprint pasa a Archivado con su fecha de cierre y queda en SOLO LECTURA (celdas no editables, sin anadir filas ni editar el esquema), que es lo que se espera de un registro historico. El boton Desarchivar lo devuelve a activo y limpia su fecha de cierre, para que una errata detectada despues de cerrarlo no quede congelada. Funciona completamente offline. Los datos viven en localStorage.
 
 ### Regression Tracker
 Lista de regresiones versionadas por plataforma (APPS, WEB por defecto): cada regresion se da de alta con Version, URL y Fecha (las nuevas entran arriba), y se despliega en una tabla de tickets (Ticket, Fecha, Prioridad, Creador, Squad, Status por defecto) que se pueden anadir o borrar (con confirmacion solo si la fila tiene contenido); las columnas se redimensionan arrastrando el borde de la cabecera y el ancho elegido se recuerda. Tanto las plataformas como los campos de ticket son configurables desde el boton "Columnas" en la barra de pestanas: renombrar, anadir campos o plataformas nuevas (un equipo que prueba iOS y Android nativos ya no esta limitado a las dos pestanas por defecto) y ocultar los que sobren — ocultar nunca borra el dato, solo deja de mostrarlo, y vuelve tal cual al mostrar la entrada de nuevo. Las regresiones se reordenan arrastrandolas por su handle ⠿ (a top, a bottom o a cualquier posicion) y el orden se conserva. Un buscador filtra la pestana activa por version, enlace o cualquier campo de ticket visible, resaltando las coincidencias: si el match esta en un ticket, la tarjeta se auto-despliega mostrando solo las filas coincidentes, y si esta en la parte oculta de un enlace "Nombre - URL", el nombre entero se tinta con el aviso "Coincide en la URL del enlace". La columna de enlace acepta "Nombre - URL" o una URL suelta — en reposo se muestra solo el nombre, y al enfocar la celda aparece el valor completo; Ctrl+click (o el icono ↗) abre siempre la URL exacta. Cada regresion se archiva de forma individual a un historial de solo lectura, independiente por pestana; el historial es mixto y conserva ademas los snapshots del antiguo tablero libre 20×6, que se siguen abriendo en modo solo lectura. Funciona completamente offline.
@@ -90,7 +100,7 @@ Editable desde el sidebar o, en la portada, desde la franja de configuracion, de
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (658 tests / 62 files) |
+| Tests | Vitest + React Testing Library (681 tests / 64 files) + 5 browser-checks con Playwright (38 asertos contra el build de produccion) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 
@@ -108,7 +118,7 @@ Editable desde el sidebar o, en la portada, desde la franja de configuracion, de
 
 ```bash
 git clone https://github.com/jraversbcn21/ACGen.git
-cd ACGen/acgen
+cd ACGen
 npm install
 ```
 
@@ -126,10 +136,20 @@ Arranca el servidor de desarrollo de Vite (por defecto `http://localhost:5173`).
 npm run build
 ```
 
+`build` ejecuta `typecheck` antes de compilar, asi que un error de tipos rompe el build en vez de colarse.
+
 ### Tests
 
 ```bash
-npm test
+npm test              # suite completa (Vitest)
+npm run test:watch    # en watch
+npm run typecheck     # tipos de app y de tests (el tsconfig principal excluye los tests)
+```
+
+Ademas hay una suite de **browser-checks con Playwright** en `scripts/browser-checks/`, que corre contra un servidor real (dev, preview o produccion) y cubre lo que jsdom no puede ver — pegado en celdas de solo lectura, persistencia de anchos de columna, esquema de pestanas. Playwright no es dependencia del proyecto; los scripts resuelven la instalacion global y explican como instalarla si falta:
+
+```bash
+node scripts/browser-checks/sprint-schema.mjs http://localhost:5173
 ```
 
 ### Lint
@@ -156,17 +176,22 @@ merge a main  ->  Vercel build + deploy (nube)  ->  produccion (acgen.vercel.app
 ## Estructura del Proyecto
 
 ```
-acgen/
+ACGen/
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
 │   ├── config/             # Constantes, prompts, proveedores, datos de demo
 │   ├── hooks/              # useLocalStorage, useHistory, useSprints, useRegressions, useSchema, useWorkspace...
-│   ├── services/           # Servicio API (multi-proveedor) + anonimizador
-│   ├── i18n/                # Contexto de idioma, es.json / en.json
+│   ├── services/           # Servicio API (multi-proveedor), anonimizador, backup
+│   ├── utils/              # stripMarkdown, ticketLink, dates, image, download, highlight...
+│   ├── i18n/               # Contexto de idioma, es.json / en.json
 │   ├── types/              # Interfaces TypeScript
+│   ├── test/               # Setup de Vitest
 │   ├── App.tsx             # Componente principal con ruteo por vista + ErrorBoundary
 │   ├── App.css             # Todos los estilos
 │   └── main.tsx            # Punto de entrada
+├── scripts/browser-checks/ # Comprobaciones con Playwright contra un navegador real
+├── docs/                   # Specs y planes de las fases de producto
+├── public/                 # Iconos PWA y captura del README
 ├── AGENTS.md               # Guia tecnica detallada para desarrolladores
 ├── README.md
 ├── package.json

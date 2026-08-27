@@ -88,7 +88,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
 
   return (
     <div>
-      <div className="tool-layout tool-fill">
+      <div className="tool-fill">
         <div className="tool-split">
           <div className="tool-main">
             <textarea

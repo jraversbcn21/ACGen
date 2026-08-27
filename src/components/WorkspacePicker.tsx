@@ -87,7 +87,7 @@ export function WorkspacePicker({
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         type="button"
-        className="btn-ghost workspace-picker-btn"
+        className="btn-ghost"
         onClick={() => setOpen((o) => !o)}
         style={{ fontSize: 13 }}
       >

@@ -559,18 +559,6 @@ body {
 }
 
 /* === OUTPUT SECTION === */
-.output-section {
-  margin-top: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.output-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 /* === MODEL BADGE (output) === */
 .model-badge-new {
   font-size: 12px; color: var(--text-3); background: var(--surface-2);
@@ -602,12 +590,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.copy-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
 }
 
 .btn-copy {
@@ -731,71 +713,17 @@ body {
 .criteria-output-ta:focus { box-shadow: none; }
 .criteria-reasoning { flex: none; padding: 12px; border-top: 1px solid var(--border); }
 /* Bug Report compact row */
-.br-compact-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
-}
-
-.br-compact-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 130px;
-  max-width: 170px;
-  flex: 0 0 auto;
-}
-
-.br-compact-field-wide {
-  flex: 0 0 230px;
-  max-width: 230px;
-}
-
-.br-output-ta {
-  min-height: clamp(220px, 36vh, 470px);
-  flex: 1;
-}
 /* La caja de resultados respira respecto al boton Generar y llena el alto sobrante */
 .br-root {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 128px);
 }
-.br-output-section {
-  margin-top: 28px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
 /* Test Data Tool */
-.td-form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.td-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-}
-
-.td-form-row-single {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
 .td-form-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.td-output-section {
-  margin-top: 24px;
-  animation: fadeIn 0.3s ease;
 }
 
 .td-actions-bar {

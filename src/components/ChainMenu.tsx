@@ -37,7 +37,7 @@ export function ChainMenu({ sourceView, content, onChain }: ChainMenuProps) {
   if (!options || options.length === 0) return null;
 
   return (
-    <div className="chain-menu" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
       <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>{t('chain.sendTo')}</span>
       {options.map((opt) => (
         <button

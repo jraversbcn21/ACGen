@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="error-boundary-fallback">
           <h2>{t('error.boundary')}</h2>
           <p>{this.state.error.message}</p>
-          <button type="button" className="btn" onClick={this.handleReset}>
+          <button type="button" className="btn-primary" onClick={this.handleReset}>
             {t('common.retry')}
           </button>
         </div>

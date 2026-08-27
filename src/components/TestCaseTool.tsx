@@ -292,7 +292,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
                     <td><span className={`badge ${typeClass(tc.type)}`}>{tc.type}</span></td>
                     <td>{tc.preconditions}</td>
                     <td>
-                      <ol className="steps-list">
+                      <ol>
                         {tc.testSteps.map((step, i) => (
                           <li key={i}>{step}</li>
                         ))}
