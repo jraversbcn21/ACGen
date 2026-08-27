@@ -13,6 +13,12 @@ const page = await browser.newPage({
   permissions: ['clipboard-read', 'clipboard-write'],
 });
 const errors = [];
+// El rediseño de la lista separa seleccionar (item lateral) de abrir (hero):
+// clicar el nombre ya no navega, hay que pasar por "Abrir tablero".
+const openBoard = async (name) => {
+  await page.locator('.sp-item-name', { hasText: name }).first().click();
+  await page.getByRole('button', { name: /Abrir tablero|Open board/ }).click();
+};
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 // Parte 1 acepta los confirm (Archivar pregunta); la parte 2 los cancela a proposito.
@@ -39,7 +45,7 @@ await page.getByText('Sprint Tracker', { exact: true }).click();
 await page.getByRole('button', { name: /Nuevo Sprint/i }).click();
 await page.getByPlaceholder('Sprint 25').fill('Sprint paste');
 await page.getByRole('button', { name: /^Crear$/ }).click();
-await page.getByText('Sprint paste', { exact: true }).click();
+await openBoard('Sprint paste');
 await page.waitForSelector('table');
 
 // Control positivo: en un sprint ACTIVO el paste transforma la celda. Sin esto,
@@ -58,7 +64,7 @@ await page.getByRole('button', { name: 'Archivar' }).click();
 await page.waitForTimeout(400);
 
 // El mismo paste sobre el sprint archivado no debe tocar nada.
-await page.getByText('Sprint paste', { exact: true }).click();
+await openBoard('Sprint paste');
 await page.waitForSelector('table');
 const celdaRO = page.locator('input[data-row="0"][data-col="0"]');
 check('2. La celda archivada es readOnly', await celdaRO.evaluate((el) => el.readOnly));
