@@ -1274,6 +1274,78 @@ td:hover .cell-open-link {
   .tc-actions-sep { display: none; }
 }
 
+/* === BUG REPORT: entorno a la izquierda, reporte a la derecha (3b) === */
+.br-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(320px, 360px) 1fr; gap: 18px;
+}
+.br-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+.br-card {
+  flex: none;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.br-card-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.br-env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.br-env-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.br-env-field--full { grid-column: 1 / -1; }
+.br-env-field .field-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.br-env-field .field-input,
+.br-env-field .field-select,
+.br-env-field .sselect-trigger { height: 38px; font-size: 12.5px; }
+
+.br-desc { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.br-desc-label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+.br-desc-label .hint { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.br-desc-ta { flex: 1; min-height: clamp(110px, 18vh, 260px); resize: none; }
+
+.br-actions-row { display: flex; gap: 8px; }
+.br-actions-row .btn-ghost { flex: 1; min-width: 0; padding: 9px 10px; }
+.br-card .btn-primary { width: 100%; min-width: 0; }
+.br-card .loading-status { text-align: center; }
+
+.br-panel {
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.br-panel-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.br-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.br-panel-actions { display: flex; align-items: center; gap: 6px; }
+.br-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.br-panel-body { flex: 1; min-height: 0; display: flex; padding: 4px; }
+.br-panel-ta {
+  flex: 1; min-height: 0; height: 100%;
+  border: none; background: transparent; resize: none;
+}
+.br-panel-ta:focus { box-shadow: none; }
+.br-panel-reasoning { flex: none; padding: 12px; border-top: 1px solid var(--border); }
+
+@media (max-width: 900px) {
+  .br-grid { grid-template-columns: 1fr; }
+  .br-panel { min-height: 55vh; }
+  .br-desc-ta { flex: none; resize: vertical; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
