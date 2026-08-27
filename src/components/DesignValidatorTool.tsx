@@ -117,7 +117,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
       <div className="dv-grid">
         {/* ---------- IZQUIERDA: criterios + imagen + acciones ---------- */}
         <div className="dv-side">
-          <div className="dv-field dv-field--grow">
+          <div className="dv-field">
             <label htmlFor="dv-criteria" className="dv-label">
               {t('designvalidator.criteriaLabel')}
               <span className="hint">⌘⏎</span>
@@ -131,7 +131,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
             />
           </div>
 
-          <div className="dv-field">
+          <div className="dv-field dv-field--grow">
             <span className="dv-label">{t('designvalidator.imageLabel')}</span>
             <ImageDropzone
               imageName={image?.name ?? null}
