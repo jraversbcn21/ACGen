@@ -268,235 +268,260 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
 
   return (
     <div className="br-root">
-      {/* Compact fields row */}
-      <div className="br-compact-row">
-        <div className="br-compact-field">
-          <label htmlFor="br-platform" className="field-label">{t('bugreport.platform')}</label>
-          <div className="input-wrap">
-            <select
-              id="br-platform"
-              value={formData.platform}
-              onChange={(e) => handlePlatformChange(e.target.value)}
-              className="field-select"
-            >
-              {PLATFORMS.map(p => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-            </select>
-            <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('bugreport.title')}</h1>
+          <p className="tool-sub">{t('bugreport.subtitle')}</p>
+        </div>
+      </header>
+
+      <div className="br-grid">
+        {/* ---------- IZQUIERDA: entorno + descripcion + acciones ---------- */}
+        <div className="br-side">
+          <div className="br-card">
+            <span className="br-card-title">{t('bugreport.environment')}</span>
+            <div className="br-env-grid">
+              <div className="br-env-field">
+                <label htmlFor="br-platform" className="field-label">{t('bugreport.platform')}</label>
+                <div className="input-wrap">
+                  <select
+                    id="br-platform"
+                    value={formData.platform}
+                    onChange={(e) => handlePlatformChange(e.target.value)}
+                    className="field-select"
+                  >
+                    {PLATFORMS.map(p => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
+                  <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                </div>
+              </div>
+              <div className="br-env-field">
+                <label htmlFor="br-market" className="field-label">{t('bugreport.market')}</label>
+                <SearchableSelect
+                  options={marketOptions}
+                  value={formData.market}
+                  onChange={(v) => updateForm('market', v)}
+                  placeholder={t('common.search')}
+                  searchPlaceholder={t('common.searchMarket')}
+                />
+              </div>
+              {isWeb ? (
+                <>
+                  <div className="br-env-field">
+                    <label htmlFor="br-browser" className="field-label">{t('bugreport.browser')}</label>
+                    <div className="input-wrap">
+                      <select
+                        id="br-browser"
+                        value={formData.browser}
+                        onChange={(e) => updateForm('browser', e.target.value)}
+                        className="field-select"
+                      >
+                        {browserOptions.map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                      <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                    </div>
+                  </div>
+                  <div className="br-env-field">
+                    <label htmlFor="br-url" className="field-label">{t('bugreport.url')}</label>
+                    <input
+                      id="br-url"
+                      type="text"
+                      value={formData.url || ''}
+                      onChange={(e) => updateForm('url', e.target.value)}
+                      placeholder="https://localhost:3443/"
+                      className="field-input"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="br-env-field">
+                    <label htmlFor="br-app-version" className="field-label">
+                      {formData.platform === 'app-android' ? t('bugreport.apkVersion') : t('bugreport.buildVersion')}
+                    </label>
+                    <input
+                      id="br-app-version"
+                      type="text"
+                      value={formData.appVersion || ''}
+                      onChange={(e) => updateForm('appVersion', e.target.value)}
+                      placeholder={t('bugreport.apkPlaceholder')}
+                      className="field-input"
+                    />
+                  </div>
+                  <div className="br-env-field">
+                    <label htmlFor="br-device" className="field-label">{t('bugreport.device')}</label>
+                    <div className="input-wrap">
+                      <select
+                        id="br-device"
+                        value={formData.device || ''}
+                        onChange={(e) => updateForm('device', e.target.value)}
+                        className="field-select"
+                      >
+                        {(formData.platform === 'app-ios' ? iosDevices : androidDevices).map((label) => (
+                          <option key={label} value={label}>{label}</option>
+                        ))}
+                      </select>
+                      <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                    </div>
+                  </div>
+                  <div className="br-env-field br-env-field--full">
+                    <label htmlFor="br-os-version" className="field-label">
+                      {formData.platform === 'app-android' ? t('bugreport.androidVersion') : t('bugreport.iosVersion')}
+                    </label>
+                    <input
+                      id="br-os-version"
+                      type="text"
+                      value={formData.osVersion || ''}
+                      onChange={(e) => updateForm('osVersion', e.target.value)}
+                      placeholder={formData.platform === 'app-android' ? t('bugreport.androidPlaceholder') : t('bugreport.iosPlaceholder')}
+                      className="field-input"
+                    />
+                  </div>
+                </>
+              )}
+              <div className="br-env-field br-env-field--full">
+                <label htmlFor="br-context" className="field-label">{t('bugreport.additionalContext')}</label>
+                <input
+                  id="br-context"
+                  type="text"
+                  value={formData.additionalContext || ''}
+                  onChange={(e) => updateForm('additionalContext', e.target.value)}
+                  placeholder={t('bugreport.notesPlaceholder')}
+                  className="field-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="br-desc">
+            <label htmlFor="br-description" className="br-desc-label">
+              {t('bugreport.description')}
+              <span className="hint">⌘⏎</span>
+            </label>
+            <textarea
+              id="br-description"
+              value={formData.description}
+              onChange={(e) => updateForm('description', e.target.value)}
+              placeholder={t('bugreport.descriptionPlaceholder')}
+              className="field-textarea br-desc-ta"
+            />
+          </div>
+
+          <div className="br-card">
+            <ConfidentialToggle
+              view="bugreport"
+              text={buildBugReportMessage(formData)}
+              onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
+            />
+            <div className="br-actions-row">
+              <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setShowHistory(true)}
+              >
+                {t('bugreport.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
+              </button>
+            </div>
+            <GenerateButton
+              onClick={handleGenerate}
+              disabled={!canGenerate || isStreaming}
+              loading={isLoading || isStreaming}
+            />
+            {loadingStatus && (
+              <span className="loading-status">{loadingStatus}</span>
+            )}
           </div>
         </div>
-        <div className="br-compact-field">
-          <label htmlFor="br-market" className="field-label">{t('bugreport.market')}</label>
-          <SearchableSelect
-            options={marketOptions}
-            value={formData.market}
-            onChange={(v) => updateForm('market', v)}
-            placeholder={t('common.search')}
-            searchPlaceholder={t('common.searchMarket')}
-          />
-        </div>
-        {isWeb ? (
-          <>
-            <div className="br-compact-field">
-              <label htmlFor="br-browser" className="field-label">{t('bugreport.browser')}</label>
-              <div className="input-wrap">
-                <select
-                  id="br-browser"
-                  value={formData.browser}
-                  onChange={(e) => updateForm('browser', e.target.value)}
-                  className="field-select"
-                >
-                  {browserOptions.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-                <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
-              </div>
-            </div>
-            <div className="br-compact-field br-compact-field-wide">
-              <label htmlFor="br-url" className="field-label">{t('bugreport.url')}</label>
-              <input
-                id="br-url"
-                type="text"
-                value={formData.url || ''}
-                onChange={(e) => updateForm('url', e.target.value)}
-                placeholder="https://localhost:3443/"
-                className="field-input"
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="br-compact-field">
-              <label htmlFor="br-app-version" className="field-label">
-                {formData.platform === 'app-android' ? t('bugreport.apkVersion') : t('bugreport.buildVersion')}
-              </label>
-              <input
-                id="br-app-version"
-                type="text"
-                value={formData.appVersion || ''}
-                onChange={(e) => updateForm('appVersion', e.target.value)}
-                placeholder={formData.platform === 'app-android' ? t('bugreport.apkPlaceholder') : t('bugreport.apkPlaceholder')}
-                className="field-input"
-              />
-            </div>
-            <div className="br-compact-field">
-              <label htmlFor="br-device" className="field-label">{t('bugreport.device')}</label>
-              <div className="input-wrap">
-                <select
-                  id="br-device"
-                  value={formData.device || ''}
-                  onChange={(e) => updateForm('device', e.target.value)}
-                  className="field-select"
-                >
-                  {(formData.platform === 'app-ios' ? iosDevices : androidDevices).map((label) => (
-                    <option key={label} value={label}>{label}</option>
-                  ))}
-                </select>
-                <span className="select-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg></span>
-              </div>
-            </div>
-            <div className="br-compact-field">
-              <label htmlFor="br-os-version" className="field-label">
-                {formData.platform === 'app-android' ? t('bugreport.androidVersion') : t('bugreport.iosVersion')}
-              </label>
-              <input
-                id="br-os-version"
-                type="text"
-                value={formData.osVersion || ''}
-                onChange={(e) => updateForm('osVersion', e.target.value)}
-                placeholder={formData.platform === 'app-android' ? t('bugreport.androidPlaceholder') : t('bugreport.iosPlaceholder')}
-                className="field-input"
-              />
-            </div>
-          </>
-        )}
-        <div className="br-compact-field br-compact-field-wide">
-          <label htmlFor="br-context" className="field-label">{t('bugreport.additionalContext')}</label>
-          <input
-            id="br-context"
-            type="text"
-            value={formData.additionalContext || ''}
-            onChange={(e) => updateForm('additionalContext', e.target.value)}
-            placeholder={t('bugreport.notesPlaceholder')}
-            className="field-input"
-          />
-        </div>
-      </div>
 
-      {/* Bug description */}
-      <div className="tool-split" style={{ marginTop: 16 }}>
-        <div className="tool-main">
-          <label htmlFor="br-description" className="field-label">{t('bugreport.description')}</label>
-          <textarea
-            id="br-description"
-            value={formData.description}
-            onChange={(e) => updateForm('description', e.target.value)}
-            placeholder={t('bugreport.descriptionPlaceholder')}
-            className="field-textarea"
-            style={{ minHeight: 'clamp(100px, 16vh, 140px)' }}
-          />
-        </div>
-        <div className="actions-col">
-          <ConfidentialToggle
-            view="bugreport"
-            text={buildBugReportMessage(formData)}
-            onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
-          />
-          <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => setShowHistory(true)}
-          >
-            {t('bugreport.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
-          </button>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={handleClear}
-            disabled={!formData.description && !output}
-          >
-            {t('common.clear')}
-          </button>
-          <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={isLoading || isStreaming}
-          />
-          {loadingStatus && (
-            <span className="loading-status">{loadingStatus}</span>
+        {/* ---------- DERECHA: reporte generado ---------- */}
+        <div className="br-panel">
+          <div className="br-panel-head">
+            <span className="br-panel-title">{t('bugreport.generated')}</span>
+            <div className="br-panel-actions">
+              {output && (
+                <button
+                  type="button"
+                  className="btn-ghost btn-copy"
+                  onClick={handleCopy}
+                >
+                  {copied ? t('common.copied') : t('bugreport.copy')}
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={handleClear}
+                disabled={!formData.description && !output}
+              >
+                {t('common.clear')}
+              </button>
+            </div>
+          </div>
+
+          <div className="br-panel-body">
+            <textarea
+              id="br-output"
+              value={isStreaming ? streamText : output}
+              readOnly
+              className="field-textarea br-panel-ta"
+              placeholder={t('bugreport.outputPlaceholder')}
+            />
+          </div>
+
+          {reasoning && (
+            <div className="br-panel-reasoning">
+              <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
+                <summary>
+                  <span className="reasoning-label">Razonamiento del modelo</span>
+                  <span className="reasoning-tts" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={`tts-lang-btn ${ttsLang === 'es-ES' ? 'active' : ''}`}
+                      onClick={() => { stopSpeech(); setTtsLang('es-ES'); }}
+                      title="Leer en español"
+                    >ES</button>
+                    <button
+                      type="button"
+                      className={`tts-lang-btn ${ttsLang === 'en-US' ? 'active' : ''}`}
+                      onClick={() => { stopSpeech(); setTtsLang('en-US'); }}
+                      title="Read in English"
+                    >EN</button>
+                    {!isSpeaking ? (
+                      <button
+                        type="button"
+                        className="tts-play-btn"
+                        onClick={() => startSpeech(reasoning ?? '')}
+                        title="Leer en voz alta"
+                        disabled={!reasoning}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                          <polygon points="5,3 19,12 5,21" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="tts-stop-btn"
+                        onClick={stopSpeech}
+                        title="Detener lectura"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                          <rect x="4" y="4" width="16" height="16" rx="2" />
+                        </svg>
+                      </button>
+                    )}
+                  </span>
+                </summary>
+                <div className="reasoning-body">{reasoning}</div>
+              </details>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* Output area */}
-      <div className="br-output-section">
-        <textarea
-          id="br-output"
-          value={isStreaming ? streamText : output}
-          readOnly
-          className="field-textarea br-output-ta"
-          placeholder={t('bugreport.outputPlaceholder')}
-        />
-        {output && (
-          <div className="copy-row">
-            <button
-              type="button"
-              className="btn-ghost btn-copy"
-              onClick={handleCopy}
-            >
-              {copied ? t('common.copied') : t('bugreport.copy')}
-            </button>
-          </div>
-        )}
-        {reasoning && (
-          <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
-            <summary>
-                <span className="reasoning-label">Razonamiento del modelo</span>
-                <span className="reasoning-tts" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className={`tts-lang-btn ${ttsLang === 'es-ES' ? 'active' : ''}`}
-                    onClick={() => { stopSpeech(); setTtsLang('es-ES'); }}
-                    title="Leer en español"
-                  >ES</button>
-                  <button
-                    type="button"
-                    className={`tts-lang-btn ${ttsLang === 'en-US' ? 'active' : ''}`}
-                    onClick={() => { stopSpeech(); setTtsLang('en-US'); }}
-                    title="Read in English"
-                  >EN</button>
-                  {!isSpeaking ? (
-                    <button
-                      type="button"
-                      className="tts-play-btn"
-                      onClick={() => startSpeech(reasoning ?? '')}
-                      title="Leer en voz alta"
-                      disabled={!reasoning}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <polygon points="5,3 19,12 5,21" />
-                      </svg>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="tts-stop-btn"
-                      onClick={stopSpeech}
-                      title="Detener lectura"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                      </svg>
-                    </button>
-                  )}
-                </span>
-              </summary>
-            <div className="reasoning-body">{reasoning}</div>
-          </details>
-        )}
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
