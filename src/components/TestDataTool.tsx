@@ -390,7 +390,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
           {!hasOutput ? (
             <div className="td-empty">
               <span className="td-empty-title">{t('testdata.generatedData')}</span>
-              <span className="td-empty-sub">{t('testdata.additionalContextPlaceholder')}</span>
+              <span className="td-empty-sub">{t('testdata.emptyHint')}</span>
             </div>
           ) : (
             <div className="data-table-wrap">
