@@ -70,19 +70,14 @@ export function SprintTracker() {
   }
 
   return (
-    <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>
-        {t('sprint.title')}
-      </h2>
-      <SprintList
-        sprints={sprints}
-        onAddSprint={addSprint}
-        onSelectSprint={handleSelectSprint}
-        onDeleteSprint={deleteSprint}
-        onRenameSprint={handleRenameSprint}
-        onArchiveSprint={archiveSprint}
-        onUnarchiveSprint={unarchiveSprint}
-      />
-    </div>
+    <SprintList
+      sprints={sprints}
+      onAddSprint={addSprint}
+      onSelectSprint={handleSelectSprint}
+      onDeleteSprint={deleteSprint}
+      onRenameSprint={handleRenameSprint}
+      onArchiveSprint={archiveSprint}
+      onUnarchiveSprint={unarchiveSprint}
+    />
   );
 }

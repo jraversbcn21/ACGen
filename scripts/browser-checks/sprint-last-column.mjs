@@ -12,6 +12,12 @@ page.on('pageerror', (e) => errors.push(String(e)));
 const ok = [], fail = [];
 const check = (n, c, d = '') => (c ? ok : fail).push(`${n}${d ? ` — ${d}` : ''}`);
 
+// El rediseño de la lista separa seleccionar (item lateral) de abrir (hero).
+const openBoard = async (name) => {
+  await page.locator(".sp-item-name", { hasText: name }).first().click();
+  await page.getByRole("button", { name: /Abrir tablero|Open board/ }).click();
+};
+
 async function inputPorValor(valor) {
   const inputs = page.locator('.modal-content input[type="text"]');
   for (let i = 0; i < await inputs.count(); i++) {
@@ -28,7 +34,7 @@ await page.getByText('Sprint Tracker', { exact: true }).click();
 await page.getByRole('button', { name: /Nuevo Sprint/i }).click();
 await page.getByPlaceholder('Sprint 25').fill('Sprint de prueba');
 await page.getByRole('button', { name: /^Crear$/ }).click();
-await page.getByText('Sprint de prueba', { exact: true }).click();
+await openBoard('Sprint de prueba');
 await page.waitForSelector('table');
 
 // Escribe en Squad (indice de datos 4, la ULTIMA nombrada) y en la columna 5,

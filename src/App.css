@@ -1685,6 +1685,161 @@ td:hover .cell-open-link {
   .cv-bar .btn-primary { flex: 1 1 100%; min-width: 0; }
 }
 
+/* === SPRINT TRACKER: sprint actual + lista lateral (8c) === */
+.sp-root { display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 128px); }
+.sp-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 1fr minmax(280px, 340px); gap: 18px;
+}
+.sp-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.sp-hero {
+  flex: none;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); border-radius: var(--radius);
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
+}
+.sp-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sp-hero-id { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.sp-hero-flags { display: flex; align-items: center; gap: 10px; }
+.sp-hero-badge {
+  background: var(--accent-weak); color: var(--accent);
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 10px;
+}
+.sp-hero-day { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); }
+.sp-hero-name { font-size: 20px; font-weight: 800; color: var(--text); }
+.sp-hero-name-input { font-size: 20px; font-weight: 800; padding: 2px 8px; }
+.sp-hero-dates { font-size: 12.5px; color: var(--text-3); font-family: var(--font-mono); }
+.sp-hero-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sp-hero-actions .btn-ghost { padding: 7px 13px; font-size: 12.5px; }
+.sp-hero-actions .btn-primary { padding: 7px 16px; font-size: 12.5px; min-width: 0; }
+
+.sp-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.sp-metric {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; min-width: 0;
+}
+.sp-metric-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp-metric-value { font-size: 20px; font-weight: 800; color: var(--text); font-family: var(--font-mono); }
+
+/* flex:none y no 1: la lista tiene una fila por pestaña (5 por defecto), asi
+   que estirarla al alto de la columna solo dibujaba un marco medio vacio. */
+.sp-panel {
+  flex: none; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.sp-panel-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 10px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.sp-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.sp-panel-sub { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); }
+.sp-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 14px; }
+
+.sp-bar-row {
+  display: grid; grid-template-columns: minmax(90px, 150px) 1fr 52px;
+  align-items: center; gap: 14px;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+}
+.sp-bar-label {
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp-bar-track {
+  height: 8px; border-radius: 999px; background: var(--border);
+  position: relative; overflow: hidden;
+}
+.sp-bar-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--accent); border-radius: 999px; }
+.sp-bar-value { font-size: 13px; color: var(--text-2); font-family: var(--font-mono); text-align: right; }
+
+/* actividad reciente */
+.sp-act-row {
+  display: grid; grid-template-columns: minmax(90px, 130px) minmax(80px, 140px) 100px 1fr;
+  align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px; min-width: 0;
+}
+.sp-act-row > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-act-ticket { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+.sp-act-ticket a { color: var(--accent); text-decoration: none; }
+.sp-act-ticket a:hover { text-decoration: underline; }
+.sp-act-tab { color: var(--text-2); }
+.sp-act-date { color: var(--text-3); font-family: var(--font-mono); font-size: 12.5px; }
+.sp-act-squad { color: var(--text-3); }
+.sp-act-empty { font-size: 12.5px; color: var(--text-3); margin: 10px 0; }
+
+/* lista lateral */
+.sp-side {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.sp-side-head {
+  flex: none; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.sp-side-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.sp-side-head .field-input { height: 34px; font-size: 12.5px; }
+.sp-side-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
+.sp-side-group {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-3); padding: 10px 8px 4px; margin: 0;
+}
+.sp-item {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border: none; border-radius: var(--radius-sm);
+  background: transparent; text-align: left; cursor: pointer;
+  transition: background .15s var(--ease);
+}
+.sp-item:hover { background: var(--surface-2); }
+.sp-item-selected { background: var(--accent-weak); }
+.sp-item-selected:hover { background: var(--accent-weak); }
+.sp-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.sp-dot-current { background: var(--accent); }
+.sp-dot-active { background: var(--success); }
+.sp-dot-archived { background: var(--border-strong); }
+.sp-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sp-item-name {
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp-item-selected .sp-item-name { color: var(--text); font-weight: 700; }
+.sp-item-meta { font-size: 11.5px; color: var(--text-3); font-family: var(--font-mono); }
+.sp-item-actions { flex: none; display: flex; gap: 4px; opacity: 0; transition: opacity .15s var(--ease); }
+.sp-item:hover .sp-item-actions, .sp-item:focus-within .sp-item-actions { opacity: 1; }
+.sp-mini {
+  border: none; background: transparent; color: var(--text-3);
+  font-size: 11.5px; padding: 3px 7px; border-radius: 6px; cursor: pointer;
+}
+.sp-mini:hover { color: var(--text); background: var(--surface); }
+
+.sp-empty {
+  box-sizing: border-box; flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px;
+}
+.sp-empty-title { font-size: 14px; color: var(--text-2); }
+.sp-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 340px; }
+
+.sp-form {
+  flex: none; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
+}
+.sp-form-row { display: grid; grid-template-columns: 1fr 200px; gap: 12px; }
+.sp-form-actions { display: flex; gap: 8px; }
+
+@media (max-width: 900px) {
+  .sp-root { min-height: 0; }
+  .sp-grid { grid-template-columns: 1fr; }
+  .sp-side { min-height: 40vh; }
+  .sp-form-row { grid-template-columns: 1fr; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
