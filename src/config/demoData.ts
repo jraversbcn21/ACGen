@@ -92,7 +92,7 @@ Cuando hago clic en el boton "Pagar ahora"
 Entonces el pago se procesa correctamente y veo la pantalla de confirmacion de pedido
 ResultadoQA: (/)/(x)
 Pais/Entorno: ES/Pro
-Fecha: 15-07-2026
+Fecha: 15/07/2026
 Evidencia:
 Validado por:
 {quote}

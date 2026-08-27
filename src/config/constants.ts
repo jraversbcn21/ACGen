@@ -372,7 +372,7 @@ REGLAS:
 3. Genera pasos de reproducción detallados, numerados con #, específicos y basados en la descripción proporcionada.
 4. Si la plataforma es App Android o App iOS, usa lenguaje de interacción móvil/app: "tap en", "swipe", "navegar al tab de", "pull to refresh", etc.
 5. Si la plataforma es Web, usa lenguaje web: "clic en", "hover sobre", "scroll hasta", "navegar a", etc.
-6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD-MM-YYYY. El campo "Validado por:" debe quedar vacío: solo la etiqueta, sin ningún nombre.
+6. En la sección de Criterios de aceptación, genera un criterio Dado/Cuando/Entonces coherente con el bug descrito. El ResultadoQA debe ser (/)/(x) ya que es un bug. La Fecha debe ser la fecha actual en formato DD/MM/YYYY (con barras, no guiones). El campo "Validado por:" debe quedar vacío: solo la etiqueta, sin ningún nombre.
 7. Si se proporciona contexto de un ticket de Jira relacionado, úsalo para enriquecer la descripción, precondiciones y criterios.
 8. En el panel DESCRIPCIÓN, el campo "Entorno/Pais" debe ser siempre exactamente "{entornos}/{mercadoPrincipal}", independientemente del mercado seleccionado. Los campos "Versión" y "Evidencia" deben quedar vacíos: solo la etiqueta.
 
@@ -404,7 +404,7 @@ Cuando [action that triggers the bug]
 Entonces [expected correct behavior]
 ResultadoQA: (/)/(x)
 Pais/Entorno: [Market and platform]
-Fecha: [Current date DD-MM-YYYY]
+Fecha: [Current date DD/MM/YYYY]
 Evidencia:
 Validado por:
 {quote}
