@@ -189,7 +189,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       <header className="tool-head">
         <div className="tool-head-main">
           <h1 className="tool-title">{t('testcase.title')}</h1>
-          <p className="tool-sub">{t('testcase.instructions')}</p>
+          <p className="tool-sub">{t('landing.tool.testcaseDesc')}</p>
         </div>
         {generatedModel && (
           <div className="tool-head-aside">
