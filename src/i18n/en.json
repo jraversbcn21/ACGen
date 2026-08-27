@@ -74,7 +74,7 @@
   "landing.tool.sprinttrackerDesc": "Ticket tracking dashboard by sprint",
   "acceptance.inputLabel": "Functionality or flow",
   "acceptance.contextLabel": "Additional context",
-  "acceptance.resultTitle": "Acceptance criteria",
+  "acceptance.resultTitle": "Result",
   "acceptance.inputPlaceholder": "Describe the functionality or flow that needs acceptance criteria...",
   "acceptance.history": "History",
   "acceptance.outputPlaceholder": "Acceptance criteria will appear here...",

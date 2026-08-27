@@ -654,13 +654,22 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
+/* Titulo de pagina de cada herramienta */
+.tool-page-title {
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* Criteria tool — entrada compacta a la izquierda, resultado a la derecha */
 .criteria-grid {
   display: grid;
   grid-template-columns: minmax(340px, 400px) 1fr;
   gap: 20px;
   align-items: stretch;
-  min-height: calc(100vh - 128px);
+  /* 128px de chrome + ~40px del titulo de pagina */
+  min-height: calc(100vh - 168px);
 }
 
 /* --- columna izquierda: entradas + acciones --- */

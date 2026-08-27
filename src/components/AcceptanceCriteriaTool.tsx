@@ -216,6 +216,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
 
   return (
     <div>
+      <h2 className="tool-page-title">{t('landing.tool.acceptance')}</h2>
       <div className="criteria-grid">
         <div className="criteria-left">
           <div className="criteria-field criteria-field--grow">
