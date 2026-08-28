@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateShortcutLabel } from './shortcut';
+import { generateShortcutLabel, paletteShortcutLabel } from './shortcut';
 
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const WIN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
@@ -17,5 +17,12 @@ describe('generateShortcutLabel', () => {
 
   it('cae a Ctrl+Enter en cualquier otra plataforma', () => {
     expect(generateShortcutLabel('Mozilla/5.0 (X11; Linux x86_64)')).toBe('Ctrl+Enter');
+  });
+});
+
+describe('paletteShortcutLabel', () => {
+  it('mismo criterio que el de generar: Cmd en Mac, Ctrl en el resto', () => {
+    expect(paletteShortcutLabel(MAC)).toBe('⌘K');
+    expect(paletteShortcutLabel(WIN)).toBe('Ctrl K');
   });
 });

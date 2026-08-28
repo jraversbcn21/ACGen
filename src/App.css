@@ -131,35 +131,6 @@ body {
    the sidebar views), so it centers itself. */
 .landing { max-width: 1120px; margin: 0 auto; }
 
-/* === HERO === */
-.hero { margin-bottom: 34px; max-width: 760px; }
-.eyebrow {
-  font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 16px;
-}
-.hero-title {
-  margin: 0; font-weight: 400; line-height: 1.06; letter-spacing: -.02em;
-  font-size: clamp(34px, 6vw, 50px);
-}
-.hero-title .b { font-weight: 800; }
-.hero-title .s { font-size: 1.04em; }
-.greet-serif {
-  font-family: var(--font-serif); font-style: italic; font-weight: 500; letter-spacing: -.01em;
-}
-
-/* === CONFIG STRIP === */
-/* Two children: ProviderConfig's field row on the left, .config-actions
-   (Perfil / Prompts) on the right. align-items: flex-end matters here —
-   ProviderConfig's own root already uses alignItems: 'flex-end', so this
-   keeps the action buttons sitting on the same baseline as the selects
-   instead of centering against the strip's full height. */
-.config-strip {
-  margin-bottom: 46px;
-  display: flex; justify-content: space-between; align-items: flex-end;
-  gap: 12px; flex-wrap: wrap;
-}
-.config-actions { display: flex; gap: 8px; }
-
 /* === SECTION HEADER === */
 .sec-head {
   display: flex; align-items: baseline; gap: 14px; padding-bottom: 6px; margin-bottom: 2px;
@@ -1963,6 +1934,94 @@ td:hover .cell-open-link {
   .rg-root { min-height: 0; }
   .rg-grid { grid-template-columns: 1fr; }
   .rg-rail { max-height: 320px; }
+}
+
+/* === LANDING 2a: CONSOLA + TARJETAS ===
+   La portada pasa a ser una consola: titular en una linea, buscador (Ctrl K),
+   chips de familia y una tira con el estado del modelo. Debajo, el grid
+   .tool-list de siempre — no cambia ni una regla. Este bloque sustituye a
+   .hero + .config-strip, que se borraron con el resto de su familia (.eyebrow,
+   .hero-title, .greet-serif, .config-actions): la portada era su unico
+   consumidor. */
+.ld-console { margin-bottom: 40px; }
+
+.ld-hero { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.ld-title {
+  margin: 0; font-family: var(--font-serif); font-style: italic; font-weight: 500;
+  font-size: clamp(26px, 3.6vw, 36px); line-height: 1.14; letter-spacing: -.01em; color: var(--text);
+}
+.ld-hero-tag {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--text-3);
+}
+
+/* El buscador es el elemento con mas peso de la portada: 62 px de alto y el
+   unico borde "strong" del bloque. */
+.ld-search {
+  display: flex; align-items: center; gap: 14px; height: 62px; padding: 0 18px; margin-bottom: 18px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.ld-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+.ld-search-ico { display: grid; place-items: center; color: var(--accent); flex: 0 0 auto; }
+.ld-search-input {
+  flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; outline: none;
+  color: var(--text); font-family: var(--font-ui); font-size: 15.5px;
+}
+.ld-search-input::placeholder { color: var(--text-3); }
+.ld-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.ld-kbd {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; white-space: nowrap;
+}
+
+.ld-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.ld-chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px;
+  border-radius: 999px; border: 1px solid var(--border); background: transparent;
+  color: var(--text-2); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
+}
+.ld-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.ld-chip[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--ring); color: var(--accent); }
+.ld-chip-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--text-3); }
+.ld-chip[aria-pressed="true"] .ld-chip-count { color: inherit; opacity: .75; }
+
+/* Tira de estado: lo que antes ocupaban tres inputs grandes cabe en una linea
+   de 50 px, y los campos reales viven en .ld-config-panel tras "Editar". */
+.ld-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  min-height: 50px; padding: 8px 8px 8px 18px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+}
+.ld-status-items { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.ld-status-item { display: flex; align-items: center; gap: 8px; }
+.ld-status-key {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.ld-status-val { font-size: 13px; font-weight: 600; color: var(--text); }
+.ld-status-val.mono { font-family: var(--font-mono); font-weight: 400; font-size: 12.5px; }
+.ld-status-sep { width: 1px; height: 18px; background: var(--border); }
+.ld-status-ok { font-size: 12.5px; font-weight: 700; color: var(--success); }
+.ld-status-warn { font-size: 12.5px; font-weight: 700; color: var(--warning); }
+.ld-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ld-config-panel {
+  margin-top: 12px; padding: 16px 18px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+
+.ld-empty {
+  margin: 0; padding: 30px 18px; text-align: center;
+  color: var(--text-3); font-size: 14px;
+  border: 1px dashed var(--border); border-radius: 14px;
+}
+
+@media (max-width: 860px) {
+  .ld-search { height: 56px; gap: 10px; padding: 0 14px; }
+  .ld-search-input { font-size: 14.5px; }
+  .ld-status { padding: 12px 12px; }
 }
 
 /* Portatiles y ventanas medianas: menos padding, barra lateral mas estrecha.
