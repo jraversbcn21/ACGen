@@ -10,3 +10,11 @@
 export function generateShortcutLabel(ua: string = navigator.userAgent): string {
   return /Mac|iPhone|iPad|iPod/.test(ua) ? '⌘⏎' : 'Ctrl+Enter';
 }
+
+/**
+ * Etiqueta del atajo que enfoca el buscador de la portada. Mismo criterio:
+ * el handler acepta Ctrl y Cmd, la etiqueta se adapta a la plataforma.
+ */
+export function paletteShortcutLabel(ua: string = navigator.userAgent): string {
+  return /Mac|iPhone|iPad|iPod/.test(ua) ? '⌘K' : 'Ctrl K';
+}
