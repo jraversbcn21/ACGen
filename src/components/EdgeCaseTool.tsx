@@ -11,6 +11,7 @@ import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import { categoryBadge } from '../utils/categoryBadge';
+import { generateShortcutLabel } from '../utils/shortcut';
 
 type EdgeCase = { categoria: string; escenario: string; resultadoEsperado: string };
 
@@ -155,7 +156,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         <div className="ec-pane ec-input-pane">
           <div className="ec-pane-head">
             <span className="ec-pane-title">{t('edgecase.functionality')}</span>
-            <span className="ec-pane-hint">{t('edgecase.chars', { n: String(requirement.length) })} · ⌘⏎</span>
+            <span className="ec-pane-hint">{t('edgecase.chars', { n: String(requirement.length) })} · {generateShortcutLabel()}</span>
           </div>
           <div className="ec-input-body">
             <textarea
