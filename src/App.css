@@ -2061,10 +2061,11 @@ td:hover .cell-open-link {
 }
 .dl-star:hover { color: var(--warning); }
 .dl-star-on { color: var(--warning); }
-.dl-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; }
-.dl-item-name { font-size: 13.5px; font-weight: 600; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Una sola linea: nombre + etiqueta del enlace al lado, no apilados. */
+.dl-item-body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; text-decoration: none; }
+.dl-item-name { flex: none; max-width: 40%; font-size: 13.5px; font-weight: 600; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dl-item-body:hover .dl-item-name { text-decoration: underline; }
-.dl-item-url { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-item-url { flex: 1; min-width: 0; font-size: 12px; color: var(--text-3); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dl-tag {
   flex: none; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   color: var(--text-3); background: var(--surface-2);

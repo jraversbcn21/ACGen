@@ -68,6 +68,17 @@ describe('DocLibrary', () => {
     expect(a.target).toBe('_blank');
   });
 
+  it('una URL guardada en formato "Nombre - URL" muestra el nombre SnapLink y abre la URL exacta', () => {
+    renderLib();
+    // Nombre ya escrito ANTES de pegar: el campo URL conserva el texto SnapLink
+    // entero — el caso real que salia como URL cruda en dos lineas.
+    addLink('Vacaciones QA', 'vacaciones_equipoBSK.xlsx - https://sharepoint.example.com/doc/1');
+    const a = document.querySelector('.dl-item-body') as HTMLAnchorElement;
+    expect(a.href).toBe('https://sharepoint.example.com/doc/1');
+    expect(a.querySelector('.dl-item-url')?.textContent).toBe('vacaciones_equipoBSK.xlsx');
+    expect(a.textContent).not.toContain('https://');
+  });
+
   it('los chips de categoria se derivan con recuento y filtran (toggle)', () => {
     renderLib();
     addLink('A', 'https://a.example', 'Jira');

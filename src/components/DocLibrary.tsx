@@ -187,16 +187,24 @@ export function DocLibrary() {
             <span className="dl-empty-title">{t('doclibrary.noMatches')}</span>
           </div>
         )}
-        {visible.map((link) => (
+        {visible.map((link) => {
+          /* La URL guardada puede venir en formato SnapLink ("Nombre - URL"):
+             el clic abre siempre la URL exacta, y en reposo se muestra el
+             nombre del SnapLink en vez de la URL cruda — mismo convenio que
+             las celdas de enlace de los trackers. */
+          const parts = parseUrlCell(link.url);
+          const href = parts ? parts.url : link.url;
+          const urlLabel = parts?.name ?? href;
+          return (
           <div key={link.id} className="dl-item">
             <button type="button" className={`dl-star ${link.favorite ? 'dl-star-on' : ''}`}
               aria-pressed={link.favorite} aria-label={t('doclibrary.toggleFavorite')}
               title={t('doclibrary.toggleFavorite')} onClick={() => toggleFavorite(link.id)}>
               ★
             </button>
-            <a className="dl-item-body" href={link.url} target="_blank" rel="noopener noreferrer" title={link.url}>
+            <a className="dl-item-body" href={href} target="_blank" rel="noopener noreferrer" title={href}>
               <span className="dl-item-name">{link.name} ↗</span>
-              <span className="dl-item-url">{link.url}</span>
+              <span className="dl-item-url">{urlLabel}</span>
             </a>
             {link.category.trim() && <span className="dl-tag">{link.category}</span>}
             <span className="dl-item-actions">
@@ -204,7 +212,8 @@ export function DocLibrary() {
               <button type="button" className="btn-ghost dl-mini" onClick={() => handleDelete(link)}>{t('common.delete')}</button>
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
