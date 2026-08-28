@@ -66,7 +66,7 @@ Genera una historia de usuario en formato **Como / Quiero / Para**, junto con un
 Analiza un requisito o historia de usuario y detecta ambiguedades, contradicciones, informacion faltante, dependencias no declaradas y sugiere preguntas concretas para refinarlo con los stakeholders. La pantalla enfrenta el requisito **Antes** (con contador de caracteres) y el analisis **Despues**, para comparar sin cambiar de pestana, y remata con una tarjeta **"Que ha encontrado"** que cuenta cuantos hallazgos hay en cada categoria. La salida se muestra en texto plano, igual que en Historia de Usuario.
 
 ### Casos Limite
-Genera una lista de edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos y roles, red y conectividad) a partir de un requisito.
+Genera una lista de edge cases agrupados por categoria (valores frontera, estados vacios, concurrencia, i18n, permisos y roles, red y conectividad) a partir de un requisito. La entrada es una tarjeta compacta con la botonera al lado y la tabla ocupa el ancho completo debajo; la cabecera resume **cuantos casos ha salido de cada categoria** y **Copiar tabla** los lleva al portapapeles en TSV, listos para pegar en una hoja de calculo.
 
 ### Conversor de Formatos
 Convierte un texto entre formatos de documentacion agil: Gherkin (Given/When/Then), Markdown, Jira wiki, Azure DevOps y texto plano, preservando el contenido. Barra **"Convertir de → a"** con los dos formatos y un boton para **intercambiarlos**, que ademas mueve el resultado a la entrada: convertir de vuelta o seguir encadenando no exige copiar y pegar. Origen y resultado se ven en paralelo, y el resultado se copia o se **descarga** con la extension que le corresponde (`.feature`, `.md` o `.txt`).
@@ -100,7 +100,7 @@ Editable desde el sidebar o, en la portada, desde la franja de configuracion, de
 | Frontend | React 18, TypeScript, Vite 5 |
 | LLM API | Groq (por defecto), OpenRouter, o cualquier endpoint compatible con OpenAI |
 | PDF | jsPDF + jspdf-autotable |
-| Tests | Vitest + React Testing Library (681 tests / 64 files) + 5 browser-checks con Playwright (38 asertos contra el build de produccion) |
+| Tests | Vitest + React Testing Library (686 tests / 65 files) + 5 browser-checks con Playwright (38 asertos contra el build de produccion) |
 | PWA | vite-plugin-pwa |
 | Estilos | CSS personalizado (sin framework) |
 

@@ -529,36 +529,6 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px;
 }
 
-/* === SIDE ACTIONS (input izquierda, botonera en columna derecha) === */
-.tool-split { display: flex; gap: 20px; align-items: flex-start; }
-.tool-split > .tool-main { flex: 1; min-width: 0; }
-.actions-col { display: flex; flex-direction: column; gap: 10px; flex: 0 0 170px; }
-.actions-col .btn-primary, .actions-col .btn-ghost { width: 100%; }
-.actions-col .loading-status { text-align: center; }
-
-/* === RESULT BOX (caja de resultados siempre visible) === */
-.tool-fill {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 128px);
-}
-.result-box {
-  flex: 1;
-  margin-top: 20px;
-  min-height: clamp(140px, 22vh, 240px);
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow-y: auto;
-}
-.result-box-placeholder {
-  color: var(--text-3);
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-}
-
-/* === OUTPUT SECTION === */
 /* === MODEL BADGE (output) === */
 .model-badge-new {
   font-size: 12px; color: var(--text-3); background: var(--surface-2);
@@ -840,7 +810,6 @@ body {
     flex: none;
     resize: vertical;
   }
-  .tool-fill,
   .br-root {
     min-height: 0;
   }
@@ -851,19 +820,6 @@ body {
   }
   .td-form-row {
     grid-template-columns: 1fr;
-  }
-  .tool-split {
-    flex-direction: column;
-  }
-  .tool-split > .actions-col {
-    flex-direction: row;
-    flex-wrap: wrap;
-    flex-basis: auto;
-    width: 100%;
-  }
-  .tool-split > .actions-col .btn-primary,
-  .tool-split > .actions-col .btn-ghost {
-    width: auto;
   }
 }
 
@@ -1830,14 +1786,80 @@ td:hover .cell-open-link {
   .rf-pane { min-height: 34vh; }
 }
 
-/* Portatiles y ventanas medianas: menos padding, columna de acciones mas compacta.
+/* Portatiles y ventanas medianas: menos padding, barra lateral mas estrecha.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
    estuviera antes. */
 @media (max-width: 1200px) {
   .app-layout .container { padding: 20px; }
-  .actions-col { flex-basis: 150px; }
-  .tool-split { gap: 14px; }
   .sidebar { width: 190px; }
   .criteria-grid { gap: 16px; }
+}
+
+/* === EDGE CASES: entrada compacta arriba + tabla a todo el ancho (10b) === */
+.ec-root { display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 128px); }
+
+.ec-input-row { flex: none; display: flex; gap: 14px; align-items: stretch; }
+.ec-pane {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.ec-input-pane { flex: 1; min-width: 0; }
+.ec-pane-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 9px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.ec-pane-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.ec-pane-hint { font-size: 12px; color: var(--text-3); font-family: var(--font-mono); }
+.ec-input-body { flex: 1; min-height: 0; display: flex; padding: 4px; }
+.ec-input-ta {
+  flex: 1; min-height: clamp(96px, 15vh, 150px); height: 100%;
+  border: none; background: transparent; resize: none;
+}
+.ec-input-ta:focus { box-shadow: none; }
+
+/* botonera a la derecha de la entrada, centrada verticalmente */
+.ec-actions { flex: 0 0 220px; display: flex; flex-direction: column; gap: 9px; justify-content: center; }
+.ec-actions .btn-primary, .ec-actions .btn-ghost { width: 100%; }
+.ec-actions .loading-status { text-align: center; }
+
+/* panel de resultados: ocupa todo el alto restante */
+.ec-panel {
+  flex: 1; min-height: clamp(240px, 40vh, 640px);
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.ec-panel-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 10px 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.ec-panel-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; font-weight: 700; color: var(--text); }
+.ec-cats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ec-cat { display: inline-flex; align-items: center; gap: 6px; }
+.ec-cat-count { font-family: var(--font-mono); font-size: 11px; font-weight: 500; opacity: .75; }
+.ec-panel-actions { display: flex; align-items: center; gap: 6px; }
+.ec-panel-actions .btn-ghost { padding: 6px 12px; font-size: 12.5px; }
+.ec-panel-body { flex: 1; min-height: 0; overflow: auto; }
+.ec-panel-body .data-table-wrap { border: none; border-radius: 0; background: transparent; }
+.ec-panel-body .data-table th { position: sticky; top: 0; z-index: 1; }
+.ec-panel-body .data-table td { white-space: normal; }
+.ec-cat-col { width: 220px; }
+
+.ec-empty {
+  box-sizing: border-box; height: 100%; min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center;
+}
+.ec-empty-title { font-size: 14px; color: var(--text-2); }
+.ec-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 340px; }
+
+@media (max-width: 900px) {
+  .ec-root { min-height: 0; }
+  .ec-input-row { flex-direction: column; }
+  .ec-actions { flex: none; }
+  .ec-cat-col { width: auto; }
 }
