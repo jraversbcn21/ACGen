@@ -1786,16 +1786,6 @@ td:hover .cell-open-link {
   .rf-pane { min-height: 34vh; }
 }
 
-/* Portatiles y ventanas medianas: menos padding, barra lateral mas estrecha.
-   Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
-   .container viven mas abajo que el resto y ganarian por cascada si este bloque
-   estuviera antes. */
-@media (max-width: 1200px) {
-  .app-layout .container { padding: 20px; }
-  .sidebar { width: 190px; }
-  .criteria-grid { gap: 16px; }
-}
-
 /* === EDGE CASES: entrada compacta arriba + tabla a todo el ancho (10b) === */
 .ec-root { display: flex; flex-direction: column; gap: 14px; min-height: calc(100vh - 128px); }
 
@@ -1862,4 +1852,14 @@ td:hover .cell-open-link {
   .ec-input-row { flex-direction: column; }
   .ec-actions { flex: none; }
   .ec-cat-col { width: auto; }
+}
+
+/* Portatiles y ventanas medianas: menos padding, barra lateral mas estrecha.
+   Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
+   .container viven mas abajo que el resto y ganarian por cascada si este bloque
+   estuviera antes. */
+@media (max-width: 1200px) {
+  .app-layout .container { padding: 20px; }
+  .sidebar { width: 190px; }
+  .criteria-grid { gap: 16px; }
 }
