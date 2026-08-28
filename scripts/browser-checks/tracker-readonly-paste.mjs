@@ -110,7 +110,9 @@ await page.evaluate(() => {
 // landing (con su tarjeta "Regression Tracker") ya no esta en pantalla.
 await page.goto(`${URL}/#/regressiontracker`, { waitUntil: 'networkidle' });
 await page.reload({ waitUntil: 'networkidle' });
-await page.getByLabel('Mostrar u ocultar tickets').click();
+// Rediseño 11b: el detalle de la version seleccionada (la primera por defecto)
+// muestra su tabla siempre desplegada — ya no existe el toggle de tickets.
+await page.waitForSelector('.rg-detail table');
 
 dialogAction = 'dismiss';
 dialogMsg = null;

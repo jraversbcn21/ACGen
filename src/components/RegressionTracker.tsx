@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { TrackerGrid } from './TrackerGrid';
 import { RegressionCard } from './RegressionCard';
 import { RegressionSchemaEditor } from './RegressionSchemaEditor';
-import { useRegressions, isLegacyArchived } from '../hooks/useRegressions';
-import type { PlatformId, ArchivedItem } from '../hooks/useRegressions';
+import { useRegressions, isLegacyArchived, filledTicketCount } from '../hooks/useRegressions';
+import type { PlatformId, ArchivedItem, Regression } from '../hooks/useRegressions';
 import { useSchema } from '../hooks/useSchema';
 import { DEFAULT_SCHEMA, resolveLabel, visibleEntries } from '../types/schema';
 import { STORAGE_KEYS } from '../config/constants';
@@ -24,6 +24,10 @@ export function RegressionTracker() {
   } = useRegressions();
   const [screen, setScreen] = useState<Screen>({ kind: 'board' });
   const [activeTab, setActiveTab] = useState<PlatformId>(DEFAULT_SCHEMA.regression.platforms[0].id);
+  // Version enfocada POR PLATAFORMA: cambiar de APPS a WEB y volver no pierde
+  // la que estabas mirando. Una plataforma sin entrada aqui cae a la primera
+  // visible, asi que el panel nunca arranca vacio habiendo regresiones.
+  const [selectedIds, setSelectedIds] = useState<Record<PlatformId, string>>({});
   const [showNewForm, setShowNewForm] = useState(false);
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [draft, setDraft] = useState({ version: '', url: '', fecha: localTodayISO() });
@@ -59,14 +63,16 @@ export function RegressionTracker() {
   const handleCreate = () => {
     if (!draft.version.trim()) return;
     addRegression(safeTab, draft);
+    // Se limpia la seleccion de la plataforma para que el detalle caiga a la
+    // primera visible, que es la recien creada (addRegression inserta arriba):
+    // creas una version para rellenarla, no para tener que clicarla despues.
+    setSelectedIds((prev) => {
+      const next = { ...prev };
+      delete next[safeTab];
+      return next;
+    });
     setDraft({ version: '', url: '', fecha: localTodayISO() });
     setShowNewForm(false);
-  };
-
-  const formInputStyle: React.CSSProperties = {
-    height: 30, padding: '0 10px', fontSize: 12, fontFamily: 'var(--font-ui)',
-    background: 'var(--surface-2)', color: 'var(--text)',
-    border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', outline: 'none',
   };
 
   const snapshot: ArchivedItem | null =
@@ -158,210 +164,253 @@ export function RegressionTracker() {
   const hasText = (s: string) => s.toLowerCase().includes(needle);
   const visible = list
     .map((regression, index) => {
-      if (!needle) return { regression, index, forceExpanded: false, visibleTicketIds: undefined as string[] | undefined };
+      if (!needle) return { regression, index, visibleTicketIds: undefined as string[] | undefined };
       const ticketIds = regression.tickets
         .filter((tk) => visibleFieldIds.some((f) => hasText(tk[f] ?? '')))
         .map((tk) => tk.id);
-      if (ticketIds.length > 0) return { regression, index, forceExpanded: true, visibleTicketIds: ticketIds };
+      if (ticketIds.length > 0) return { regression, index, visibleTicketIds: ticketIds };
       if (hasText(regression.version) || hasText(regression.url)) {
-        return { regression, index, forceExpanded: false, visibleTicketIds: undefined as string[] | undefined };
+        return { regression, index, visibleTicketIds: undefined as string[] | undefined };
       }
       return null;
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{t('regression.title')}</h2>
-        {archived.length > 0 && (
-          <button
-            type="button"
-            className="btn-ghost"
-            style={{ marginLeft: 'auto', padding: '6px 14px' }}
-            onClick={() => setScreen({ kind: 'archivedList' })}
+  // El detalle sigue a la version que el usuario toca en el rail; si aun no ha
+  // tocado ninguna —o la que miraba ya no pasa el filtro— cae a la primera
+  // visible, que es la mas reciente porque addRegression inserta al principio.
+  const selected = visible.find((v) => v.regression.id === selectedIds[safeTab]) ?? visible[0] ?? null;
+
+  const ticketsInTab = list.reduce((sum, r) => sum + filledTicketCount(r, visibleFieldIds), 0);
+
+  const renderRailItem = ({ regression, index }: { regression: Regression; index: number }) => {
+    const isSelected = selected?.regression.id === regression.id;
+    const count = filledTicketCount(regression, visibleFieldIds);
+    return (
+      <div
+        key={regression.id}
+        className={`rg-item ${isSelected ? 'rg-item-selected' : ''}`}
+        role="button"
+        tabIndex={0}
+        aria-current={isSelected}
+        data-drag-index={index}
+        onClick={() => setSelectedIds((prev) => ({ ...prev, [safeTab]: regression.id }))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setSelectedIds((prev) => ({ ...prev, [safeTab]: regression.id }));
+          }
+        }}
+        onDragOver={(e) => {
+          if (dragIndex === null) return;
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const half = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+          setDropTarget((prev) => (prev?.index === index && prev.half === half ? prev : { index, half }));
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (dragIndex !== null && dropTarget) {
+            let to = dropTarget.half === 'top' ? dropTarget.index : dropTarget.index + 1;
+            if (to > dragIndex) to -= 1;
+            const dragged = list[dragIndex];
+            if (dragged && to !== dragIndex) moveRegression(safeTab, dragged.id, to);
+          }
+          setDragIndex(null);
+          setDropTarget(null);
+        }}
+        style={{
+          opacity: dragIndex === index ? 0.5 : 1,
+          boxShadow:
+            dragIndex !== null && dropTarget?.index === index
+              ? dropTarget.half === 'top' ? '0 -2px 0 0 var(--accent)' : '0 2px 0 0 var(--accent)'
+              : undefined,
+        }}
+      >
+        {!searching && (
+          <span
+            draggable
+            role="button"
+            aria-label={t('regression.dragHandle')}
+            title={t('regression.dragHandle')}
+            className="rg-item-grip"
+            onClick={(e) => e.stopPropagation()}
+            onDragStart={(e) => {
+              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+              setDragIndex(index);
+            }}
+            onDragEnd={() => { setDragIndex(null); setDropTarget(null); }}
           >
-            {t('regression.archivedList')} ({archived.length})
-          </button>
+            ⠿
+          </span>
         )}
+        <span className="rg-item-text">
+          <span className="rg-item-version">{regression.version}</span>
+          <span className="rg-item-url" title={regression.url}>{regression.url || '—'}</span>
+        </span>
+        <span className="rg-item-meta">
+          <span className="rg-item-count">{count}</span>
+          <span className="rg-item-date">{regression.fecha ? formatDate(regression.fecha, lang) : ''}</span>
+        </span>
       </div>
+    );
+  };
 
-      <div className="sprint-tabs">
-        {platforms.map((platform) => (
-          <button
-            key={platform.id}
-            type="button"
-            className={`btn-ghost ${safeTab === platform.id ? 'sprint-tab-active' : ''}`}
-            onClick={() => setActiveTab(platform.id)}
-          >
-            {resolveLabel(platform, t)}
-          </button>
-        ))}
-        <a
-          href="https://chromewebstore.google.com/detail/SnapLink/nooilpnmljdmpdknbkckjiieafoaikfc?utm_source=ext_app_menu"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-ghost"
-          style={{ marginLeft: 'auto', padding: '6px 14px', fontSize: 12, textDecoration: 'none' }}
-          title="Descargar extensión SnapLink para Chrome"
-        >
-          + SnapLink
-        </a>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => setShowSchemaEditor(true)}
-          style={{ padding: '6px 14px', fontSize: 12 }}
-        >
-          {t('schema.open')}
-        </button>
-      </div>
-
-      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
-          {!showNewForm ? (
-            <button type="button" className="btn-ghost" onClick={() => { setDraft({ version: '', url: '', fecha: localTodayISO() }); setShowNewForm(true); }} style={{ padding: '6px 14px', fontSize: 13 }}>
-              + {t('regression.newRegression')}
+  return (
+    <div className="rg-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('regression.title')}</h1>
+          <p className="tool-sub">
+            {t('regression.subtitle', {
+              platform: platformLabel(safeTab),
+              regs: String(list.length),
+              tickets: String(ticketsInTab),
+            })}
+          </p>
+        </div>
+        <div className="tool-head-aside">
+          {archived.length > 0 && (
+            <button type="button" className="btn-ghost" onClick={() => setScreen({ kind: 'archivedList' })}>
+              {t('regression.archivedList')} ({archived.length})
             </button>
-          ) : (
-            <>
+          )}
+          <button type="button" className="btn-ghost" onClick={() => setShowSchemaEditor(true)}>
+            {t('schema.open')}
+          </button>
+          <a
+            href="https://chromewebstore.google.com/detail/SnapLink/nooilpnmljdmpdknbkckjiieafoaikfc?utm_source=ext_app_menu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost"
+            style={{ textDecoration: 'none' }}
+            title="Descargar extensión SnapLink para Chrome"
+          >
+            + SnapLink
+          </a>
+        </div>
+      </header>
+
+      {showNewForm && (
+        <div className="rg-form">
+          <div className="rg-form-row">
+            <div className="rg-form-field" style={{ flex: '0 0 120px' }}>
+              <label htmlFor="rg-version" className="field-label">{t('regression.versionLabel')}</label>
               <input
+                id="rg-version"
                 type="text"
+                className="field-input"
                 autoFocus
-                aria-label={t('regression.versionLabel')}
                 placeholder="1.0.0"
                 value={draft.version}
                 onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
-                style={{ ...formInputStyle, width: 100 }}
               />
+            </div>
+            <div className="rg-form-field" style={{ flex: 1, minWidth: 220 }}>
+              <label htmlFor="rg-url" className="field-label">{t('regression.urlLabel')}</label>
               <input
+                id="rg-url"
                 type="text"
-                aria-label={t('regression.urlLabel')}
+                className="field-input"
                 placeholder="https://..."
                 value={draft.url}
                 onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewForm(false); }}
-                style={{ ...formInputStyle, flex: 1, minWidth: 200 }}
               />
+            </div>
+            <div className="rg-form-field" style={{ flex: '0 0 170px' }}>
+              <label htmlFor="rg-fecha" className="field-label">{t('regression.dateLabel')}</label>
               <input
+                id="rg-fecha"
                 type="date"
-                aria-label={t('regression.dateLabel')}
+                className="field-input"
                 value={draft.fecha}
                 onChange={(e) => setDraft((d) => ({ ...d, fecha: e.target.value }))}
-                style={{ ...formInputStyle, width: 150 }}
               />
-              <button type="button" className="btn-ghost" disabled={!draft.version.trim()} onClick={handleCreate} style={{ padding: '6px 14px', fontSize: 13 }}>
-                {t('regression.create')}
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)} style={{ padding: '6px 14px', fontSize: 13 }}>
-                {t('common.cancel')}
-              </button>
-            </>
-          )}
-        </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {needle !== '' && (
-            <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              {visible.length} / {list.length}
-            </span>
-          )}
-          <input
-            type="text"
-            aria-label={t('regression.searchPlaceholder')}
-            placeholder={t('regression.searchPlaceholder')}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ ...formInputStyle, width: 440, maxWidth: '100%', minWidth: 0 }}
-          />
-          {query !== '' && (
-            <button
-              type="button"
-              className="btn-ghost"
-              aria-label={t('regression.searchClear')}
-              title={t('regression.searchClear')}
-              onClick={() => setQuery('')}
-              style={{ padding: '4px 8px', fontSize: 12 }}
-            >
-              ×
+            </div>
+          </div>
+          <div className="rg-form-actions">
+            <button type="button" className="btn-primary" disabled={!draft.version.trim()} onClick={handleCreate} style={{ minWidth: 140 }}>
+              {t('regression.create')}
             </button>
+            <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="rg-grid">
+        {/* ---------- RAIL: versiones de la plataforma ---------- */}
+        <aside className="rg-rail">
+          <div className="rg-rail-head">
+            <div className="rg-tabs" role="tablist">
+              {platforms.map((platform) => (
+                <button
+                  key={platform.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={safeTab === platform.id}
+                  className={`rg-tab ${safeTab === platform.id ? 'rg-tab-active' : ''}`}
+                  onClick={() => setActiveTab(platform.id)}
+                >
+                  {resolveLabel(platform, t)}
+                </button>
+              ))}
+            </div>
+            <div className="rg-search">
+              <input
+                type="search"
+                className="field-input"
+                aria-label={t('regression.searchPlaceholder')}
+                placeholder={t('regression.searchPlaceholder')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {searching && (
+                <span className="rg-search-count">{visible.length}/{list.length}</span>
+              )}
+            </div>
+            <button type="button" className="btn-primary rg-new" onClick={() => {
+              setDraft({ version: '', url: '', fecha: localTodayISO() });
+              setShowNewForm((v) => !v);
+            }}>
+              + {t('regression.newRegression')}
+            </button>
+          </div>
+          <div className="rg-rail-body">
+            {list.length === 0 && <p className="rg-rail-empty">{t('regression.noRegressions')}</p>}
+            {list.length > 0 && visible.length === 0 && <p className="rg-rail-empty">{t('regression.noMatches')}</p>}
+            {visible.map(renderRailItem)}
+          </div>
+        </aside>
+
+        {/* ---------- DETALLE: tickets de la version enfocada ---------- */}
+        <section className="rg-detail-wrap">
+          {selected ? (
+            <RegressionCard
+              key={selected.regression.id}
+              variant="panel"
+              regression={selected.regression}
+              visibleTicketIds={selected.visibleTicketIds}
+              highlightNeedle={needle || undefined}
+              onUpdateRegression={(patch) => updateRegression(safeTab, selected.regression.id, patch)}
+              onUpdateTicket={(ticketId, field, value) => updateTicket(safeTab, selected.regression.id, ticketId, field, value)}
+              onAddTicket={() => addTicket(safeTab, selected.regression.id)}
+              onDeleteTicket={(ticketId) => deleteTicket(safeTab, selected.regression.id, ticketId)}
+              onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(safeTab, selected.regression.id); }}
+              onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(safeTab, selected.regression.id); }}
+            />
+          ) : (
+            <div className="rg-detail-empty">
+              <span className="rg-detail-empty-title">{t('regression.selectVersion')}</span>
+              <span className="rg-detail-empty-sub">{t('regression.selectHint')}</span>
+            </div>
           )}
-        </span>
+        </section>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        {list.length === 0 && (
-          <p style={{ marginTop: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-            {t('regression.noRegressions')}
-          </p>
-        )}
-        {list.length > 0 && needle !== '' && visible.length === 0 && (
-          <p style={{ marginTop: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-            {t('regression.noMatches')}
-          </p>
-        )}
-        {visible.map(({ regression, index, forceExpanded, visibleTicketIds }) => (
-          <div
-            key={regression.id}
-            data-drag-index={index}
-            onDragOver={(e) => {
-              if (dragIndex === null) return;
-              e.preventDefault();
-              const rect = e.currentTarget.getBoundingClientRect();
-              const half = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
-              setDropTarget((prev) => (prev?.index === index && prev.half === half ? prev : { index, half }));
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (dragIndex !== null && dropTarget) {
-                let to = dropTarget.half === 'top' ? dropTarget.index : dropTarget.index + 1;
-                if (to > dragIndex) to -= 1;
-                const dragged = list[dragIndex];
-                if (dragged && to !== dragIndex) moveRegression(safeTab, dragged.id, to);
-              }
-              setDragIndex(null);
-              setDropTarget(null);
-            }}
-            style={{
-              opacity: dragIndex === index ? 0.5 : 1,
-              boxShadow:
-                dragIndex !== null && dropTarget?.index === index
-                  ? dropTarget.half === 'top' ? '0 -2px 0 0 var(--accent)' : '0 2px 0 0 var(--accent)'
-                  : undefined,
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            <RegressionCard
-              regression={regression}
-              forceExpanded={forceExpanded}
-              visibleTicketIds={visibleTicketIds}
-              highlightNeedle={needle || undefined}
-              dragHandle={searching ? undefined : (
-                <span
-                  draggable
-                  role="button"
-                  aria-label={t('regression.dragHandle')}
-                  title={t('regression.dragHandle')}
-                  onDragStart={(e) => {
-                    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-                    setDragIndex(index);
-                  }}
-                  onDragEnd={() => { setDragIndex(null); setDropTarget(null); }}
-                  style={{ cursor: 'grab', color: 'var(--text-3)', fontSize: 14, userSelect: 'none', padding: '0 2px' }}
-                >
-                  ⠿
-                </span>
-              )}
-              onUpdateRegression={(patch) => updateRegression(safeTab, regression.id, patch)}
-              onUpdateTicket={(ticketId, field, value) => updateTicket(safeTab, regression.id, ticketId, field, value)}
-              onAddTicket={() => addTicket(safeTab, regression.id)}
-              onDeleteTicket={(ticketId) => deleteTicket(safeTab, regression.id, ticketId)}
-              onArchive={() => { if (confirm(t('regression.archiveOneConfirm'))) archiveRegression(safeTab, regression.id); }}
-              onDelete={() => { if (confirm(t('regression.deleteOneConfirm'))) deleteRegression(safeTab, regression.id); }}
-            />
-          </div>
-        ))}
-      </div>
       {showSchemaEditor && <RegressionSchemaEditor onClose={() => setShowSchemaEditor(false)} />}
     </div>
   );

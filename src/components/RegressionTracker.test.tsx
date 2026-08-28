@@ -45,7 +45,8 @@ describe('RegressionTracker (versioned)', () => {
     fireEvent.change(screen.getByLabelText('Versión'), { target: { value: '1.0.0' } });
     expect(createBtn.disabled).toBe(false);
     fireEvent.click(createBtn);
-    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    // La versión nueva aparece en el rail Y ya seleccionada en el detalle
+    expect(screen.getAllByText('1.0.0').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('0 tickets')).toBeInTheDocument();
     // El formulario se cierra tras crear
     expect(screen.queryByLabelText('Versión')).not.toBeInTheDocument();
@@ -54,11 +55,11 @@ describe('RegressionTracker (versioned)', () => {
   it('each platform keeps its own regression list', () => {
     renderTracker();
     createRegression('1.0.0');
-    fireEvent.click(screen.getByText('WEB'));
+    fireEvent.click(screen.getByRole('tab', { name: 'WEB' }));
     expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
     expect(screen.getByText(/No hay regresiones/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText('APPS'));
-    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'APPS' }));
+    expect(screen.getAllByText('1.0.0').length).toBeGreaterThanOrEqual(2);
   });
 
   it('archiving a card (with confirm) moves it to the mixed history labeled PLATFORM · version', () => {
@@ -76,7 +77,7 @@ describe('RegressionTracker (versioned)', () => {
     renderTracker();
     createRegression('1.0.0');
     fireEvent.click(screen.getByText('Archivar'));
-    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    expect(screen.getAllByText('1.0.0').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/Archivadas/)).not.toBeInTheDocument();
   });
 
@@ -100,10 +101,10 @@ describe('RegressionTracker (versioned)', () => {
     expect(screen.getByText('Archivada')).toBeInTheDocument(); // badge
   });
 
-  it('expanding a card and editing a ticket cell round-trips through the real hook to localStorage', () => {
+  it('editing a ticket cell in the detail panel round-trips through the real hook to localStorage', () => {
     renderTracker();
     createRegression('1.0.0');
-    fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
+    // El panel de detalle muestra la tabla siempre desplegada: sin toggle.
     const firstRowInputs = document.querySelectorAll('tbody tr:first-child input');
     fireEvent.change(firstRowInputs[0], { target: { value: 'PROJ-42' } });
 
@@ -127,7 +128,7 @@ describe('RegressionTracker (versioned)', () => {
   });
 
   describe('search', () => {
-    it('filters by version leaving matching cards collapsed and shows the N / M counter', () => {
+    it('filters the rail by version and shows the N/M counter', () => {
       renderTracker();
       createRegression('1.0.0');
       createRegression('2.0.0');
@@ -135,37 +136,36 @@ describe('RegressionTracker (versioned)', () => {
       const matches = screen.queryAllByText((_, element) => element?.textContent?.includes('2.0.0') ?? false);
       expect(matches.length).toBeGreaterThan(0);
       expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
-      expect(screen.getByText('1 / 2')).toBeInTheDocument();
-      expect(screen.queryByText('Prioridad')).not.toBeInTheDocument(); // match por cabecera: colapsada
+      expect(screen.getByText('1/2')).toBeInTheDocument();
     });
 
-    it('a ticket match auto-expands the card showing only matching rows (case-insensitive)', () => {
+    it('a ticket match shows only matching rows in the detail (case-insensitive)', () => {
       renderTracker();
       createRegression('1.0.0');
-      fireEvent.click(screen.getByLabelText('Mostrar u ocultar tickets'));
       const firstRowInputs = document.querySelectorAll('tbody tr:first-child input');
       fireEvent.change(firstRowInputs[0], { target: { value: 'PROJ-42' } });
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: 'proj-42' } });
-      expect(screen.getByText('Prioridad')).toBeInTheDocument(); // auto-expandida
       expect(document.querySelectorAll('tbody tr')).toHaveLength(1); // solo la fila coincidente
       expect(screen.getByDisplayValue('PROJ-42')).toBeInTheDocument();
     });
 
-    it('shows the no-matches message and clears the search with the × button', () => {
+    it('shows the no-matches message and recovers when the search is cleared', () => {
       renderTracker();
       createRegression('1.0.0');
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: 'zzz' } });
       expect(screen.getByText('Sin coincidencias.')).toBeInTheDocument();
       expect(screen.queryByText('1.0.0')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByLabelText('Limpiar búsqueda'));
-      expect(screen.getByText('1.0.0')).toBeInTheDocument();
+      // Sin ninguna version visible, el detalle cae al estado vacio
+      expect(screen.getByText('Ninguna versión seleccionada')).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '' } });
+      expect(screen.getAllByText('1.0.0').length).toBeGreaterThanOrEqual(2);
     });
 
     it('keeps the query when switching tabs', () => {
       renderTracker();
       createRegression('1.0.0');
       fireEvent.change(screen.getByPlaceholderText(/Buscar por versión/), { target: { value: '1.0' } });
-      fireEvent.click(screen.getByText('WEB'));
+      fireEvent.click(screen.getByRole('tab', { name: 'WEB' }));
       expect((screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement).value).toBe('1.0');
     });
 
@@ -178,10 +178,29 @@ describe('RegressionTracker (versioned)', () => {
       expect(marks[0].textContent).toBe('1.0');
     });
 
-    it('the search input is twice as wide (440px)', () => {
+  });
+
+  describe('rail selection (redesign 11b)', () => {
+    it('clicking a rail item selects it into the detail panel', () => {
       renderTracker();
-      const input = screen.getByPlaceholderText(/Buscar por versión/) as HTMLInputElement;
-      expect(input.style.width).toBe('440px');
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      // Las nuevas entran arriba y quedan seleccionadas: el detalle muestra 2.0.0
+      expect(document.querySelector('.rg-detail-version')?.textContent).toBe('2.0.0');
+      fireEvent.click(screen.getAllByText('1.0.0')[0]);
+      expect(document.querySelector('.rg-detail-version')?.textContent).toBe('1.0.0');
+    });
+
+    it('each platform remembers its own selected version', () => {
+      renderTracker();
+      createRegression('1.0.0');
+      createRegression('2.0.0');
+      fireEvent.click(screen.getAllByText('1.0.0')[0]); // APPS enfoca 1.0.0
+      fireEvent.click(screen.getByRole('tab', { name: 'WEB' }));
+      createRegression('9.0.0');
+      fireEvent.click(screen.getByRole('tab', { name: 'APPS' }));
+      // Volver a APPS conserva la seleccion previa, no la resetea a la primera
+      expect(document.querySelector('.rg-detail-version')?.textContent).toBe('1.0.0');
     });
   });
 
@@ -243,8 +262,8 @@ describe('RegressionTracker (versioned)', () => {
 describe('RegressionTracker con esquema', () => {
   it('GUARDIAN: sin esquema guardado pinta las dos pestanas de hoy', () => {
     renderTracker();
-    expect(screen.getByRole('button', { name: 'APPS' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'WEB' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'APPS' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'WEB' })).toBeTruthy();
   });
 
   it('renombrar una plataforma cambia la pestana sin mover los datos', () => {
@@ -260,9 +279,9 @@ describe('RegressionTracker con esquema', () => {
       },
     }));
     renderTracker();
-    expect(screen.getByRole('button', { name: 'Moviles' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
-    expect(screen.getByText('1.2.3')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Moviles' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'APPS' })).toBeNull();
+    expect(screen.getAllByText('1.2.3').length).toBeGreaterThanOrEqual(2);
   });
 
   it('ocultar la plataforma activa reencamina a la primera visible', () => {
@@ -274,8 +293,8 @@ describe('RegressionTracker con esquema', () => {
       },
     }));
     renderTracker();
-    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'WEB' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'APPS' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'WEB' })).toBeTruthy();
   });
 
   it('la busqueda no encuentra por campos ocultos', () => {
@@ -318,7 +337,7 @@ describe('RegressionTracker con esquema', () => {
     fireEvent.change(screen.getByPlaceholderText('Nombre de la plataforma nueva'), { target: { value: 'Android' } });
     fireEvent.click(screen.getByRole('button', { name: 'Añadir plataforma' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
-    expect(screen.getByRole('button', { name: 'Android' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Android' })).toBeTruthy();
   });
 
   it('un esquema con todas las plataformas ocultas sigue renderizando un tracker usable y no escribe bajo la clave "undefined"', () => {
@@ -332,8 +351,8 @@ describe('RegressionTracker con esquema', () => {
     renderTracker();
     // Sin plataformas visibles no hay pestanas, pero el resto del tracker
     // (alta de regresion incluida) sigue siendo usable.
-    expect(screen.queryByRole('button', { name: 'APPS' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'WEB' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'APPS' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'WEB' })).toBeNull();
     fireEvent.click(screen.getByText('+ Nueva regresión'));
     fireEvent.change(screen.getByLabelText('Versión'), { target: { value: '1.0.0' } });
     fireEvent.click(screen.getByText('Crear'));
