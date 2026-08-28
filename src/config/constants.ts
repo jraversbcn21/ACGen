@@ -72,11 +72,12 @@ export const STORAGE_KEYS = {
   ACTIVE_WORKSPACE: 'acgen_active_workspace',
   LAST_BACKUP: 'acgen_last_backup',
   SCHEMA: 'acgen_schema',
+  DOC_LINKS: 'acgen_doclinks',
 } as const;
 
 export const TEMPERATURE = 0.2;
 
-export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'designvalidator';
+export type ViewType = 'landing' | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'sprinttracker' | 'regressiontracker' | 'userstory' | 'refiner' | 'edgecase' | 'converter' | 'designvalidator' | 'doclibrary';
 
 export const SUPPORTED_MARKETS = [
   { code: 'AL', label: 'Albania', currency: 'ALL', locale: 'sq' },

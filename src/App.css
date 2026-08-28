@@ -2024,6 +2024,71 @@ td:hover .cell-open-link {
   .ld-status { padding: 12px 12px; }
 }
 
+/* === BIBLIOTECA DE DOCUMENTACION: buscador + chips + lista de enlaces === */
+.dl-root { display: flex; flex-direction: column; gap: 14px; }
+
+.dl-form {
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.dl-form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.dl-form-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dl-form-actions { display: flex; gap: 8px; }
+
+.dl-bar { display: flex; flex-direction: column; gap: 10px; }
+.dl-search { position: relative; max-width: 460px; }
+.dl-search .field-input { width: 100%; padding-right: 64px; }
+.dl-search-count {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; color: var(--text-3); font-family: var(--font-mono);
+}
+.dl-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.dl-list {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.dl-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-bottom: 1px solid var(--border); min-width: 0;
+}
+.dl-item:last-child { border-bottom: none; }
+.dl-star {
+  flex: none; border: none; background: transparent; cursor: pointer;
+  font-size: 17px; line-height: 1; padding: 4px 2px;
+  color: var(--border-strong); transition: color .15s var(--ease);
+}
+.dl-star:hover { color: var(--warning); }
+.dl-star-on { color: var(--warning); }
+/* Una sola linea: nombre + etiqueta del enlace al lado, no apilados. */
+.dl-item-body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; text-decoration: none; }
+.dl-item-name { flex: none; max-width: 40%; font-size: 13.5px; font-weight: 600; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-item-body:hover .dl-item-name { text-decoration: underline; }
+.dl-item-url { flex: 1; min-width: 0; font-size: 12px; color: var(--text-3); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-tag {
+  flex: none; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--text-3); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dl-item-actions { flex: none; display: flex; gap: 4px; opacity: 0; transition: opacity .15s var(--ease); }
+.dl-item:hover .dl-item-actions, .dl-item:focus-within .dl-item-actions { opacity: 1; }
+.dl-mini { padding: 4px 10px; font-size: 12px; }
+
+.dl-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; padding: 40px 24px;
+}
+.dl-empty-title { font-size: 14px; color: var(--text-2); }
+.dl-empty-sub { font-size: 12.5px; color: var(--text-3); max-width: 460px; }
+
+@media (max-width: 700px) {
+  .dl-item { flex-wrap: wrap; }
+  .dl-item-actions { opacity: 1; }
+  .dl-tag { max-width: 110px; }
+}
+
 /* Portatiles y ventanas medianas: menos padding, barra lateral mas estrecha.
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque

@@ -9,7 +9,7 @@ import { PromptEditor } from './PromptEditor';
 
 type ViewId =
   | 'acceptance' | 'testcase' | 'bugreport' | 'testdata' | 'userstory' | 'refiner'
-  | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker' | 'designvalidator';
+  | 'edgecase' | 'converter' | 'sprinttracker' | 'regressiontracker' | 'designvalidator' | 'doclibrary';
 
 interface LandingScreenProps {
   onSelect: (view: ViewId) => void;
@@ -38,6 +38,7 @@ const tools: { id: ViewId; icon: (p: { size?: number }) => JSX.Element; titleKey
   { id: 'converter', icon: Icon.converter, titleKey: 'landing.tool.converter', descKey: 'landing.tool.converterDesc', family: 'util' },
   { id: 'sprinttracker', icon: Icon.sprint, titleKey: 'landing.tool.sprinttracker', descKey: 'landing.tool.sprinttrackerDesc', family: 'tracking' },
   { id: 'regressiontracker', icon: Icon.regression, titleKey: 'landing.tool.regressiontracker', descKey: 'landing.tool.regressiontrackerDesc', family: 'tracking' },
+  { id: 'doclibrary', icon: Icon.docs, titleKey: 'landing.tool.doclibrary', descKey: 'landing.tool.doclibraryDesc', family: 'util' },
 ];
 
 /** Orden de los chips: primero las familias con mas herramientas. */

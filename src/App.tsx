@@ -25,9 +25,10 @@ import { downloadJson, toFilename } from './utils/download';
 import { I18nProvider } from './i18n/I18nContext';
 import { requestPersistentStorage } from './services/persistence';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { DocLibrary } from './components/DocLibrary';
 import type { ViewType } from './config/constants';
 
-const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter', 'designvalidator'];
+const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter', 'designvalidator', 'doclibrary'];
 
 function getViewFromHash(): ViewType {
   const hash = window.location.hash.replace('#/', '') || 'landing';
@@ -238,6 +239,8 @@ export default function App() {
               onSwitchToVisionModel={() => { setProvider('openrouter'); setModel('google/gemini-2.5-flash'); }}
               onSaveArtifact={(input, output) => saveArtifact({ tool: 'designvalidator', input, output })} />
           )}
+
+          {view === 'doclibrary' && <DocLibrary />}
         </ErrorBoundary>
       </main>
       </div>
