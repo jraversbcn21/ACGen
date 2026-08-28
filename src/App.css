@@ -784,14 +784,6 @@ body {
   .br-root {
     min-height: 0;
   }
-  .br-compact-field,
-  .br-compact-field-wide {
-    min-width: 100%;
-    max-width: 100%;
-  }
-  .td-form-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* === SPRINT TRACKER === */
