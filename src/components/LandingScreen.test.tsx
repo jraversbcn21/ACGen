@@ -25,10 +25,10 @@ function renderLanding(props: Partial<Parameters<typeof LandingScreen>[0]> = {})
 describe('LandingScreen layout (consola + tarjetas)', () => {
   afterEach(() => localStorage.clear());
 
-  it('renders the 11 tool buttons', () => {
+  it('renders the 12 tool buttons', () => {
     renderLanding();
     const list = document.querySelector('.tool-list');
-    expect(list?.querySelectorAll('.tool-row')).toHaveLength(11);
+    expect(list?.querySelectorAll('.tool-row')).toHaveLength(12);
   });
 
   it('wraps the console block and the grid in .landing', () => {
@@ -41,11 +41,11 @@ describe('LandingScreen layout (consola + tarjetas)', () => {
     expect(landing?.querySelector('.tool-list')).not.toBeNull();
   });
 
-  it('renders exactly the 11 tool cells with no placeholder slot', () => {
+  it('renders exactly the 12 tool cells with no placeholder slot', () => {
     renderLanding();
     const list = document.querySelector('.tool-list');
     expect(list?.querySelector('.add-slot')).toBeNull();
-    expect(list?.children).toHaveLength(11);
+    expect(list?.children).toHaveLength(12);
   });
 
   it('still fires onSelect when a tool is clicked', () => {
@@ -97,7 +97,7 @@ describe('LandingScreen — buscador y filtros', () => {
     fireEvent.change(search(), { target: { value: 'gherkin' } });
     fireEvent.keyDown(search(), { key: 'Escape' });
     expect(search().value).toBe('');
-    expect(document.querySelectorAll('.tool-row')).toHaveLength(11);
+    expect(document.querySelectorAll('.tool-row')).toHaveLength(12);
   });
 
   it('el chip de familia filtra y se puede desactivar', () => {
@@ -110,7 +110,7 @@ describe('LandingScreen — buscador y filtros', () => {
     expect(document.querySelectorAll('.tool-row')).toHaveLength(2);
     expect(chip.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(chip);
-    expect(document.querySelectorAll('.tool-row')).toHaveLength(11);
+    expect(document.querySelectorAll('.tool-row')).toHaveLength(12);
   });
 
   it('conserva el numero del catalogo al filtrar', () => {
