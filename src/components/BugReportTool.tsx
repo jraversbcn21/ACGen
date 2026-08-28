@@ -17,6 +17,7 @@ import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import { parseDeviceList } from '../types/context';
 import type { BugReportFormData, PlatformId } from '../types';
+import { generateShortcutLabel } from '../utils/shortcut';
 
 interface BugReportToolProps {
   apiKey: string;
@@ -400,7 +401,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
           <div className="br-desc">
             <label htmlFor="br-description" className="br-desc-label">
               {t('bugreport.description')}
-              <span className="hint">⌘⏎</span>
+              <span className="hint">{generateShortcutLabel()}</span>
             </label>
             <textarea
               id="br-description"

@@ -10,6 +10,7 @@ import { ImageDropzone } from './ImageDropzone';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import type { ContentPart, DesignReport } from '../types';
+import { generateShortcutLabel } from '../utils/shortcut';
 
 interface DesignValidatorToolProps {
   apiKey: string;
@@ -120,7 +121,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
           <div className="dv-field dv-field--crit">
             <label htmlFor="dv-criteria" className="dv-label">
               {t('designvalidator.criteriaLabel')}
-              <span className="hint">⌘⏎</span>
+              <span className="hint">{generateShortcutLabel()}</span>
             </label>
             <textarea
               id="dv-criteria"

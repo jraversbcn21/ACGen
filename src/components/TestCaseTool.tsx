@@ -14,6 +14,7 @@ import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus, TestCaseData } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateShortcutLabel } from '../utils/shortcut';
 
 function priorityClass(p: string): string {
   if (p === 'Alta' || p === 'High') return 'badge-high';
@@ -201,7 +202,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       <div className="tc-field">
         <label htmlFor="testcase-input" className="tc-label">
           {t('testcase.instructions')}
-          <span className="hint">⌘⏎</span>
+          <span className="hint">{generateShortcutLabel()}</span>
         </label>
         <textarea
           id="testcase-input"

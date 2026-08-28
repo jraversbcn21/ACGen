@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
@@ -11,12 +11,46 @@ import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import { categoryBadge } from '../utils/categoryBadge';
+import { generateShortcutLabel } from '../utils/shortcut';
+
+type EdgeCase = { categoria: string; escenario: string; resultadoEsperado: string };
+
+/**
+ * 10b: la entrada es una tarjeta compacta arriba con la botonera a su derecha y
+ * la tabla ocupa todo el ancho y toda la altura restante. Antes el textarea y
+ * la caja de resultado se repartian el alto a ciegas y dejaban un hueco vacio.
+ */
+function formatAsTSV(rows: EdgeCase[], header: [string, string, string]): string {
+  const body = rows.map((r) =>
+    [r.categoria, r.escenario, r.resultadoEsperado]
+      .map((v) => (v || '').replace(/\t/g, ' ').replace(/\n/g, ' '))
+      .join('\t'),
+  );
+  return [header.join('\t'), ...body].join('\n');
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
 
 export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {
   const [requirement, setRequirement] = useState('');
-  const [edgeCases, setEdgeCases] = useState<Array<{ categoria: string; escenario: string; resultadoEsperado: string }>>([]);
+  const [edgeCases, setEdgeCases] = useState<EdgeCase[]>([]);
+  const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { isStreaming, stream } = useStreamingResponse();
   const { toast, showToast } = useToast();
@@ -27,11 +61,20 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [prefill]);
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
+  const hasOutput = edgeCases.length > 0;
+
+  /** Recuento por categoria para la cabecera del panel de resultados. */
+  const categories = useMemo(() => {
+    const acc = new Map<string, number>();
+    edgeCases.forEach((ec) => acc.set(ec.categoria, (acc.get(ec.categoria) ?? 0) + 1));
+    return Array.from(acc, ([label, count]) => ({ label, count, badge: categoryBadge(label) }));
+  }, [edgeCases]);
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     setLoading(true);
     setError(null);
     setEdgeCases([]);
+    setGeneratedModel(undefined);
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('edgecase'), 'testcase', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
@@ -39,7 +82,8 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         if (!items || items.length === 0) {
           throw new Error(t('error.noEdgeCases'));
         }
-        setEdgeCases(items as Array<{ categoria: string; escenario: string; resultadoEsperado: string }>);
+        setEdgeCases(items as EdgeCase[]);
+        setGeneratedModel(model);
         onSaveArtifact?.(effectiveInput, fullText);
       });
     } catch (err) {
@@ -69,11 +113,18 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     setRequirement('');
     setEdgeCases([]);
     setError(null);
+    setCopied(false);
     showToast(t('common.cleared'), () => {
       setRequirement(prev);
       setEdgeCases(prevCases);
     });
   }, [requirement, edgeCases, showToast, t]);
+
+  const handleCopy = useCallback(async () => {
+    await copyText(formatAsTSV(edgeCases, [t('edgecase.category'), t('edgecase.scenario'), t('edgecase.expectedResult')]));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [edgeCases, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -87,44 +138,95 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [canGenerate, loading, isStreaming, handleGenerate]);
 
   return (
-    <div>
-      <div className="tool-fill">
-        <div className="tool-split">
-          <div className="tool-main">
+    <div className="ec-root">
+      <header className="tool-head">
+        <div className="tool-head-main">
+          <h1 className="tool-title">{t('edgecase.title')}</h1>
+          <p className="tool-sub">{t('edgecase.subtitle')}</p>
+        </div>
+        {generatedModel && (
+          <div className="tool-head-aside">
+            <span className="model-badge-new">{t('header.model')}: {generatedModel}</span>
+          </div>
+        )}
+      </header>
+
+      {/* ---------- entrada compacta + botonera ---------- */}
+      <div className="ec-input-row">
+        <div className="ec-pane ec-input-pane">
+          <div className="ec-pane-head">
+            <span className="ec-pane-title">{t('edgecase.functionality')}</span>
+            <span className="ec-pane-hint">{t('edgecase.chars', { n: String(requirement.length) })} · {generateShortcutLabel()}</span>
+          </div>
+          <div className="ec-input-body">
             <textarea
               value={requirement}
               onChange={(e) => setRequirement(e.target.value)}
               placeholder={t('edgecase.inputPlaceholder')}
-              className="field-textarea"
-              style={{ minHeight: 'clamp(140px, 24vh, 220px)' }}
-            />
-          </div>
-          <div className="actions-col">
-            <ConfidentialToggle
-              view="edgecase"
-              text={requirement}
-              onReview={() => setConf(anonymize(requirement))}
-            />
-            <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && edgeCases.length === 0}>
-              {t('common.clear')}
-            </button>
-            <GenerateButton
-              onClick={handleGenerate}
-              disabled={!canGenerate || isStreaming}
-              loading={loading || isStreaming}
+              className="field-textarea ec-input-ta"
+              aria-label={t('edgecase.functionality')}
             />
           </div>
         </div>
 
-        <div className="result-box">
-          {edgeCases.length === 0 ? (
-            <span className="result-box-placeholder">{t('edgecase.outputPlaceholder')}</span>
+        <div className="ec-actions">
+          <ConfidentialToggle
+            view="edgecase"
+            text={requirement}
+            onReview={() => setConf(anonymize(requirement))}
+          />
+          <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !hasOutput}>
+            {t('common.clear')}
+          </button>
+          <GenerateButton
+            onClick={handleGenerate}
+            disabled={!canGenerate || isStreaming}
+            loading={loading || isStreaming}
+          />
+        </div>
+      </div>
+
+      {/* ---------- tabla a todo el ancho ---------- */}
+      <div className="ec-panel">
+        <div className="ec-panel-head">
+          <span className="ec-panel-title">
+            {t('edgecase.generated')}
+            {hasOutput && <span className="history-count">{edgeCases.length}</span>}
+            {hasOutput && (
+              <span className="ec-cats">
+                {categories.map((c) => (
+                  <span className={`badge ${c.badge} ec-cat`} key={c.label}>
+                    {c.label}
+                    <span className="ec-cat-count">{c.count}</span>
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
+          <div className="ec-panel-actions">
+            <button
+              type="button"
+              className={`btn-ghost ${copied ? 'btn-copied' : ''}`}
+              onClick={handleCopy}
+              disabled={!hasOutput}
+            >
+              {copied ? t('common.copied') : t('edgecase.copyAll')}
+            </button>
+          </div>
+        </div>
+
+        <div className="ec-panel-body">
+          {!hasOutput ? (
+            <div className="ec-empty">
+              <span className="ec-empty-title">{t('edgecase.outputPlaceholder')}</span>
+              <span className="ec-empty-sub">{t('edgecase.emptyHint')}</span>
+            </div>
           ) : (
             <div className="data-table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{t('edgecase.category')}</th>
+                    <th className="ec-cat-col">{t('edgecase.category')}</th>
                     <th>{t('edgecase.scenario')}</th>
                     <th>{t('edgecase.expectedResult')}</th>
                   </tr>
@@ -132,7 +234,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
                 <tbody>
                   {edgeCases.map((ec, idx) => (
                     <tr key={idx}>
-                      <td><span className={`badge ${categoryBadge(ec.categoria)}`}>{ec.categoria}</span></td>
+                      <td className="ec-cat-col"><span className={`badge ${categoryBadge(ec.categoria)}`}>{ec.categoria}</span></td>
                       <td>{ec.escenario}</td>
                       <td>{ec.resultadoEsperado}</td>
                     </tr>
@@ -143,6 +245,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           )}
         </div>
       </div>
+
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       <Toast toast={toast} />
       {conf && (
