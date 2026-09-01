@@ -1607,7 +1607,7 @@ td:hover .cell-open-link {
 
 /* actividad reciente */
 .sp-act-row {
-  display: grid; grid-template-columns: minmax(90px, 130px) minmax(80px, 140px) 100px 1fr;
+  display: grid; grid-template-columns: max-content minmax(80px, 140px) 100px 1fr;
   align-items: center; gap: 12px;
   padding: 10px 0; border-bottom: 1px solid var(--border);
   font-size: 13px; min-width: 0;
@@ -1639,6 +1639,7 @@ td:hover .cell-open-link {
   color: var(--text-3); padding: 10px 8px 4px; margin: 0;
 }
 .sp-item {
+  position: relative;
   width: 100%; display: flex; align-items: center; gap: 10px;
   padding: 9px 10px; border: none; border-radius: var(--radius-sm);
   background: transparent; text-align: left; cursor: pointer;
@@ -1654,12 +1655,18 @@ td:hover .cell-open-link {
 .sp-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .sp-item-name {
   font-size: 13px; font-weight: 600; color: var(--text-2);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  white-space: nowrap;
 }
 .sp-item-selected .sp-item-name { color: var(--text); font-weight: 700; }
 .sp-item-meta { font-size: 11.5px; color: var(--text-3); font-family: var(--font-mono); }
-.sp-item-actions { flex: none; display: flex; gap: 4px; opacity: 0; transition: opacity .15s var(--ease); }
-.sp-item:hover .sp-item-actions, .sp-item:focus-within .sp-item-actions { opacity: 1; }
+/* Superpuestas, no en flujo: si reservan sitio estrujan el nombre a elipsis. */
+.sp-item-actions {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: flex; gap: 4px; padding: 2px; border-radius: 8px;
+  background: var(--surface-2); box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  opacity: 0; pointer-events: none; transition: opacity .15s var(--ease);
+}
+.sp-item:hover .sp-item-actions, .sp-item:focus-within .sp-item-actions { opacity: 1; pointer-events: auto; }
 .sp-mini {
   border: none; background: transparent; color: var(--text-3);
   font-size: 11.5px; padding: 3px 7px; border-radius: 6px; cursor: pointer;
