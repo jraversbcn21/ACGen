@@ -1605,9 +1605,11 @@ td:hover .cell-open-link {
 .sp-bar-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--accent); border-radius: 999px; }
 .sp-bar-value { font-size: 13px; color: var(--text-2); font-family: var(--font-mono); text-align: right; }
 
-/* actividad reciente */
+/* actividad reciente — cada fila es su propio grid, asi que las columnas de la
+   derecha van con ancho FIJO para quedar alineadas entre filas; solo el ticket
+   es flexible (crece hasta su limite y de ahi elipsis). */
 .sp-act-row {
-  display: grid; grid-template-columns: max-content minmax(80px, 140px) 100px 1fr;
+  display: grid; grid-template-columns: minmax(0, 1fr) 110px 95px 110px;
   align-items: center; gap: 12px;
   padding: 10px 0; border-bottom: 1px solid var(--border);
   font-size: 13px; min-width: 0;
