@@ -59,6 +59,10 @@ check('6. Escribir no altera el dato', (await celda.inputValue()) === 'ACG-1', a
 // Vuelve y desarchiva.
 await page.getByRole('button', { name: /Volver|Back/ }).click();
 await page.waitForTimeout(300);
+// Desde la #49 las acciones del item llevan pointer-events: none hasta el
+// hover; Playwright hace el hit-test antes de mover el raton, asi que hay
+// que posarse sobre el item primero.
+await page.locator('.sp-item', { hasText: 'Sprint de prueba' }).hover();
 await page.getByRole('button', { name: 'Desarchivar' }).click();
 await page.waitForTimeout(400);
 check('7. Vuelve a Activo', await page.getByRole('button', { name: 'Archivar' }).isVisible());
