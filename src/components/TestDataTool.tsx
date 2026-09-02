@@ -123,7 +123,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { isStreaming, stream } = useStreamingResponse();
+  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   const canGenerate = apiKey.trim().length > 0;
@@ -162,7 +162,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setLoadingStatus('');
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
@@ -189,6 +189,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prevForm = formData;
     const prevData = generatedData;
     const prevModel = generatedModel;
@@ -203,7 +204,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
-  }, [formData, generatedData, generatedModel, showToast, t]);
+  }, [formData, generatedData, generatedModel, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));

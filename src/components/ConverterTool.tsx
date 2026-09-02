@@ -36,7 +36,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream } = useStreamingResponse();
+  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -55,7 +55,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, showToast, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const buildEffectiveInput = useCallback(
     () => `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`,
@@ -76,10 +76,11 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   }, [canGenerate, loading, isStreaming, buildEffectiveInput, doGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     setInput('');
     setResult('');
     showToast(t('common.cleared'));
-  }, [showToast, t]);
+  }, [resetStream, showToast, t]);
 
   // Intercambiar formatos mueve tambien el resultado a la entrada: es el gesto
   // util real (convertir de vuelta, o seguir encadenando desde lo generado).

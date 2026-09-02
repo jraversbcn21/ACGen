@@ -35,7 +35,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream } = useStreamingResponse();
+  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -78,7 +78,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, showToast, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -93,6 +93,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
   }, [canGenerate, loading, isStreaming, effectiveInput, doGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prev = { role, action, benefit, idea, result };
     setRole('');
     setAction('');
@@ -107,7 +108,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       setIdea(prev.idea);
       setResult(prev.result);
     });
-  }, [role, action, benefit, idea, result, showToast, t]);
+  }, [role, action, benefit, idea, result, resetStream, showToast, t]);
 
   const handleCopy = useCallback(async () => {
     try {
