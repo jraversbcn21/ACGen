@@ -426,7 +426,7 @@
   "backup.autoReconnect": "Reconectar fichero",
   "backup.autoError": "No se pudo escribir el auto-backup.",
   "profile.title": "Perfil del proyecto",
-  "profile.hint": "Estos valores se inyectan en los prompts de todas las herramientas. Ajústalos a tu producto: dominio, entorno, mercado, idioma y convenciones de datos de prueba. Deja un campo vacío para omitirlo de los prompts.",
+  "profile.hint": "Estos valores se inyectan en los prompts de todas las herramientas. Ajústalos a tu producto: dominio, entorno, mercado, idioma y convenciones de datos de prueba. Un campo vacío vuelve a su valor por defecto.",
   "profile.domain": "Dominio / industria",
   "profile.productType": "Tipo de producto",
   "profile.markets": "Mercados",
