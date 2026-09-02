@@ -1,17 +1,14 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { copyText } from '../utils/clipboard';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
 import { SUPPORTED_MARKETS, PLATFORMS, STORAGE_KEYS, IOS_DEVICES, ANDROID_DEVICES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useHistory } from '../hooks/useHistory';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
+import { useGenerator } from '../hooks/useGenerator';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -77,14 +74,10 @@ const DEFAULT_FORM: BugReportFormData = {
 export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact }: BugReportToolProps) {
   const [formData, setFormData] = useState<BugReportFormData>(DEFAULT_FORM);
   const [output, setOutput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
@@ -102,64 +95,36 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setFormData(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (isLoading || isStreaming) return;
-    setIsLoading(true);
-    setError(null);
-    setOutput('');
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('bugreport'), 'criteria', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        setOutput(fullText);
-        onSaveArtifact?.(effectiveInput, fullText);
-        addEntry(formData.description, fullText);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-    } finally {
-      setIsLoading(false);
-      setConf(null);
-    }
-  }, [isLoading, isStreaming, apiKey, model, formData.description, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || isLoading || isStreaming) return;
-    const userMessage = buildBugReportMessage(formData);
-    if (localStorage.getItem('acgen_confidential_bugreport') === 'true') {
-      const { text, map } = anonymize(userMessage);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(userMessage);
-  }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !isLoading) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, isLoading, handleGenerate]);
+  const historyInputRef = useRef('');
+  const gen = useGenerator<string>({
+    view: 'bugreport',
+    toolType: 'criteria',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => {
+      historyInputRef.current = formData.description;
+      return buildBugReportMessage(formData);
+    },
+    parse: (fullText) => fullText,
+    onResult: (fullText, { input: sent }) => {
+      setOutput(fullText);
+      onSaveArtifact?.(sent as string, fullText);
+      addEntry(historyInputRef.current, fullText);
+    },
+  });
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prevForm = formData;
     const prevOutput = output;
     setFormData(DEFAULT_FORM);
     setOutput('');
-    setError(null);
     setCopied(false);
     showToast(t('common.cleared'), () => {
       setFormData(prevForm);
       setOutput(prevOutput);
     });
-  }, [formData, output, resetStream, showToast, t]);
+  }, [formData, output, gen, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;
@@ -344,7 +309,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
             <ConfidentialToggle
               view="bugreport"
               text={buildBugReportMessage(formData)}
-              onReview={() => setConf(anonymize(buildBugReportMessage(formData)))}
+              onReview={gen.openReview}
             />
             <div className="br-actions-row">
               <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
@@ -357,9 +322,9 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
               </button>
             </div>
             <GenerateButton
-              onClick={handleGenerate}
-              disabled={!canGenerate || isStreaming}
-              loading={isLoading || isStreaming}
+              onClick={gen.handleGenerate}
+              disabled={!canGenerate || gen.isStreaming}
+              loading={gen.status === 'loading'}
             />
           </div>
         </div>
@@ -392,7 +357,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
           <div className="br-panel-body">
             <textarea
               id="br-output"
-              value={isStreaming ? streamText : output}
+              value={gen.isStreaming ? gen.streamText : output}
               readOnly
               className="field-textarea br-panel-ta"
               placeholder={t('bugreport.outputPlaceholder')}
@@ -401,7 +366,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
       {showHistory && (
         <HistoryModal
@@ -411,16 +376,8 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
           onClose={() => setShowHistory(false)}
         />
       )}
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );
