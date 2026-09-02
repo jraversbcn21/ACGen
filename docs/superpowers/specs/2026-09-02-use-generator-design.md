@@ -78,7 +78,7 @@ interface Generator {
   dismissError: () => void;
   handleGenerate: () => Promise<void>;
   review: { text: string; map: Record<string, string> } | null;
-  openReview: (text: string) => void;  // anonymize + abre el modal (badge "N sustituciones")
+  openReview: () => void;              // badge "N sustituciones": llama a buildInput() y abre el modal
   confirmReview: (edits: Record<string, string>) => void;
   cancelReview: () => void;
   clearGeneration: () => void;         // reset() del stream + status idle + error null + cierra el modal
@@ -106,7 +106,7 @@ const gen = useGenerator<TestCaseData[]>({
 });
 
 // JSX intacto, cableado al hook:
-<ConfidentialToggle view="testcase" text={input} onReview={() => gen.openReview(input)} />
+<ConfidentialToggle view="testcase" text={input} onReview={gen.openReview} />
 <GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming}
                 loading={gen.status === 'loading' && !gen.isStreaming} />
 <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
@@ -130,7 +130,12 @@ const gen = useGenerator<TestCaseData[]>({
   `t(err.message, err.params)` o `t('error.unexpected')`; con `onError` lo
   entrega ahí, si no lo pone en `error`; `status='error'`. En `finally`:
   cierra `review`.
-- `openReview(text)`: `setReview(anonymize(text))`. `confirmReview(edits)`:
+- `openReview()`: `setReview(anonymize(buildInput()))` — sin argumento a
+  propósito: el badge entra por aquí sin pasar por `handleGenerate`, y
+  `buildInput` es donde el tool captura lo que necesita "al arrancar"
+  (historial, texto del artefacto); si el texto se construyera fuera, ese
+  ref quedaría sin escribir en este camino (hallazgo de la review de la
+  Tarea 5, decisión de Jorge). `confirmReview(edits)`:
   `applyPlaceholderEdits` → `run(text, map)` → cierra el modal.
   `cancelReview`: cierra el modal.
 - `clearGeneration`: `reset()` de `useStreamingResponse` (invalida el stream en
