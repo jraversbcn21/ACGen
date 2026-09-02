@@ -53,7 +53,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream } = useStreamingResponse();
+  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -84,7 +84,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, showToast, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -119,6 +119,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
   }, [result]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prev = requirement;
     const prevResult = result;
     setRequirement('');
@@ -127,7 +128,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
       setRequirement(prev);
       setResult(prevResult);
     });
-  }, [requirement, result, showToast, t]);
+  }, [requirement, result, resetStream, showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

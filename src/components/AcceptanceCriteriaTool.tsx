@@ -78,7 +78,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       setLoadingStatus('');
       setConf(null);
     }
-  }, [apiKey, model, requirements, profile, stream, addEntry, t]);
+  }, [apiKey, model, requirements, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
 
   const buildEffectiveInput = useCallback(() => {
     const inputText = additionalContext.trim()
@@ -122,7 +122,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       setReasoning(prevReasoning);
       setAdditionalContext(prevContext);
     });
-  }, [requirements, criteria, reasoning, additionalContext, showToast]);
+  }, [requirements, criteria, reasoning, additionalContext, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.acceptance;

@@ -86,7 +86,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.BUG_HISTORY);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { text: streamText, isStreaming, stream } = useStreamingResponse();
+  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   const isWeb = formData.platform === 'web-desktop' || formData.platform === 'web-mobile';
@@ -135,7 +135,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setLoadingStatus('');
       setConf(null);
     }
-  }, [apiKey, model, formData.description, profile, stream, addEntry, t]);
+  }, [apiKey, model, formData.description, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;
@@ -162,6 +162,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   }, [canGenerate, isLoading, handleGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prevForm = formData;
     const prevOutput = output;
     const prevReasoning = reasoning;
@@ -175,7 +176,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setOutput(prevOutput);
       setReasoning(prevReasoning);
     });
-  }, [formData, output, reasoning, showToast, t]);
+  }, [formData, output, reasoning, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;

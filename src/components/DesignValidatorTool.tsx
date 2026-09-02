@@ -29,7 +29,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
   const [report, setReport] = useState<DesignReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { isStreaming, stream } = useStreamingResponse();
+  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -65,6 +65,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
   }, [canGenerate, loading, isStreaming, image, criteria, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prevCriteria = criteria;
     const prevImage = image;
     const prevReport = report;
@@ -77,7 +78,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
       setImage(prevImage);
       setReport(prevReport);
     });
-  }, [criteria, image, report, showToast, t]);
+  }, [criteria, image, report, resetStream, showToast, t]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

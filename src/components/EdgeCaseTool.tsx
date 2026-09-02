@@ -52,7 +52,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { isStreaming, stream } = useStreamingResponse();
+  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -93,7 +93,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;
@@ -108,6 +108,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [canGenerate, loading, isStreaming, requirement, doGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prev = requirement;
     const prevCases = edgeCases;
     setRequirement('');
@@ -118,7 +119,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setRequirement(prev);
       setEdgeCases(prevCases);
     });
-  }, [requirement, edgeCases, showToast, t]);
+  }, [requirement, edgeCases, resetStream, showToast, t]);
 
   const handleCopy = useCallback(async () => {
     await copyText(formatAsTSV(edgeCases, [t('edgecase.category'), t('edgecase.scenario'), t('edgecase.expectedResult')]));

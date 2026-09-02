@@ -45,7 +45,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const [copied, setCopied] = useState(false);
   const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { isStreaming, stream } = useStreamingResponse();
+  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     } finally {
       setConf(null);
     }
-  }, [apiKey, model, profile, stream, t]);
+  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || status === 'loading' || isStreaming) return;
@@ -107,6 +107,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [canGenerate, status, handleGenerate]);
 
   const handleClear = useCallback(() => {
+    resetStream();
     const prevInput = input;
     const prevTestCases = testCases;
     const prevModel = generatedModel;
@@ -121,7 +122,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setTestCases(prevTestCases);
       setGeneratedModel(prevModel);
     });
-  }, [input, testCases, generatedModel, showToast, t]);
+  }, [input, testCases, generatedModel, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.testcase;
