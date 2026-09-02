@@ -1,6 +1,7 @@
 // src/components/AnonymizerReview.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n/I18nContext';
+import { placeholderEditErrors } from '../services/anonymizer';
 
 interface AnonymizerReviewProps {
   /** placeholder -> original value detected in the input. */
@@ -13,6 +14,7 @@ interface AnonymizerReviewProps {
 export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewProps) {
   const entries = Object.entries(map);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const errors = useMemo(() => placeholderEditErrors(map, edits), [map, edits]);
   const t = useT();
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
                       type="text"
                       value={edits[placeholder] ?? placeholder}
                       onChange={(e) => setEdits(prev => ({ ...prev, [placeholder]: e.target.value }))}
+                      aria-invalid={errors.has(placeholder)}
                       className="field-input"
                       style={{ fontFamily: 'var(--font-mono)', fontSize: 13, width: '100%' }}
                     />
@@ -54,9 +57,12 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
             </tbody>
           </table>
         </div>
+        {errors.size > 0 && (
+          <p style={{ margin: '0 0 12px', color: 'var(--danger)', fontSize: 13 }}>{t('confidential.renameHint')}</p>
+        )}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button type="button" className="btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
-          <button type="button" className="btn-primary" onClick={() => onConfirm(edits)}>
+          <button type="button" className="btn-primary" disabled={errors.size > 0} onClick={() => onConfirm(edits)}>
             {t('confidential.confirmSend')}
           </button>
         </div>

@@ -71,6 +71,26 @@ export function applyPlaceholderEdits(
   return { text: result, map: nextMap };
 }
 
+/** Forma que debe conservar un rename: [NOMBRE], sin espacios ni corchetes dentro. */
+const PLACEHOLDER_SHAPE = /^\[[^[\]\s]+\]$/;
+
+/**
+ * Placeholders cuyo rename del modal de revision no es seguro. Sin la forma
+ * [NOMBRE], cualquier palabra igual del texto generado se restauraria a un dato
+ * real ("email" -> la direccion); y dos claves iguales pisan el mapa, asi que la
+ * segunda direccion se pierde. Un rename en blanco se ignora, no es error.
+ */
+export function placeholderEditErrors(map: SubMap, edits: Record<string, string>): Set<string> {
+  const keys = Object.keys(map);
+  const finalKey = (p: string) => edits[p]?.trim() || p;
+  const errors = new Set<string>();
+  for (const p of keys) {
+    const k = finalKey(p);
+    if (!PLACEHOLDER_SHAPE.test(k) || keys.some((q) => q !== p && finalKey(q) === k)) errors.add(p);
+  }
+  return errors;
+}
+
 /** A placeholder mid-stream: `[`, then the prefix, then `_`, then the counter. */
 const PARTIAL_PLACEHOLDER = /\[[A-Z]*(?:_\d*)?$/;
 

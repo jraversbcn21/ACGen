@@ -1,6 +1,6 @@
 // src/services/anonymizer.test.ts
 import { describe, it, expect } from 'vitest';
-import { anonymize, deanonymize, applyPlaceholderEdits, splitPendingPlaceholder } from './anonymizer';
+import { anonymize, deanonymize, applyPlaceholderEdits, placeholderEditErrors, splitPendingPlaceholder } from './anonymizer';
 
 describe('anonymize', () => {
   it('replaces emails with [EMAIL_N] placeholders', () => {
@@ -229,5 +229,30 @@ describe('splitPendingPlaceholder', () => {
 
   it('con claves del mapa, las claves por defecto [PREFIX_n] siguen protegidas', () => {
     expect(splitPendingPlaceholder('Contacta a [EMA', ['[EMAIL_1]'])).toEqual(['Contacta a ', '[EMA']);
+  });
+});
+
+describe('placeholderEditErrors', () => {
+  const map = { '[EMAIL_1]': 'a@x.com', '[EMAIL_2]': 'b@y.com' };
+
+  it('acepta renames con forma [NOMBRE] y unicos', () => {
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': '[PERSONA]', '[EMAIL_2]': '[DESTINO]' })).toEqual(new Set());
+  });
+
+  it('un rename sin corchetes colisiona con palabras normales del output', () => {
+    // "email" reemplazaria cada "email" del texto generado por la direccion real.
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': 'email' })).toEqual(new Set(['[EMAIL_1]']));
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': 'EMAIL' })).toEqual(new Set(['[EMAIL_1]']));
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': '[con espacio]' })).toEqual(new Set(['[EMAIL_1]']));
+  });
+
+  it('un rename que repite otra clave pisaria el mapa de restauracion', () => {
+    // [EMAIL_1] -> [EMAIL_2]: ambas ocurrencias restaurarian a b@y.com y a@x.com se perderia.
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': '[EMAIL_2]' })).toEqual(new Set(['[EMAIL_1]', '[EMAIL_2]']));
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': '[X]', '[EMAIL_2]': '[X]' })).toEqual(new Set(['[EMAIL_1]', '[EMAIL_2]']));
+  });
+
+  it('un rename en blanco no es error: se ignora y conserva el placeholder', () => {
+    expect(placeholderEditErrors(map, { '[EMAIL_1]': '   ' })).toEqual(new Set());
   });
 });

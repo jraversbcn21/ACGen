@@ -2094,6 +2094,9 @@ td:hover .cell-open-link {
    Al final del fichero a proposito: las reglas base de .sidebar y .app-layout
    .container viven mas abajo que el resto y ganarian por cascada si este bloque
    estuviera antes. */
+/* Campo con valor invalido (modal de revision confidencial, URL del proveedor). */
+.field-input[aria-invalid="true"] { border-color: var(--danger); }
+
 @media (max-width: 1200px) {
   .app-layout .container { padding: 20px; }
   .sidebar { width: 190px; }

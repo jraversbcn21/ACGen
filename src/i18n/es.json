@@ -268,6 +268,7 @@
   "confidential.original": "Original",
   "confidential.sentAs": "Se enviara como",
   "confidential.confirmSend": "Confirmar y enviar",
+  "confidential.renameHint": "Cada reemplazo debe tener la forma [NOMBRE], sin espacios y sin repetirse.",
   "error.apiKey": "API Key invalida. Verifica tu clave e intenta de nuevo.",
   "error.rateLimit": "Limite de peticiones alcanzado. Espera unos segundos y vuelve a intentar.",
   "error.modelDecommissioned": "El modelo seleccionado ya no esta disponible. Por favor selecciona otro modelo.",
