@@ -297,3 +297,13 @@ describe('BackupMenu', () => {
     });
   });
 });
+
+describe('BackupMenu — auto-backup sin salida', () => {
+  it('en permissionNeeded tambien se puede desactivar el auto-backup, no solo reconectar', async () => {
+    mockedAutoBackup.isFileSystemAccessSupported.mockReturnValue(true);
+    mockedAutoBackup.loadHandle.mockResolvedValue(fakeHandle({ queryPermission: vi.fn().mockResolvedValue('prompt') }));
+    renderMenu();
+    openPanel();
+    expect(await screen.findByRole('button', { name: /^desactivar$/i })).toBeInTheDocument();
+  });
+});

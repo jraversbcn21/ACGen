@@ -331,3 +331,25 @@ describe('useAutoBackup', () => {
     expect(onSnapshot).not.toHaveBeenCalled();
   });
 });
+
+describe('useAutoBackup — fallos y cierre de pestana', () => {
+  it('un fallo al elegir o guardar el fichero deja status "error", no una promesa rechazada suelta', async () => {
+    mocked.chooseBackupFile.mockRejectedValue(new Error('boom'));
+    const { result } = renderHook(() => useAutoBackup());
+    await act(async () => {});
+    await act(async () => { await result.current.enable(); });
+    expect(result.current.status).toBe('error');
+  });
+
+  it('vacia el snapshot pendiente al ocultar la pagina (pagehide) en vez de perderlo', async () => {
+    const { handle } = await mountActive();
+    mocked.writeSnapshot.mockResolvedValue(true);
+    vi.useFakeTimers();
+    act(() => {
+      window.dispatchEvent(new CustomEvent('acgen-local-storage', { detail: { key: 'acgen_sprints', value: [] } }));
+    });
+    expect(mocked.writeSnapshot).not.toHaveBeenCalled();
+    act(() => { window.dispatchEvent(new Event('pagehide')); });
+    expect(mocked.writeSnapshot).toHaveBeenCalledWith(handle, expect.anything());
+  });
+});

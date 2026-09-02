@@ -1,13 +1,22 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import type { Workspace, Artifact } from '../types/workspace';
 
+const NO_WORKSPACES: Workspace[] = [];
+
 export function useWorkspace() {
-  const [workspaces, setWorkspaces] = useLocalStorage<Workspace[]>(
+  const [storedWorkspaces, setWorkspaces] = useLocalStorage<Workspace[]>(
     STORAGE_KEYS.WORKSPACES,
     [],
   );
+  // Storage editado a mano o una copia con `"{}"` pasan el parseo; sin esto
+  // `.map`/`.find` revientan la cabecera, que vive fuera del ErrorBoundary,
+  // en cada carga. Se repara una vez en storage para que no vuelva a pasar.
+  const workspaces = Array.isArray(storedWorkspaces) ? storedWorkspaces : NO_WORKSPACES;
+  useEffect(() => {
+    if (!Array.isArray(storedWorkspaces)) setWorkspaces([]);
+  }, [storedWorkspaces, setWorkspaces]);
   const [activeId, setActiveId] = useLocalStorage<string | null>(
     STORAGE_KEYS.ACTIVE_WORKSPACE,
     null,

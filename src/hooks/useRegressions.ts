@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { localTodayISO } from '../utils/dates';
+import { writeStorage } from '../services/persistence';
 import { useSchema } from './useSchema';
 
 const STORAGE_KEY = 'acgen_regressions';
@@ -98,11 +99,32 @@ export function filledTicketCount(r: Regression, fieldIds: string[]): number {
   return r.tickets.filter((t) => ticketRowHasContent(t, fieldIds)).length;
 }
 
-function persist(state: RegressionState): void {
+function hydrate(raw: string | null, platformIds: string[], fieldIds: string[]): RegressionState {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (err) {
-    console.error('No se pudo guardar el regression tracker en localStorage:', err);
+    if (!raw) return { regressions: emptyRegressions(platformIds), archived: [] };
+    const parsed = JSON.parse(raw);
+    const archived: ArchivedItem[] = Array.isArray(parsed.archived)
+      ? parsed.archived
+          .filter((a: unknown) => typeof a === 'object' && a !== null)
+          .map((a: ArchivedItem) =>
+            isLegacyArchived(a)
+              ? { ...a, board: { ...emptyBoard(platformIds), ...(a.board || {}) } }
+              : { ...a, regression: normalizeRegression(a.regression, fieldIds) }
+          )
+      : [];
+    const regressions = { ...emptyRegressions(platformIds), ...(parsed.regressions || {}) };
+    // Object.keys y no platformIds: normaliza tambien las plataformas
+    // huerfanas (retiradas del esquema) en vez de dejarlas sin normalizar.
+    for (const p of Object.keys(regressions)) {
+      regressions[p] = (regressions[p] || []).map((r: Partial<Regression>) => normalizeRegression(r, fieldIds));
+    }
+    return {
+      ...(parsed.board ? { board: parsed.board } : {}),
+      regressions,
+      archived,
+    };
+  } catch {
+    return { regressions: emptyRegressions(platformIds), archived: [] };
   }
 }
 
@@ -119,35 +141,9 @@ export function useRegressions() {
     [schema]
   );
 
-  const [state, setState] = useState<RegressionState>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { regressions: emptyRegressions(platformIds), archived: [] };
-      const parsed = JSON.parse(raw);
-      const archived: ArchivedItem[] = Array.isArray(parsed.archived)
-        ? parsed.archived
-            .filter((a: unknown) => typeof a === 'object' && a !== null)
-            .map((a: ArchivedItem) =>
-              isLegacyArchived(a)
-                ? { ...a, board: { ...emptyBoard(platformIds), ...(a.board || {}) } }
-                : { ...a, regression: normalizeRegression(a.regression, fieldIds) }
-            )
-        : [];
-      const regressions = { ...emptyRegressions(platformIds), ...(parsed.regressions || {}) };
-      // Object.keys y no platformIds: normaliza tambien las plataformas
-      // huerfanas (retiradas del esquema) en vez de dejarlas sin normalizar.
-      for (const p of Object.keys(regressions)) {
-        regressions[p] = (regressions[p] || []).map((r: Partial<Regression>) => normalizeRegression(r, fieldIds));
-      }
-      return {
-        ...(parsed.board ? { board: parsed.board } : {}),
-        regressions,
-        archived,
-      };
-    } catch {
-      return { regressions: emptyRegressions(platformIds), archived: [] };
-    }
-  });
+  const [state, setState] = useState<RegressionState>(() =>
+    hydrate(localStorage.getItem(STORAGE_KEY), platformIds, fieldIds)
+  );
 
   // Persistir como efecto mantiene los updaters puros; la identidad del último
   // estado persistido evita reescribir lo recién hidratado en el mount.
@@ -155,8 +151,21 @@ export function useRegressions() {
   useEffect(() => {
     if (lastPersisted.current === state) return;
     lastPersisted.current = state;
-    persist(state);
+    writeStorage(STORAGE_KEY, state);
   }, [state]);
+
+  // Otra pestana escribio (o restauro una copia): rehidratar en vez de pisarla
+  // con el estado local en la siguiente edicion. lastPersisted evita el rebote.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      const next = hydrate(e.newValue, platformIds, fieldIds);
+      lastPersisted.current = next;
+      setState(next);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [platformIds, fieldIds]);
 
   const mapPlatform = (
     prev: RegressionState,

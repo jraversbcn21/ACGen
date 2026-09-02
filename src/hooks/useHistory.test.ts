@@ -111,3 +111,16 @@ describe('useHistory', () => {
     setItemSpy.mockRestore();
   });
 });
+
+describe('useHistory — multi-pestana', () => {
+  it('resincroniza desde otra pestana (evento storage) en vez de pisar sus entradas', () => {
+    const { result } = renderHook(() => useHistory(KEY));
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: KEY,
+        newValue: JSON.stringify([{ id: 'x', timestamp: 1, inputPreview: 'a', output: 'b' }]),
+      }));
+    });
+    expect(result.current.history).toHaveLength(1);
+  });
+});

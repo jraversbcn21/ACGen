@@ -1,17 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { HistoryEntry } from '../types';
+import { writeStorage } from '../services/persistence';
 
 const MAX_ENTRIES = 10;
 
+function hydrate(raw: string | null): HistoryEntry[] {
+  try {
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function useHistory(storageKey: string) {
-  const [history, setHistory] = useState<HistoryEntry[]>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState<HistoryEntry[]>(() => hydrate(localStorage.getItem(storageKey)));
+
+  // Otra pestana escribio (o restauro una copia): rehidratar en vez de pisar
+  // sus entradas con el `prev` de esta pestana en el siguiente addEntry.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === storageKey) setHistory(hydrate(e.newValue));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [storageKey]);
 
   const addEntry = useCallback((input: string, output: string) => {
     const entry: HistoryEntry = {
@@ -22,11 +34,7 @@ export function useHistory(storageKey: string) {
     };
     setHistory(prev => {
       const updated = [entry, ...prev].slice(0, MAX_ENTRIES);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch (err) {
-        console.error(`No se pudo guardar el historial "${storageKey}" en localStorage:`, err);
-      }
+      writeStorage(storageKey, updated);
       return updated;
     });
   }, [storageKey]);

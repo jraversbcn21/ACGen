@@ -265,11 +265,22 @@ function hasHistoryEntries(key: string): boolean {
   }
 }
 
+function hasDocLinks(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DOC_LINKS);
+    if (!raw) return false;
+    const links = (JSON.parse(raw) as { links?: unknown }).links;
+    return Array.isArray(links) && links.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * True if there's anything a user would regret losing: a workspace artifact,
- * a sprint, regression-board progress (a filled cell or an archived run), or
- * a criteria/bug history entry. Corrupt or absent keys count as "no data"
- * for that source rather than throwing.
+ * a sprint, regression-board progress (a filled cell or an archived run), a
+ * criteria/bug history entry, or a saved documentation link. Corrupt or
+ * absent keys count as "no data" for that source rather than throwing.
  */
 export function hasSignificantData(): boolean {
   return (
@@ -277,7 +288,8 @@ export function hasSignificantData(): boolean {
     hasAnySprint() ||
     hasRegressionData() ||
     hasHistoryEntries(STORAGE_KEYS.CRITERIA_HISTORY) ||
-    hasHistoryEntries(STORAGE_KEYS.BUG_HISTORY)
+    hasHistoryEntries(STORAGE_KEYS.BUG_HISTORY) ||
+    hasDocLinks()
   );
 }
 

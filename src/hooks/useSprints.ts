@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { STORAGE_KEYS } from '../config/constants';
 import { localTodayISO } from '../utils/dates';
+import { writeStorage } from '../services/persistence';
 import { useSchema } from './useSchema';
 
 const STORAGE_KEY = 'acgen_sprints';
@@ -36,11 +37,16 @@ function gridFor(s: Sprint, tabId: TabId): string[][] {
   return s.tabGrid[tabId] || createEmptyGrid();
 }
 
-function persistSprints(sprints: Sprint[]): void {
+function hydrate(raw: string | null, tabIds: string[]): Sprint[] {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sprints));
-  } catch (err) {
-    console.error('No se pudieron guardar los sprints en localStorage:', err);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return parsed.map((s: Sprint) => ({
+      ...s,
+      tabGrid: { ...emptyTabGrid(tabIds), ...(s.tabGrid || {}) },
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -48,19 +54,7 @@ export function useSprints() {
   const [schema] = useSchema();
   const tabIds = useMemo(() => schema.sprint.tabs.map((t) => t.id), [schema]);
 
-  const [sprints, setSprints] = useState<Sprint[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return parsed.map((s: Sprint) => ({
-        ...s,
-        tabGrid: { ...emptyTabGrid(tabIds), ...(s.tabGrid || {}) },
-      }));
-    } catch {
-      return [];
-    }
-  });
+  const [sprints, setSprints] = useState<Sprint[]>(() => hydrate(localStorage.getItem(STORAGE_KEY), tabIds));
 
   // Persistir como efecto mantiene los updaters puros; la identidad del último
   // estado persistido evita reescribir lo recién hidratado en el mount.
@@ -68,8 +62,21 @@ export function useSprints() {
   useEffect(() => {
     if (lastPersisted.current === sprints) return;
     lastPersisted.current = sprints;
-    persistSprints(sprints);
+    writeStorage(STORAGE_KEY, sprints);
   }, [sprints]);
+
+  // Otra pestana escribio (o restauro una copia): rehidratar en vez de pisarla
+  // con el estado local en la siguiente edicion. lastPersisted evita el rebote.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      const next = hydrate(e.newValue, tabIds);
+      lastPersisted.current = next;
+      setSprints(next);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [tabIds]);
 
   const addSprint = useCallback((name: string, startDate: string) => {
     const sprint: Sprint = {

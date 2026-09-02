@@ -26,6 +26,7 @@ import { I18nProvider } from './i18n/I18nContext';
 import { requestPersistentStorage } from './services/persistence';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { DocLibrary } from './components/DocLibrary';
+import { StorageQuotaAlert } from './components/StorageQuotaAlert';
 import type { ViewType } from './config/constants';
 
 const VALID_VIEWS: ViewType[] = ['landing', 'acceptance', 'testcase', 'bugreport', 'testdata', 'sprinttracker', 'regressiontracker', 'userstory', 'refiner', 'edgecase', 'converter', 'designvalidator', 'doclibrary'];
@@ -144,6 +145,7 @@ export default function App() {
 
   return (
     <I18nProvider>
+    <StorageQuotaAlert />
     <div className="page">
       <UpdateBanner visible={needRefresh} onReload={reload} />
       <Header
