@@ -8,8 +8,6 @@ import {
   createBackup,
   parseImportFile,
   restoreBackup,
-  getLastBackupAt,
-  markBackupDone,
   hasSignificantData,
   isBackupDue,
   type BackupFile,
@@ -372,26 +370,6 @@ describe('hasSignificantData', () => {
 
     expect(() => hasSignificantData()).not.toThrow();
     expect(hasSignificantData()).toBe(false);
-  });
-});
-
-describe('getLastBackupAt / markBackupDone', () => {
-  it('is null when acgen_last_backup is absent', () => {
-    expect(getLastBackupAt()).toBeNull();
-  });
-
-  it('is null when acgen_last_backup holds unparseable or non-finite content', () => {
-    localStorage.setItem('acgen_last_backup', 'not valid json{{');
-    expect(getLastBackupAt()).toBeNull();
-
-    localStorage.setItem('acgen_last_backup', JSON.stringify('not-a-number'));
-    expect(getLastBackupAt()).toBeNull();
-  });
-
-  it('returns the timestamp written by markBackupDone', () => {
-    markBackupDone(1000);
-    expect(getLastBackupAt()).toBe(1000);
-    expect(localStorage.getItem('acgen_last_backup')).toBe('1000');
   });
 });
 

@@ -5,6 +5,8 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
 import type { I18nError } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { copyText } from '../utils/clipboard';
+import { downloadBlob } from '../utils/download';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
@@ -96,34 +98,15 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
-    try {
-      await navigator.clipboard.writeText(result);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = result;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyText(result);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [result]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
     const ext = outputFormat === 'markdown' ? 'md' : outputFormat === 'gerkin' ? 'feature' : 'txt';
-    const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `conversion.${ext}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(`conversion.${ext}`, result, 'text/plain;charset=utf-8');
   }, [result, outputFormat]);
 
   useEffect(() => {

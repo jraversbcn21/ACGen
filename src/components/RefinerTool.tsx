@@ -5,6 +5,7 @@ import { useToast, Toast } from './Toast';
 import { streamWithGroq, getPrompt } from '../services/apiService';
 import type { I18nError } from '../services/apiService';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { copyText } from '../utils/clipboard';
 import { ChainMenu } from './ChainMenu';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -101,22 +102,9 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
-    try {
-      await navigator.clipboard.writeText(result);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = result;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyText(result);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [result]);
 
   const handleClear = useCallback(() => {

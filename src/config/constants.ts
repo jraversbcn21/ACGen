@@ -73,6 +73,8 @@ export const STORAGE_KEYS = {
   LAST_BACKUP: 'acgen_last_backup',
   SCHEMA: 'acgen_schema',
   DOC_LINKS: 'acgen_doclinks',
+  SPRINTS: 'acgen_sprints',
+  REGRESSIONS: 'acgen_regressions',
 } as const;
 
 export const TEMPERATURE = 0.2;
