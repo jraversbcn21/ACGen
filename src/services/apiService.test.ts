@@ -382,9 +382,9 @@ describe('interpolateProfile v2', () => {
     expect(out).toBe('A UAT B FR C Login, Dashboard D inglés E usar tarjetas Stripe');
   });
 
-  it('un campo vacío se respeta (queda vacío en el prompt)', () => {
-    const out = interpolateProfile('X {entornos} Y', { ...DEFAULT_PROFILE, environments: '' });
-    expect(out).toBe('X  Y');
+  it('un campo vaciado cae al default (dentro de una frase, "" dejaba el prompt roto)', () => {
+    expect(interpolateProfile('X {entornos} Y', { ...DEFAULT_PROFILE, environments: '' })).toBe('X Pro Y');
+    expect(interpolateProfile('X {entornos} Y', { ...DEFAULT_PROFILE, environments: '   ' })).toBe('X Pro Y');
   });
 
   it('un campo con valor no-string cae al valor de DEFAULT_PROFILE', () => {

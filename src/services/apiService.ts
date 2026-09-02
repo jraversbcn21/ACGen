@@ -27,9 +27,12 @@ const PROFILE_PLACEHOLDERS = new Map<string, keyof ProjectProfile>([
 ]);
 
 export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
+  // Un campo vaciado cae al default, igual que uno ausente: los placeholders
+  // van dentro de frases ("el entorno siempre debe ser \"{entornos}\"") y un
+  // "" no los omitia, dejaba la frase rota. Mismo criterio que parseDeviceList.
   const p = (key: keyof ProjectProfile): string => {
     const value = profile[key];
-    return typeof value === 'string' ? value : DEFAULT_PROFILE[key];
+    return typeof value === 'string' && value.trim() ? value : DEFAULT_PROFILE[key];
   };
   // Replacer en funcion: un `$&` o `$$` escrito en el perfil se copia literal
   // en vez de interpretarse como patron de String.replace.
