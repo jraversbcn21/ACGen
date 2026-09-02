@@ -64,6 +64,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => requirement,
+    onStart: () => setResult(''),
     parse: (fullText) => stripMarkdown(fullText),
     onResult: (limpio, { input: sent }) => {
       setResult(limpio);

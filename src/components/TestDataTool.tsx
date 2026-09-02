@@ -128,6 +128,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => buildTestDataMessage(formData),
+    onStart: () => { setGeneratedData([]); setGeneratedModel(undefined); },
     parse: (fullText) => {
       const jsonArray = extractJsonArray(fullText);
       if (!jsonArray || jsonArray.length === 0) throw new Error('error.noTestData');

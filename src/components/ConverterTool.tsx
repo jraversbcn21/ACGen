@@ -49,6 +49,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => buildEffectiveInput(),
+    onStart: () => setResult(''),
     parse: (fullText) => fullText,
     onResult: (fullText, { input: sent }) => {
       setResult(fullText);

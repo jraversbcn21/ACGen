@@ -56,14 +56,20 @@ const TOOLS: {
   prepare?: () => Promise<void> | void;
   /** Como meter texto con PII para que el badge confidencial tenga algo que contar. */
   preparePii?: () => void;
+  /** Texto garantizado en pantalla tras una generacion con `output`. */
+  token: string;
+  /** true en los 5 tools de texto (muestran el stream en vivo); false en los 4 de JSON/informe. */
+  streams: boolean;
 }[] = [
-  { name: 'AcceptanceCriteriaTool', Tool: AcceptanceCriteriaTool, output: 'Criterios generados', confidentialKey: 'acgen_confidential_acceptance' },
-  { name: 'BugReportTool', Tool: BugReportTool, output: 'Informe generado', confidentialKey: 'acgen_confidential_bugreport' },
-  { name: 'ConverterTool', Tool: ConverterTool, output: 'Texto convertido', confidentialKey: 'acgen_confidential_converter' },
-  { name: 'RefinerTool', Tool: RefinerTool, output: 'Requisito refinado', confidentialKey: 'acgen_confidential_refiner' },
-  { name: 'UserStoryTool', Tool: UserStoryTool, output: 'Historia generada', confidentialKey: 'acgen_confidential_userstory' },
-  { name: 'TestCaseTool', Tool: TestCaseTool, output: DEMO_DATA.testcase.output, confidentialKey: 'acgen_confidential_testcase' },
-  { name: 'EdgeCaseTool', Tool: EdgeCaseTool, output: JSON.stringify([{ categoria: 'Limites', escenario: 'x', resultadoEsperado: 'y' }]), confidentialKey: 'acgen_confidential_edgecase' },
+  { name: 'AcceptanceCriteriaTool', Tool: AcceptanceCriteriaTool, output: 'Criterios generados', confidentialKey: 'acgen_confidential_acceptance', token: 'Criterios generados', streams: true },
+  { name: 'BugReportTool', Tool: BugReportTool, output: 'Informe generado', confidentialKey: 'acgen_confidential_bugreport', token: 'Informe generado', streams: true },
+  { name: 'ConverterTool', Tool: ConverterTool, output: 'Texto convertido', confidentialKey: 'acgen_confidential_converter', token: 'Texto convertido', streams: true },
+  { name: 'RefinerTool', Tool: RefinerTool, output: 'Requisito refinado', confidentialKey: 'acgen_confidential_refiner', token: 'Requisito refinado', streams: true },
+  // El output no puede coincidir literalmente con el titulo estatico del panel
+  // ("Historia generada", userstory.generated) o `visible()` seria siempre true.
+  { name: 'UserStoryTool', Tool: UserStoryTool, output: 'Como QA quiero validar el alta de usuario', confidentialKey: 'acgen_confidential_userstory', token: 'Como QA quiero validar el alta de usuario', streams: true },
+  { name: 'TestCaseTool', Tool: TestCaseTool, output: DEMO_DATA.testcase.output, confidentialKey: 'acgen_confidential_testcase', token: 'TC-001', streams: false },
+  { name: 'EdgeCaseTool', Tool: EdgeCaseTool, output: JSON.stringify([{ categoria: 'Limites', escenario: 'x', resultadoEsperado: 'y' }]), confidentialKey: 'acgen_confidential_edgecase', token: 'Limites', streams: false },
   {
     name: 'TestDataTool',
     Tool: TestDataTool,
@@ -72,6 +78,8 @@ const TOOLS: {
     // Sin texto que escribir; Limpiar solo se habilita si el formulario difiere del defecto.
     prepare: () => { fireEvent.change(document.getElementById('td-quantity')!, { target: { value: '5' } }); },
     preparePii: () => { fireEvent.change(document.getElementById('td-context')!, { target: { value: PII } }); },
+    token: 'Maria',
+    streams: false,
   },
   {
     name: 'DesignValidatorTool',
@@ -84,6 +92,8 @@ const TOOLS: {
       fireEvent.change(screen.getByLabelText(/adjuntar imagen/i), { target: { files: [new File(['x'], 'd.png', { type: 'image/png' })] } });
       await screen.findByText('d.png');
     },
+    token: 'Login',
+    streams: false,
   },
 ];
 
@@ -91,7 +101,14 @@ function fillEveryTextbox(text = 'algo') {
   screen.getAllByRole('textbox').forEach((el) => fireEvent.change(el, { target: { value: text } }));
 }
 
-describe.each(TOOLS)('$name — closures que no se quedan viejas', ({ Tool, output, confidentialKey, props, prepare, preparePii }) => {
+/** El resultado de texto vive en un `<textarea>`, cuyo `.value` no entra en
+ *  `textContent`; el de JSON/informe es DOM normal y si entra. */
+function visible(text: string): boolean {
+  if (document.body.textContent?.includes(text)) return true;
+  return [...document.querySelectorAll('textarea')].some((ta) => ta.value.includes(text));
+}
+
+describe.each(TOOLS)('$name — closures que no se quedan viejas', ({ Tool, output, confidentialKey, props, prepare, preparePii, token, streams }) => {
   const ui = (onSaveArtifact: (i: string, o: string) => void) => (
     <I18nProvider>
       <Tool apiKey="k" model="m" {...props} onSaveArtifact={onSaveArtifact} />
@@ -173,5 +190,39 @@ describe.each(TOOLS)('$name — closures que no se quedan viejas', ({ Tool, outp
     await act(async () => { release(); });
 
     expect(streamMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('al arrancar una segunda generacion, el resultado anterior desaparece antes del primer token (y donde hay vista de stream, el stream se ve)', async () => {
+    streamMock.mockImplementation(async function* () {
+      yield { token: output, done: false };
+      yield { token: '', done: true };
+    });
+    render(ui(vi.fn()));
+    await (prepare ?? fillEveryTextbox)();
+    fireEvent.click(screen.getByRole('button', { name: /generar/i }));
+    await waitFor(() => expect(visible(token)).toBe(true));
+
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    let finished = false;
+    streamMock.mockImplementation(async function* () {
+      try {
+        yield { token: streams ? 'STREAM-MARK' : output.slice(0, 1), done: false };
+        await gate;
+        yield { token: streams ? ' resto' : output.slice(1), done: false };
+        yield { token: '', done: true };
+      } finally {
+        finished = true;
+      }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /generar/i }));
+    await waitFor(() => expect(streamMock).toHaveBeenCalledTimes(2));
+    expect(visible(token)).toBe(false);
+    if (streams) {
+      await waitFor(() => expect(visible('STREAM-MARK')).toBe(true));
+    }
+
+    await act(async () => { release(); });
+    await waitFor(() => expect(finished).toBe(true));
   });
 });

@@ -19,6 +19,8 @@ export interface GeneratorConfig<T> {
   canGenerate: boolean;
   /** Texto (o partes multimodales) que se envia. Lo que el tool necesite "al arrancar" lo captura aqui. */
   buildInput: () => string | ContentPart[];
+  /** Solo cuando una generacion arranca de verdad (tras el guard): vaciar el resultado anterior. */
+  onStart?: () => void;
   /** Del texto completo al resultado tipado. Puede lanzar Error(i18nKey) con `params`. */
   parse: (fullText: string) => T;
   /** El tool guarda SU estado, su artefacto, su historial y su modelo. */
@@ -68,6 +70,7 @@ export function useGenerator<T>(config: GeneratorConfig<T>): Generator {
     const id = ++runIdRef.current;
     busyRef.current = true;
     const c = configRef.current;
+    c.onStart?.();
     setStatus('loading');
     setError(null);
     try {

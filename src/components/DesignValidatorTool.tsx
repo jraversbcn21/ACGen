@@ -45,7 +45,6 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
     canGenerate,
     confidential: false,
     buildInput: () => {
-      setReport(null);
       // canGenerate garantiza image !== null; el `!` es solo para el tipo.
       artifactInputRef.current = `${criteria}\n\n[Imagen adjunta: ${image!.name}]`;
       const parts: ContentPart[] = [
@@ -54,6 +53,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
       ];
       return parts;
     },
+    onStart: () => setReport(null),
     parse: (fullText) => validateDesignReport(extractJsonObject(fullText)),
     onResult: (parsed, { fullText }) => {
       setReport(parsed);

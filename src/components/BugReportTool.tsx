@@ -105,6 +105,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       historyInputRef.current = formData.description;
       return buildBugReportMessage(formData);
     },
+    onStart: () => setOutput(''),
     parse: (fullText) => fullText,
     onResult: (fullText, { input: sent }) => {
       setOutput(fullText);

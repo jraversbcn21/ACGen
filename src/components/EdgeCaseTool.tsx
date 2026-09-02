@@ -55,6 +55,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => requirement,
+    onStart: () => { setEdgeCases([]); setGeneratedModel(undefined); },
     parse: (fullText) => {
       const items = extractJsonArray(fullText);
       if (!items || items.length === 0) throw new Error('error.noEdgeCases');

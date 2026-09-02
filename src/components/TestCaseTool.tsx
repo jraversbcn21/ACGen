@@ -56,6 +56,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => input,
+    onStart: () => { setTestCases([]); setGeneratedModel(undefined); },
     parse: (fullText) => {
       const items = extractJsonArray(fullText);
       if (items.length === 0) throw new Error('error.noTestCases');

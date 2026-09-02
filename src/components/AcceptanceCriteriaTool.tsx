@@ -63,6 +63,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       historyInputRef.current = requirements; // el historial guarda el texto de cuando se pulso Generar
       return buildEffectiveInput();
     },
+    onStart: () => setCriteria(''),
     parse: (fullText) => fullText,
     onResult: (fullText, { input: sent }) => {
       setCriteria(fullText);

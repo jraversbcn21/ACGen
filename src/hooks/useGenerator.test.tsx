@@ -166,6 +166,35 @@ describe('useGenerator', () => {
     expect(result.current.status).toBe('success');
   });
 
+  it('onStart: se llama una vez por generacion real, antes que onResult; no al abrir la review ni si el guard bloquea', async () => {
+    yields('ok');
+    const onStart = vi.fn();
+    const onResult = vi.fn();
+    const { result, rerender } = renderHook(
+      (props: { can: boolean }) => useGenerator(config({ canGenerate: props.can, onStart, onResult })),
+      { wrapper, initialProps: { can: false } },
+    );
+
+    // Guard bloquea: sin canGenerate, onStart no se llama.
+    await act(async () => { await result.current.handleGenerate(); });
+    expect(onStart).not.toHaveBeenCalled();
+
+    rerender({ can: true });
+    await act(async () => { await result.current.handleGenerate(); });
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStart.mock.invocationCallOrder[0]).toBeLessThan(onResult.mock.invocationCallOrder[0]);
+
+    // Solo abrir la review (badge confidencial) no arranca una generacion real.
+    localStorage.setItem('acgen_confidential_testcase', 'true');
+    const { result: r2 } = renderHook(
+      () => useGenerator(config({ onStart, buildInput: () => 'avisar a jorge@example.com' })),
+      { wrapper },
+    );
+    await act(async () => { await r2.current.handleGenerate(); });
+    expect(r2.current.review).not.toBeNull();
+    expect(onStart).toHaveBeenCalledTimes(1); // sigue en 1: no ha sumado una llamada
+  });
+
   it('re-render con otro onResult tras montar: se llama el nuevo (la clase de bug H1)', async () => {
     yields('ok');
     const a = vi.fn();

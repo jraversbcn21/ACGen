@@ -60,6 +60,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
     apiKey, model, profile, baseUrl,
     canGenerate,
     buildInput: () => effectiveInput,
+    onStart: () => setResult(''),
     parse: (fullText) => stripMarkdown(fullText),
     onResult: (limpio, { input: sent }) => {
       setResult(limpio);
