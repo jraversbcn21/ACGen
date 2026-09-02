@@ -428,3 +428,20 @@ describe('RegressionCard con esquema', () => {
     expect(screen.getByText(/^0 /)).toBeTruthy();
   });
 });
+
+describe('RegressionCard — resumen de estados', () => {
+  it('agrupa los estados sin distinguir mayusculas ("3 ok", no "1 ok · 1 ok · 1 ok")', () => {
+    const base = { ticket: 'X', fecha: '', prioridad: '', creador: '', squad: '' };
+    renderCard({
+      variant: 'panel',
+      regression: makeRegression({
+        tickets: [
+          { id: 't1', ...base, status: 'OK' },
+          { id: 't2', ...base, status: 'ok' },
+          { id: 't3', ...base, status: 'Ok' },
+        ],
+      }),
+    });
+    expect(screen.getByText('3 ok')).toBeInTheDocument();
+  });
+});

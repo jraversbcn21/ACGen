@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
-import { formatDate, localTodayISO } from './dates';
+import { formatDate, localTodayISO, daysBetween } from './dates';
 
 const ORIGINAL_TZ = process.env.TZ;
 
@@ -61,5 +61,21 @@ describe('localTodayISO', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-05T12:00:00-05:00'));
     expect(localTodayISO()).toBe('2026-01-05');
+  });
+});
+
+describe('daysBetween', () => {
+  // Europe/Madrid: el 29-03-2026 dura 23 h. Con medianoches locales y floor,
+  // cada dia posterior al cambio horario salia uno corto hasta acabar el sprint.
+  beforeAll(() => { process.env.TZ = 'Europe/Madrid'; });
+  afterAll(() => {
+    if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+    else process.env.TZ = ORIGINAL_TZ;
+  });
+
+  it('cuenta dias de calendario tambien a traves del cambio horario de marzo', () => {
+    expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
+    expect(daysBetween('2026-03-28', '2026-04-15')).toBe(18);
+    expect(daysBetween('2026-07-20', '2026-07-20')).toBe(0);
   });
 });

@@ -16,6 +16,19 @@ export function formatDate(isoDate: string | null, lang: 'es' | 'en'): string {
 }
 
 /**
+ * Calendar days from `fromISO` to `toISO` ('YYYY-MM-DD'). UTC midnights on
+ * purpose: local midnights are 23/25 h apart across a DST change, and a floor
+ * over that leaves every later day of the sprint one short.
+ */
+export function daysBetween(fromISO: string, toISO: string): number {
+  const utc = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(toISO) - utc(fromISO)) / 86400000);
+}
+
+/**
  * Today's LOCAL calendar day as 'YYYY-MM-DD'. toISOString() would give the
  * UTC day, which in negative-offset timezones is already tomorrow at night.
  */

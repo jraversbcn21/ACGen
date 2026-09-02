@@ -133,14 +133,15 @@ export function RegressionCard({
     if (!statusFieldId) return '';
     const counts = new Map<string, number>();
     for (const tk of regression.tickets) {
-      const value = (tk[statusFieldId] ?? '').trim();
+      // En minusculas al contar: "OK", "ok" y "Ok" son el mismo estado.
+      const value = (tk[statusFieldId] ?? '').trim().toLowerCase();
       if (!value) continue;
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(([value, n]) => `${n} ${value.toLowerCase()}`)
+      .map(([value, n]) => `${n} ${value}`)
       .join(' · ');
   })();
 
