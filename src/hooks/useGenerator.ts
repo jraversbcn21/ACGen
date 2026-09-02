@@ -37,7 +37,7 @@ export interface Generator {
   dismissError: () => void;
   handleGenerate: () => Promise<void>;
   review: { text: string; map: Record<string, string> } | null;
-  openReview: (text: string) => void;
+  openReview: () => void;
   confirmReview: (edits: Record<string, string>) => void;
   cancelReview: () => void;
   clearGeneration: () => void;
@@ -106,7 +106,15 @@ export function useGenerator<T>(config: GeneratorConfig<T>): Generator {
     await run(input);
   }, [run]);
 
-  const openReview = useCallback((text: string) => setReview(anonymize(text)), []);
+  // Sin argumento a proposito: el badge "N sustituciones — Revisar" entra por
+  // aqui sin pasar por handleGenerate, y buildInput es donde el tool captura
+  // lo que necesita "al arrancar" (historial, texto del artefacto). Si el
+  // texto se construyera fuera, ese ref se quedaria sin escribir en este camino.
+  const openReview = useCallback(() => {
+    const input = configRef.current.buildInput();
+    if (typeof input !== 'string') return;
+    setReview(anonymize(input));
+  }, []);
   const cancelReview = useCallback(() => setReview(null), []);
   const confirmReview = useCallback((edits: Record<string, string>) => {
     if (!review) return;

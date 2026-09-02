@@ -268,7 +268,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         <ConfidentialToggle
           view="testdata"
           text={buildTestDataMessage(formData)}
-          onReview={() => gen.openReview(buildTestDataMessage(formData))}
+          onReview={gen.openReview}
         />
         <div className="td-actions-bar-right">
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>

@@ -122,7 +122,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           <ConfidentialToggle
             view="edgecase"
             text={requirement}
-            onReview={() => gen.openReview(requirement)}
+            onReview={gen.openReview}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !hasOutput}>
             {t('common.clear')}

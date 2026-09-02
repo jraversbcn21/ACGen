@@ -72,7 +72,7 @@ describe('useGenerator', () => {
     expect(streamMock).toHaveBeenCalledTimes(1);
     expect(result.current.status).toBe('loading');
     await act(async () => { await result.current.handleGenerate(); });
-    act(() => { result.current.openReview('otra'); });
+    act(() => { result.current.openReview(); });
     act(() => { result.current.confirmReview({}); });
     expect(streamMock).toHaveBeenCalledTimes(1);
     await act(async () => { release(); await first; });
@@ -114,6 +114,14 @@ describe('useGenerator', () => {
     expect(streamMock.mock.calls[0][2]).toBe('avisar a [PERSONA]');
     expect(streamMock.mock.calls[0][6]).toEqual({ '[PERSONA]': 'jorge@example.com' });
     expect(result.current.review).toBeNull();
+  });
+
+  it('openReview pasa por buildInput: lo que el tool capture ahi tambien se captura desde el badge', () => {
+    const buildInput = vi.fn(() => 'avisar a jorge@example.com');
+    const { result } = renderHook(() => useGenerator(config({ buildInput })), { wrapper });
+    act(() => { result.current.openReview(); });
+    expect(buildInput).toHaveBeenCalledTimes(1);
+    expect(result.current.review).toEqual({ text: 'avisar a [EMAIL_1]', map: { '[EMAIL_1]': 'jorge@example.com' } });
   });
 
   it('confidential:false nunca abre review aunque haya PII y el flag este activo', async () => {

@@ -165,7 +165,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         <ConfidentialToggle
           view="testcase"
           text={input}
-          onReview={() => gen.openReview(input)}
+          onReview={gen.openReview}
         />
         <div className="tc-actions-bar-right">
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>

@@ -135,7 +135,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
             <ConfidentialToggle
               view="acceptance"
               text={buildEffectiveInput()}
-              onReview={() => gen.openReview(buildEffectiveInput())}
+              onReview={gen.openReview}
             />
             <div className="criteria-actions-row">
               <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
