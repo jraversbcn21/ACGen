@@ -37,7 +37,7 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
         priority: 'Alta',
         type: 'Negativo',
         preconditions: 'Usuario en pagina de registro',
-        testSteps: ['1. Ingresar un email sin el simbolo @ (ej: usuario.com)', '2. Completar el resto de campos correctamente', '3. Hacer clic en "Crear cuenta"'],
+        testSteps: ['Ingresar un email sin el simbolo @ (ej: usuario.com)', 'Completar el resto de campos correctamente', 'Hacer clic en "Crear cuenta"'],
         expectedResult: 'El formulario muestra un mensaje de error indicando que el formato de email no es valido. No se crea la cuenta.',
       },
       {
@@ -46,7 +46,7 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
         priority: 'Media',
         type: 'Negativo',
         preconditions: 'Usuario en pagina de registro',
-        testSteps: ['1. Ingresar un email sin dominio (ej: usuario@)', '2. Completar el resto de campos correctamente', '3. Hacer clic en "Crear cuenta"'],
+        testSteps: ['Ingresar un email sin dominio (ej: usuario@)', 'Completar el resto de campos correctamente', 'Hacer clic en "Crear cuenta"'],
         expectedResult: 'El formulario muestra un mensaje de error. No se crea la cuenta.',
       },
       {
@@ -55,7 +55,7 @@ export const DEMO_DATA: Record<string, DemoEntry> = {
         priority: 'Alta',
         type: 'Positivo',
         preconditions: 'Usuario en pagina de registro',
-        testSteps: ['1. Ingresar un email valido (ej: maria@qa)', '2. Ingresar contrasena Test1234', '3. Completar el resto de campos correctamente', '4. Hacer clic en "Crear cuenta"'],
+        testSteps: ['Ingresar un email valido (ej: maria@qa)', 'Ingresar contrasena Test1234', 'Completar el resto de campos correctamente', 'Hacer clic en "Crear cuenta"'],
         expectedResult: 'La cuenta se crea correctamente. El usuario es redirigido a la pagina de confirmacion.',
       },
     ]),

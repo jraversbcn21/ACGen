@@ -297,7 +297,8 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
                     <td>
                       <ol>
                         {tc.testSteps.map((step, i) => (
-                          <li key={i}>{step}</li>
+                          // El <ol> ya numera; el modelo a veces trae "1. ..." y se veia "1. 1. ...".
+                          <li key={i}>{step.replace(/^\d+[.)]\s*/, '')}</li>
                         ))}
                       </ol>
                     </td>

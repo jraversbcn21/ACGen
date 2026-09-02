@@ -27,8 +27,9 @@ function limpiarInline(texto: string): string {
     .replace(/\*\*([^\n]+?)\*\*/g, '$1')
     .replace(/__([^\n]+?)__/g, '$1')
     // Cursiva: exige un caracter no-espacio tras el asterisco, para no tocar ni
-    // las vinetas (`* item`) ni las multiplicaciones (`2 * 3`).
-    .replace(/\*([^\s*][^*\n]*?)\*/g, '$1')
+    // las vinetas (`* item`) ni las multiplicaciones (`2 * 3`); y que el par no
+    // vaya pegado a letras o puntos, para no comerse globs como `*.jpg y *.png`.
+    .replace(/(?<![\w.])\*([^\s*][^*\n]*?)\*(?![\w.])/g, '$1')
     .replace(/`([^`\n]+)`/g, '$1');
 }
 

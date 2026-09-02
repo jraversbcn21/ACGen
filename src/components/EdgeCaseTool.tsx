@@ -13,6 +13,7 @@ import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import { categoryBadge } from '../utils/categoryBadge';
 import { generateShortcutLabel } from '../utils/shortcut';
+import { copyText } from '../utils/clipboard';
 
 /**
  * 10b: la entrada es una tarjeta compacta arriba con la botonera a su derecha y
@@ -26,21 +27,6 @@ function formatAsTSV(rows: EdgeCase[], header: [string, string, string]): string
       .join('\t'),
   );
   return [header.join('\t'), ...body].join('\n');
-}
-
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-  }
 }
 
 export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {

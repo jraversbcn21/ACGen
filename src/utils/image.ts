@@ -1,5 +1,8 @@
 export const MAX_EDGE = 1568;
 export const MAX_BASE64_BYTES = 4 * 1024 * 1024;
+/** Tope del fichero en bruto: un PNG de 150 MB se leia y decodificaba entero
+ *  (base64 + canvas) antes de poder decir "demasiado grande". */
+export const MAX_FILE_BYTES = 30 * 1024 * 1024;
 
 export function targetDimensions(width: number, height: number, maxEdge: number): { width: number; height: number } {
   const longEdge = Math.max(width, height);
@@ -41,6 +44,9 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
 export async function fileToProcessedDataUrl(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) {
     throw new Error('error.notAnImage');
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    throw new Error('error.imageFileTooLarge');
   }
   const dataUrl = await readAsDataUrl(file);
   const img = await loadImage(dataUrl);

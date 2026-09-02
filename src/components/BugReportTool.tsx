@@ -64,7 +64,9 @@ const DEFAULT_FORM: BugReportFormData = {
   platform: 'web-desktop',
   market: 'ES',
   browser: 'Chrome',
-  url: 'https://localhost:3443/',
+  // Vacia a proposito: un valor por defecto entraba en el mensaje, casaba con el
+  // regex de URL del anonimizador y abria el modal de revision en CADA generacion.
+  url: '',
   appVersion: '',
   device: '',
   osVersion: '',
@@ -247,14 +249,13 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
 
   const handlePlatformChange = useCallback((platform: string) => {
     const p = platform as PlatformId;
-    const wasWeb = formData.platform.startsWith('web-');
-    const nowWeb = p.startsWith('web-');
     setFormData(prev => {
       const browsers = getAvailableBrowsers(p);
       let device = '';
       if (p === 'app-ios') device = iosDevices[0];
       else if (p === 'app-android') device = androidDevices[0];
-      const keepUrl = (!wasWeb && nowWeb) || prev.url === '' || prev.url === 'https://localhost:3443/';
+      // La URL escrita se conserva en todos los cambios de plataforma (el
+      // mensaje solo la incluye en web); antes app -> web la machacaba.
       return {
         ...prev,
         platform: p,
@@ -262,10 +263,9 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         appVersion: '',
         device,
         osVersion: '',
-        url: nowWeb ? (keepUrl ? 'https://localhost:3443/' : prev.url) : prev.url,
       };
     });
-  }, [formData.platform, iosDevices, androidDevices]);
+  }, [iosDevices, androidDevices]);
 
   const browserOptions = getAvailableBrowsers(formData.platform);
 
@@ -335,7 +335,7 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
                       type="text"
                       value={formData.url || ''}
                       onChange={(e) => updateForm('url', e.target.value)}
-                      placeholder="https://localhost:3443/"
+                      placeholder="https://..."
                       className="field-input"
                     />
                   </div>
