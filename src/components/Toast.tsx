@@ -26,7 +26,7 @@ export function Toast({ toast }: { toast: ToastData | null }) {
   const t = useT();
   if (!toast) return null;
   return (
-    <div className="toast">
+    <div className="toast" role="status">
       <span>{toast.message}</span>
       {toast.undo && (
         <button type="button" className="toast-undo" onClick={toast.undo}>{t('common.undo')}</button>

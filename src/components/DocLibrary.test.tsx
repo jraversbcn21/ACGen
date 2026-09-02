@@ -148,3 +148,13 @@ describe('DocLibrary', () => {
     expect(screen.queryByText('Todavía no hay enlaces')).toBeNull();
   });
 });
+
+describe('DocLibrary — esquemas de URL', () => {
+  it('solo guarda enlaces http(s): un javascript: no se da de alta y el campo se marca invalido', () => {
+    renderLib();
+    addLink('Evil', 'javascript:alert(1)');
+    expect(screen.queryByText('Evil ↗')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('URL')).toHaveAttribute('aria-invalid', 'true');
+    expect(localStorage.getItem('acgen_doclinks')).toBeNull();
+  });
+});

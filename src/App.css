@@ -842,12 +842,9 @@ td:hover .cell-open-link {
 }
 
 /* Update banner */
+/* En flujo, no fixed: fixed tapaba la mitad superior de la topbar (workspace,
+   copias, idioma, tema) y la unica salida era recargar. */
 .update-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -992,6 +989,9 @@ td:hover .cell-open-link {
   width: 100%;
   box-shadow: var(--shadow-lg);
 }
+/* El foco entra al dialogo por programa al abrirlo; el anillo iria en el borde entero. */
+.modal-content:focus { outline: none; }
+.update-banner-later { opacity: .85; }
 
 /* === BACKUP MENU === */
 .backup-menu-btn { position: relative; }

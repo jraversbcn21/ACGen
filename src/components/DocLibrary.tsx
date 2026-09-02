@@ -19,6 +19,11 @@ function norm(s: string): string {
 
 const EMPTY_DRAFT = { name: '', url: '', category: '' };
 
+/** Solo http(s), tambien dentro de un SnapLink "Nombre - URL": un javascript:
+ *  o data: no llega a ser un <a href> (rel=noopener ya lo neutraliza, pero
+ *  tampoco tiene sentido guardarlo). */
+const isHttpUrl = (value: string) => /^https?:\/\//i.test(parseUrlCell(value)?.url ?? value);
+
 export function DocLibrary() {
   const t = useT();
   const [store, setStore] = useLocalStorage<{ links: DocLink[] }>(STORAGE_KEYS.DOC_LINKS, { links: [] });
@@ -65,7 +70,7 @@ export function DocLibrary() {
   const handleSave = () => {
     const name = draft.name.trim();
     const url = draft.url.trim();
-    if (!name || !url) return;
+    if (!name || !url || !isHttpUrl(url)) return;
     const category = draft.category.trim();
     if (editingId) {
       setStore((prev) => ({ links: prev.links.map((l) => (l.id === editingId ? { ...l, name, url, category } : l)) }));
@@ -123,6 +128,7 @@ export function DocLibrary() {
             <div className="dl-form-field" style={{ flex: '2 1 280px' }}>
               <label htmlFor="dl-url" className="field-label">{t('doclibrary.urlLabel')}</label>
               <input id="dl-url" type="text" className="field-input" placeholder="https://..." value={draft.url}
+                aria-invalid={draft.url.trim() !== '' && !isHttpUrl(draft.url.trim())}
                 onChange={(e) => handleUrlChange(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') closeForm(); }} />
             </div>

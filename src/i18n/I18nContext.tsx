@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import es from './es.json';
 import en from './en.json';
@@ -31,6 +31,12 @@ function detectLang(): Lang {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useLocalStorage<Lang>('acgen_lang', detectLang());
+
+  // index.html arranca con lang="es"; los lectores de pantalla leen la UI en
+  // ingles con voz española si no se actualiza al cambiar de idioma.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     let str = translations[lang][key] ?? translations['es'][key] ?? key;
