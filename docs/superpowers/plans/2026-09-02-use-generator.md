@@ -16,6 +16,7 @@
 - **El JSX de cada tool no se toca** salvo cambiar la prop a `gen.*`. `App.css` no se toca.
 - **La config del hook se lee siempre desde `configRef.current`**, nunca desde deps. Regla no negociable (es lo que elimina la clase de bug H1).
 - **Lo que necesite el valor de entrada "al arrancar" la generación (historial, texto del artefacto del Validador) lo captura el tool dentro de `buildInput` en un ref**, no en `onResult` — así el comportamiento es idéntico aunque el usuario edite durante el stream.
+- **Lo que cada `doGenerate` HACÍA al arrancar (vaciar el resultado anterior y el modelo mostrado) va en `onStart`** (corrección de la review final): el hook lo llama solo cuando `run` arranca de verdad, tras el guard. NO en `buildInput` (corre al abrir el modal de revisión y no corre en `confirmReview`).
 - Comandos desde `acgen/`: `npm test`, `npm run typecheck` (NO `npx tsc --noEmit`), `npm run lint`.
 - Commits con el pie de atribución de la sesión (ver mensaje de commit de cada tarea).
 
@@ -54,7 +55,7 @@ export interface Generator {
   dismissError: () => void;
   handleGenerate: () => Promise<void>;
   review: { text: string; map: Record<string, string> } | null;
-  openReview: (text: string) => void;
+  openReview: () => void; // llama a buildInput() él mismo: todo camino hacia run pasa por buildInput
   confirmReview: (edits: Record<string, string>) => void;
   cancelReview: () => void;
   clearGeneration: () => void;
@@ -141,7 +142,7 @@ describe('useGenerator', () => {
     expect(streamMock).toHaveBeenCalledTimes(1);
     expect(result.current.status).toBe('loading');
     await act(async () => { await result.current.handleGenerate(); });
-    act(() => { result.current.openReview('otra'); });
+    act(() => { result.current.openReview(); });
     act(() => { result.current.confirmReview({}); });
     expect(streamMock).toHaveBeenCalledTimes(1);
     await act(async () => { release(); await first; });
@@ -183,6 +184,14 @@ describe('useGenerator', () => {
     expect(streamMock.mock.calls[0][2]).toBe('avisar a [PERSONA]');
     expect(streamMock.mock.calls[0][6]).toEqual({ '[PERSONA]': 'jorge@example.com' });
     expect(result.current.review).toBeNull();
+  });
+
+  it('openReview pasa por buildInput: lo que el tool capture ahi tambien se captura desde el badge', () => {
+    const buildInput = vi.fn(() => 'avisar a jorge@example.com');
+    const { result } = renderHook(() => useGenerator(config({ buildInput })), { wrapper });
+    act(() => { result.current.openReview(); });
+    expect(buildInput).toHaveBeenCalledTimes(1);
+    expect(result.current.review).toEqual({ text: 'avisar a [EMAIL_1]', map: { '[EMAIL_1]': 'jorge@example.com' } });
   });
 
   it('confidential:false nunca abre review aunque haya PII y el flag este activo', async () => {
@@ -289,7 +298,7 @@ export interface Generator {
   dismissError: () => void;
   handleGenerate: () => Promise<void>;
   review: { text: string; map: Record<string, string> } | null;
-  openReview: (text: string) => void;
+  openReview: () => void; // llama a buildInput() él mismo: todo camino hacia run pasa por buildInput
   confirmReview: (edits: Record<string, string>) => void;
   cancelReview: () => void;
   clearGeneration: () => void;
@@ -358,7 +367,15 @@ export function useGenerator<T>(config: GeneratorConfig<T>): Generator {
     await run(input);
   }, [run]);
 
-  const openReview = useCallback((text: string) => setReview(anonymize(text)), []);
+  // Sin argumento a proposito: el badge "N sustituciones — Revisar" entra por
+  // aqui sin pasar por handleGenerate, y buildInput es donde el tool captura
+  // lo que necesita "al arrancar" (historial, texto del artefacto). Si el
+  // texto se construyera fuera, ese ref se quedaria sin escribir en este camino.
+  const openReview = useCallback(() => {
+    const input = configRef.current.buildInput();
+    if (typeof input !== 'string') return;
+    setReview(anonymize(input));
+  }, []);
   const cancelReview = useCallback(() => setReview(null), []);
   const confirmReview = useCallback((edits: Record<string, string>) => {
     if (!review) return;
@@ -493,7 +510,7 @@ Sustituye `resetStream();` por `gen.clearGeneration();` y quita `setError(null);
 - [ ] **Step 4: Cablear el JSX (solo props)**
 
 ```tsx
-<ConfidentialToggle view="testcase" text={input} onReview={() => gen.openReview(input)} />
+<ConfidentialToggle view="testcase" text={input} onReview={gen.openReview} />
 <GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'} />
 <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
 {gen.review && (
@@ -551,7 +568,7 @@ Claude-Session: https://claude.ai/code/session_01EaAf9mtreSJq24DYfD2SND"
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null)`; deps `resetStream` → `gen`.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(requirement)}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}` (antes `loading || isStreaming`; equivalente: `isStreaming` solo es true dentro de la ventana de `loading`); `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`; `{gen.review && <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />}`.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}` (antes `loading || isStreaming`; equivalente: `isStreaming` solo es true dentro de la ventana de `loading`); `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`; `{gen.review && <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />}`.
 
 - [ ] **Step 5: Gates**: `npm test` → 793 verdes, sin tests tocados; typecheck; lint 5 warnings.
 
@@ -590,7 +607,7 @@ Claude-Session: https://claude.ai/code/session_01EaAf9mtreSJq24DYfD2SND"
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null)`; deps.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(buildTestDataMessage(formData))}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
 
 - [ ] **Step 5: Gates** (793 / limpio / 5). **Step 6: Commit** `refactor(testdata): migrar a useGenerator`.
 
@@ -629,7 +646,7 @@ Particularidad: `onComplete` hacía `addEntry(requirements, fullText)` con el `r
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null); setStatus('idle');`; deps. `handleLoadDemo`: `setError(null); setStatus('success');` → `gen.clearGeneration();`.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(buildEffectiveInput())}`; `<GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading' && !gen.isStreaming} />`; el textarea de salida `value={gen.isStreaming ? gen.streamText : criteria}` y `readOnly={gen.isStreaming}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `<GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading' && !gen.isStreaming} />`; el textarea de salida `value={gen.isStreaming ? gen.streamText : criteria}` y `readOnly={gen.isStreaming}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
 
 - [ ] **Step 5: Gates** (793 / limpio / 5). **Step 6: Commit** `refactor(acceptance): migrar a useGenerator`.
 
@@ -666,7 +683,7 @@ Particularidad: `onComplete` hacía `addEntry(requirements, fullText)` con el `r
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null)`; deps.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(buildBugReportMessage(formData))}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; textarea de salida `value={gen.isStreaming ? gen.streamText : output}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; textarea de salida `value={gen.isStreaming ? gen.streamText : output}`; `ErrorBanner`/`AnonymizerReview` como en Task 2.
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(bugreport): migrar a useGenerator`.
 
@@ -704,7 +721,7 @@ Particularidad: error por toast; guarda el texto limpio; `isBusy` derivado de `l
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; deps.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(effectiveInput)}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={isBusy}`; `stripMarkdown(streamText)` → `stripMarkdown(gen.streamText)`; `<ErrorBanner message={null} onDismiss={() => {}} />` se queda tal cual (decisión C); `{gen.review && <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />}`.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={isBusy}`; `stripMarkdown(streamText)` → `stripMarkdown(gen.streamText)`; `<ErrorBanner message={null} onDismiss={() => {}} />` se queda tal cual (decisión C); `{gen.review && <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />}`.
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(userstory): migrar a useGenerator`.
 
@@ -737,7 +754,7 @@ Particularidad: error por toast; guarda el texto limpio; `isBusy` derivado de `l
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; deps. La línea `const shown = result || ((isStreaming || loading) ? streamText : '');` → `const shown = result || (gen.status === 'loading' ? gen.streamText : '');`.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(requirement)}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner` con `null` se queda; `AnonymizerReview` como en Task 2.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner` con `null` se queda; `AnonymizerReview` como en Task 2.
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(refiner): migrar a useGenerator`.
 
@@ -770,7 +787,7 @@ Particularidad: error por toast; guarda el texto limpio; `isBusy` derivado de `l
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; deps. Sigue SIN Deshacer (decisión C). `const shown = isStreaming ? streamText : result;` → `gen.isStreaming ? gen.streamText : result`.
 
-- [ ] **Step 4: JSX**: `onReview={() => gen.openReview(buildEffectiveInput())}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner` con `null` se queda; `AnonymizerReview` como en Task 2.
+- [ ] **Step 4: JSX**: `onReview={gen.openReview}`; `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner` con `null` se queda; `AnonymizerReview` como en Task 2.
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(converter): migrar a useGenerator`.
 
@@ -812,11 +829,11 @@ Particularidades: sin modo confidencial; entrada `ContentPart[]`; `canGenerate` 
   });
 ```
 
-`handleGenerate` hacía `setReport(null)` al arrancar. Para conservarlo sin tocar el hook, envuelve: `const handleGenerate = useCallback(() => { setReport(null); return gen.handleGenerate(); }, [gen]);` — pero OJO: eso vacía el informe aunque el guard del hook rechace la llamada (p. ej. sin imagen). Comprueba en `DesignValidatorTool.test.tsx` si algún test cubre "generar sin imagen conserva el informe anterior"; si no lo cubre y el comportamiento antiguo era `if (!canGenerate ...) return;` ANTES de `setReport(null)`, replica el guard: `if (!canGenerate || gen.status === 'loading' || gen.isStreaming) return; setReport(null); return gen.handleGenerate();`.
+`handleGenerate` hacía `setReport(null)` al arrancar. **NO lo envuelvas en un wrapper**: el atajo Ctrl+Enter vive en el hook y llama a su propio `handleGenerate`, así que un wrapper solo cubriría el clic (hallazgo de la review de la Tarea 10, decisión de Jorge). La regla es la misma que para el historial: lo que el tool necesita "al arrancar" va en `buildInput`, que el hook llama en TODOS los caminos y solo tras pasar su guard (así una llamada bloqueada — sin imagen, generación en curso — no vacía el informe anterior, igual que antes). Añade `setReport(null);` como primera línea de `buildInput` y pasa `onClick={gen.handleGenerate}` directo, como los otros ocho tools.
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null)`; deps.
 
-- [ ] **Step 4: JSX**: `GenerateButton onClick={handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`. (No hay toggle ni modal.)
+- [ ] **Step 4: JSX**: `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`. (No hay toggle ni modal.)
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(designvalidator): migrar a useGenerator`.
 

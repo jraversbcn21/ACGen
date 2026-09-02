@@ -1,22 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
 import { STORAGE_KEYS } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import type { ViewType } from '../config/constants';
 import { useHistory } from '../hooks/useHistory';
 import type { ProjectProfile } from '../types/context';
-import type { GenerationStatus } from '../types';
 import { useT } from '../i18n/I18nContext';
 import { copyText } from '../utils/clipboard';
 
 import { ChainMenu } from './ChainMenu';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 
@@ -33,15 +29,11 @@ interface AcceptanceCriteriaToolProps {
 export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChain, prefill, onSaveArtifact }: AcceptanceCriteriaToolProps) {
   const [requirements, setRequirements] = useState('');
   const [criteria, setCriteria] = useState('');
-  const [status, setStatus] = useState<GenerationStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [additionalContext, setAdditionalContext] = useState('');
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
   const { toast, showToast } = useToast();
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   useEffect(() => {
@@ -52,29 +44,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
 
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    // Tambien entra por el modal confidencial, que no pasa por handleGenerate.
-    if (status === 'loading' || isStreaming) return;
-    setStatus('loading');
-    setError(null);
-    setCriteria('');
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('acceptance'), 'criteria', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        setCriteria(fullText);
-        onSaveArtifact?.(effectiveInput, fullText);
-        addEntry(requirements, fullText);
-        setStatus('success');
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-      setStatus('error');
-    } finally {
-      setConf(null);
-    }
-  }, [status, isStreaming, apiKey, model, requirements, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
-
   const buildEffectiveInput = useCallback(() => {
     const inputText = additionalContext.trim()
       ? `${requirements}\n\n--- Contexto adicional ---\n${additionalContext.trim()}`
@@ -84,28 +53,32 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
     return `${inputText}\n\nFecha actual: ${today}`;
   }, [requirements, additionalContext]);
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || status === 'loading' || isStreaming) return;
-    const effectiveInput = buildEffectiveInput();
-    if (localStorage.getItem('acgen_confidential_acceptance') === 'true') {
-      const { text, map } = anonymize(effectiveInput);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(effectiveInput);
-  }, [canGenerate, status, isStreaming, buildEffectiveInput, doGenerate]);
+  const historyInputRef = useRef('');
+  const gen = useGenerator<string>({
+    view: 'acceptance',
+    toolType: 'criteria',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => {
+      historyInputRef.current = requirements; // el historial guarda el texto de cuando se pulso Generar
+      return buildEffectiveInput();
+    },
+    onStart: () => setCriteria(''),
+    parse: (fullText) => fullText,
+    onResult: (fullText, { input: sent }) => {
+      setCriteria(fullText);
+      onSaveArtifact?.(sent as string, fullText);
+      addEntry(historyInputRef.current, fullText);
+    },
+  });
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prevRequirements = requirements;
     const prevCriteria = criteria;
     const prevContext = additionalContext;
     setRequirements('');
     setCriteria('');
-    setError(null);
-    setStatus('idle');
     setCopied(false);
     setAdditionalContext('');
     showToast(t('common.cleared'), () => {
@@ -113,26 +86,14 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       setCriteria(prevCriteria);
       setAdditionalContext(prevContext);
     });
-  }, [requirements, criteria, additionalContext, resetStream, showToast, t]);
+  }, [requirements, criteria, additionalContext, gen, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.acceptance;
     setRequirements(demo.input);
     setCriteria(demo.output);
-    setError(null);
-    setStatus('success');
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && status !== 'loading') handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, status, handleGenerate]);
+    gen.clearGeneration();
+  }, [gen]);
 
   const handleCopy = useCallback(async () => {
     await copyText(criteria);
@@ -175,7 +136,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
             <ConfidentialToggle
               view="acceptance"
               text={buildEffectiveInput()}
-              onReview={() => setConf(anonymize(buildEffectiveInput()))}
+              onReview={gen.openReview}
             />
             <div className="criteria-actions-row">
               <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
@@ -187,7 +148,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
                 {t('acceptance.history')} {history.length > 0 && <span className="history-count">{history.length}</span>}
               </button>
             </div>
-            <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
+            <GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading' && !gen.isStreaming} />
           </div>
         </div>
         <div className="criteria-right">
@@ -219,17 +180,17 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
           <div className="criteria-panel-body">
             <textarea
               id="criteria-output"
-              value={isStreaming ? streamText : criteria}
+              value={gen.isStreaming ? gen.streamText : criteria}
               onChange={(e) => setCriteria(e.target.value)}
               className="field-textarea criteria-output-ta"
-              readOnly={isStreaming}
+              readOnly={gen.isStreaming}
               placeholder={!criteria ? t('acceptance.outputPlaceholder') : ''}
             />
           </div>
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
       {showHistory && (
         <HistoryModal
@@ -239,16 +200,8 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
           onClose={() => setShowHistory(false)}
         />
       )}
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

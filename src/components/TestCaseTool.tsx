@@ -2,17 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, validateTestCases, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
+import { extractJsonArray, validateTestCases } from '../services/apiService';
 import { DEMO_DATA } from '../config/demoData';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
-import type { GenerationStatus, TestCaseData } from '../types';
+import type { TestCaseData } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateShortcutLabel } from '../utils/shortcut';
@@ -40,13 +38,9 @@ function generateJiraTable(testCases: TestCaseData[], t: (key: string) => string
 export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, baseUrl }: { apiKey: string; model: string; profile?: ProjectProfile; prefill?: string; onSaveArtifact?: (input: string, output: string) => void; baseUrl?: string }) {
   const [input, setInput] = useState('');
   const [testCases, setTestCases] = useState<TestCaseData[]>([]);
-  const [status, setStatus] = useState<GenerationStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   useEffect(() => {
@@ -56,67 +50,32 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
   const hasOutput = testCases.length > 0;
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (status === 'loading' || isStreaming) return;
-    setStatus('loading');
-    setError(null);
-    setTestCases([]);
-    setGeneratedModel(undefined);
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testcase'), 'testcase', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        const items = extractJsonArray(fullText);
-        if (items.length === 0) {
-          throw new Error(t('error.noTestCases'));
-        }
-        const validated = validateTestCases(items);
-        setTestCases(validated);
-        onSaveArtifact?.(effectiveInput, fullText);
-        setGeneratedModel(model);
-        setStatus('success');
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-      setStatus('error');
-      setTestCases([]);
-    } finally {
-      setConf(null);
-    }
-  }, [status, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || status === 'loading' || isStreaming) return;
-    if (localStorage.getItem('acgen_confidential_testcase') === 'true') {
-      const { text, map } = anonymize(input);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(input);
-  }, [canGenerate, status, isStreaming, input, doGenerate]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && status !== 'loading') handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, status, handleGenerate]);
+  const gen = useGenerator<TestCaseData[]>({
+    view: 'testcase',
+    toolType: 'testcase',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => input,
+    onStart: () => { setTestCases([]); setGeneratedModel(undefined); },
+    parse: (fullText) => {
+      const items = extractJsonArray(fullText);
+      if (items.length === 0) throw new Error('error.noTestCases');
+      return validateTestCases(items);
+    },
+    onResult: (validated, { input: sent, fullText, model: usedModel }) => {
+      setTestCases(validated);
+      onSaveArtifact?.(sent as string, fullText);
+      setGeneratedModel(usedModel);
+    },
+  });
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prevInput = input;
     const prevTestCases = testCases;
     const prevModel = generatedModel;
     setInput('');
     setTestCases([]);
-    setError(null);
-    setStatus('idle');
     setGeneratedModel(undefined);
     setCopied(false);
     showToast(t('common.cleared'), () => {
@@ -124,14 +83,14 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setTestCases(prevTestCases);
       setGeneratedModel(prevModel);
     });
-  }, [input, testCases, generatedModel, resetStream, showToast, t]);
+  }, [input, testCases, generatedModel, gen, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
+    gen.clearGeneration();
     const demo = DEMO_DATA.testcase;
     setInput(demo.input);
     setTestCases(JSON.parse(demo.output));
-    setStatus('success');
-  }, []);
+  }, [gen]);
 
   const handleCopyJira = useCallback(async () => {
     const table = generateJiraTable(testCases, t);
@@ -207,7 +166,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         <ConfidentialToggle
           view="testcase"
           text={input}
-          onReview={() => setConf(anonymize(input))}
+          onReview={gen.openReview}
         />
         <div className="tc-actions-bar-right">
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
@@ -221,9 +180,9 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           </button>
           <span className="tc-actions-sep" aria-hidden="true" />
           <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={status === 'loading'}
+            onClick={gen.handleGenerate}
+            disabled={!canGenerate || gen.isStreaming}
+            loading={gen.status === 'loading'}
           />
         </div>
       </div>
@@ -300,18 +259,10 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

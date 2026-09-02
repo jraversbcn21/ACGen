@@ -2,12 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
 import { ChainMenu } from './ChainMenu';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -34,9 +31,6 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
   const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -60,42 +54,24 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
     : idea.trim().length > 0;
   const canGenerate = apiKey.trim().length > 0 && hasInput;
 
-  const doGenerate = useCallback(async (input: string, effectiveMap?: Record<string, string>) => {
-    if (loading || isStreaming) return;
-    setLoading(true);
-    setResult('');
-    try {
-      const gen = streamWithGroq(apiKey, model, input, getPrompt('userstory'), 'criteria', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        // Se limpia aqui y no al pintar para que lo que copias, encadenas y se
-        // guarda en el historial sea el mismo texto plano que ves.
-        const limpio = stripMarkdown(fullText);
-        setResult(limpio);
-        onSaveArtifact?.(input, limpio);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      showToast(message);
-    } finally {
-      setLoading(false);
-      setConf(null);
-    }
-  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
-    if (localStorage.getItem('acgen_confidential_userstory') === 'true') {
-      const { text, map } = anonymize(effectiveInput);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(effectiveInput);
-  }, [canGenerate, loading, isStreaming, effectiveInput, doGenerate]);
+  const gen = useGenerator<string>({
+    view: 'userstory',
+    toolType: 'criteria',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => effectiveInput,
+    onStart: () => setResult(''),
+    parse: (fullText) => stripMarkdown(fullText),
+    onResult: (limpio, { input: sent }) => {
+      setResult(limpio);
+      onSaveArtifact?.(sent as string, limpio);
+    },
+    onError: showToast,
+  });
+  const isBusy = gen.status === 'loading';
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prev = { role, action, benefit, idea, result };
     setRole('');
     setAction('');
@@ -110,7 +86,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       setIdea(prev.idea);
       setResult(prev.result);
     });
-  }, [role, action, benefit, idea, result, resetStream, showToast, t]);
+  }, [role, action, benefit, idea, result, gen, showToast, t]);
 
   const handleCopy = useCallback(async () => {
     await copyText(result);
@@ -118,18 +94,6 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
     setTimeout(() => setCopied(false), 2000);
   }, [result]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !loading && !isStreaming) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, loading, isStreaming, handleGenerate]);
-
-  const isBusy = loading || isStreaming;
   const hasOutput = result.length > 0;
 
   return (
@@ -224,7 +188,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
             <ConfidentialToggle
               view="userstory"
               text={effectiveInput}
-              onReview={() => setConf(anonymize(effectiveInput))}
+              onReview={gen.openReview}
             />
             <div className="us-card-actions">
               <button
@@ -236,8 +200,8 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
                 {t('common.clear')}
               </button>
               <GenerateButton
-                onClick={handleGenerate}
-                disabled={!canGenerate || isStreaming}
+                onClick={gen.handleGenerate}
+                disabled={!canGenerate || gen.isStreaming}
                 loading={isBusy}
               />
             </div>
@@ -268,7 +232,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
             {hasOutput ? (
               <div data-testid="userstory-output" className="us-output">{result}</div>
             ) : isBusy ? (
-              <div className="us-output">{stripMarkdown(streamText)}</div>
+              <div className="us-output">{stripMarkdown(gen.streamText)}</div>
             ) : (
               <div className="us-empty">
                 <span className="us-empty-title">{t('userstory.outputPlaceholder')}</span>
@@ -281,16 +245,8 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
 
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

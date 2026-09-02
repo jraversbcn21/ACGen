@@ -2,12 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
 import { ChainMenu } from './ChainMenu';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -51,10 +48,7 @@ function summarizeFindings(text: string): { label: string; count: number }[] {
 export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill, onSaveArtifact }: RefinerToolProps) {
   const [requirement, setRequirement] = useState('');
   const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -64,41 +58,20 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
 
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (loading || isStreaming) return;
-    setLoading(true);
-    setResult('');
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('refiner'), 'criteria', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        // Se limpia aqui y no al pintar para que lo que ves, copias, encadenas
-        // y se guarda en el historial sea el mismo texto plano — mismo criterio
-        // que UserStoryTool. El resumen de hallazgos sigue funcionando: la
-        // limpieza quita `**`/`###` pero conserva las viñetas que cuenta.
-        const limpio = stripMarkdown(fullText);
-        setResult(limpio);
-        onSaveArtifact?.(effectiveInput, limpio);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      showToast(message);
-    } finally {
-      setLoading(false);
-      setConf(null);
-    }
-  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
-    if (localStorage.getItem('acgen_confidential_refiner') === 'true') {
-      const { text, map } = anonymize(requirement);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(requirement);
-  }, [canGenerate, loading, isStreaming, requirement, doGenerate]);
+  const gen = useGenerator<string>({
+    view: 'refiner',
+    toolType: 'criteria',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => requirement,
+    onStart: () => setResult(''),
+    parse: (fullText) => stripMarkdown(fullText),
+    onResult: (limpio, { input: sent }) => {
+      setResult(limpio);
+      onSaveArtifact?.(sent as string, limpio);
+    },
+    onError: showToast,
+  });
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
@@ -108,7 +81,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
   }, [result]);
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prev = requirement;
     const prevResult = result;
     setRequirement('');
@@ -117,20 +90,9 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
       setRequirement(prev);
       setResult(prevResult);
     });
-  }, [requirement, result, resetStream, showToast, t]);
+  }, [requirement, result, gen, showToast, t]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !loading && !isStreaming) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, loading, isStreaming, handleGenerate]);
-
-  const shown = result || ((isStreaming || loading) ? streamText : '');
+  const shown = result || (gen.status === 'loading' ? gen.streamText : '');
   const findings = result ? summarizeFindings(result) : [];
 
   return (
@@ -144,15 +106,15 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
           <ConfidentialToggle
             view="refiner"
             text={requirement}
-            onReview={() => setConf(anonymize(requirement))}
+            onReview={gen.openReview}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !result}>
             {t('common.clear')}
           </button>
           <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={loading || isStreaming}
+            onClick={gen.handleGenerate}
+            disabled={!canGenerate || gen.isStreaming}
+            loading={gen.status === 'loading'}
           />
         </div>
       </header>
@@ -225,16 +187,8 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
 
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

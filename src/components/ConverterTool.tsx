@@ -1,13 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
 import { downloadBlob } from '../utils/download';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -35,55 +32,38 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const [inputFormat, setInputFormat] = useState('text');
   const [outputFormat, setOutputFormat] = useState('markdown');
   const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { text: streamText, isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
-
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (loading || isStreaming) return;
-    setLoading(true);
-    setResult('');
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('converter'), 'criteria', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => { setResult(fullText); onSaveArtifact?.(effectiveInput, fullText); });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      showToast(message);
-    } finally {
-      setLoading(false);
-      setConf(null);
-    }
-  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const buildEffectiveInput = useCallback(
     () => `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`,
     [input, inputFormat, outputFormat],
   );
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
-    const effectiveInput = buildEffectiveInput();
-    if (localStorage.getItem('acgen_confidential_converter') === 'true') {
-      const { text, map } = anonymize(effectiveInput);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(effectiveInput);
-  }, [canGenerate, loading, isStreaming, buildEffectiveInput, doGenerate]);
+  const gen = useGenerator<string>({
+    view: 'converter',
+    toolType: 'criteria',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => buildEffectiveInput(),
+    onStart: () => setResult(''),
+    parse: (fullText) => fullText,
+    onResult: (fullText, { input: sent }) => {
+      setResult(fullText);
+      onSaveArtifact?.(sent as string, fullText);
+    },
+    onError: showToast,
+  });
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     setInput('');
     setResult('');
     showToast(t('common.cleared'));
-  }, [resetStream, showToast, t]);
+  }, [gen, showToast, t]);
 
   // Intercambiar formatos mueve tambien el resultado a la entrada: es el gesto
   // util real (convertir de vuelta, o seguir encadenando desde lo generado).
@@ -109,22 +89,11 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     downloadBlob(`conversion.${ext}`, result, 'text/plain;charset=utf-8');
   }, [result, outputFormat]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !loading && !isStreaming) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, loading, isStreaming, handleGenerate]);
-
   const formatLabel = (id: string) => {
     const f = FORMATS.find(x => x.id === id);
     return f?.labelKey ? t(f.labelKey) : f?.label ?? id;
   };
-  const shown = isStreaming ? streamText : result;
+  const shown = gen.isStreaming ? gen.streamText : result;
 
   return (
     <div className="cv-root">
@@ -179,16 +148,16 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         <ConfidentialToggle
           view="converter"
           text={buildEffectiveInput()}
-          onReview={() => setConf(anonymize(buildEffectiveInput()))}
+          onReview={gen.openReview}
         />
         <span className="cv-bar-sep" aria-hidden="true" />
         <button type="button" className="btn-ghost" onClick={handleClear} disabled={!input && !result}>
           {t('common.clear')}
         </button>
         <GenerateButton
-          onClick={handleGenerate}
-          disabled={!canGenerate || isStreaming}
-          loading={loading || isStreaming}
+          onClick={gen.handleGenerate}
+          disabled={!canGenerate || gen.isStreaming}
+          loading={gen.status === 'loading'}
         />
       </div>
 
@@ -244,16 +213,8 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
 
       <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

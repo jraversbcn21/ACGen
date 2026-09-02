@@ -2,11 +2,9 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, validateEdgeCases, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
+import { extractJsonArray, validateEdgeCases } from '../services/apiService';
 import type { EdgeCase } from '../types';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
+import { useGenerator } from '../hooks/useGenerator';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -33,11 +31,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const [requirement, setRequirement] = useState('');
   const [edgeCases, setEdgeCases] = useState<EdgeCase[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
-  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -55,74 +49,43 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     return Array.from(acc, ([label, count]) => ({ label, count, badge: categoryBadge(label) }));
   }, [edgeCases]);
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (loading || isStreaming) return;
-    setLoading(true);
-    setError(null);
-    setEdgeCases([]);
-    setGeneratedModel(undefined);
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('edgecase'), 'testcase', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        const items = extractJsonArray(fullText);
-        if (!items || items.length === 0) {
-          throw new Error(t('error.noEdgeCases'));
-        }
-        setEdgeCases(validateEdgeCases(items));
-        setGeneratedModel(model);
-        onSaveArtifact?.(effectiveInput, fullText);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-    } finally {
-      setLoading(false);
-      setConf(null);
-    }
-  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming) return;
-    if (localStorage.getItem('acgen_confidential_edgecase') === 'true') {
-      const { text, map } = anonymize(requirement);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(requirement);
-  }, [canGenerate, loading, isStreaming, requirement, doGenerate]);
+  const gen = useGenerator<EdgeCase[]>({
+    view: 'edgecase',
+    toolType: 'testcase',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => requirement,
+    onStart: () => { setEdgeCases([]); setGeneratedModel(undefined); },
+    parse: (fullText) => {
+      const items = extractJsonArray(fullText);
+      if (!items || items.length === 0) throw new Error('error.noEdgeCases');
+      return validateEdgeCases(items);
+    },
+    onResult: (cases, { input: sent, fullText, model: usedModel }) => {
+      setEdgeCases(cases);
+      setGeneratedModel(usedModel);
+      onSaveArtifact?.(sent as string, fullText);
+    },
+  });
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prev = requirement;
     const prevCases = edgeCases;
     setRequirement('');
     setEdgeCases([]);
-    setError(null);
     setCopied(false);
     showToast(t('common.cleared'), () => {
       setRequirement(prev);
       setEdgeCases(prevCases);
     });
-  }, [requirement, edgeCases, resetStream, showToast, t]);
+  }, [requirement, edgeCases, gen, showToast, t]);
 
   const handleCopy = useCallback(async () => {
     await copyText(formatAsTSV(edgeCases, [t('edgecase.category'), t('edgecase.scenario'), t('edgecase.expectedResult')]));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [edgeCases, t]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !loading && !isStreaming) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, loading, isStreaming, handleGenerate]);
 
   return (
     <div className="ec-root">
@@ -160,15 +123,15 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
           <ConfidentialToggle
             view="edgecase"
             text={requirement}
-            onReview={() => setConf(anonymize(requirement))}
+            onReview={gen.openReview}
           />
           <button type="button" className="btn-ghost" onClick={handleClear} disabled={!requirement && !hasOutput}>
             {t('common.clear')}
           </button>
           <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={loading || isStreaming}
+            onClick={gen.handleGenerate}
+            disabled={!canGenerate || gen.isStreaming}
+            loading={gen.status === 'loading'}
           />
         </div>
       </div>
@@ -233,18 +196,10 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );

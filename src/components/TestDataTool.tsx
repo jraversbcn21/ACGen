@@ -1,16 +1,14 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { SearchableSelect } from './SearchableSelect';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, validateTestDataRows, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
+import { extractJsonArray, validateTestDataRows } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
 import { downloadBlob } from '../utils/download';
-import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
 import { useT } from '../i18n/I18nContext';
@@ -116,17 +114,32 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   const [formData, setFormData] = useState<TestDataFormData>(DEFAULT_FORM);
   const [generatedData, setGeneratedData] = useState<Record<string, string>[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
-  const [conf, setConf] = useState<{ text: string; map: Record<string, string> } | null>(null);
   const { toast, showToast } = useToast();
-  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const t = useT();
 
   const canGenerate = apiKey.trim().length > 0;
   const hasOutput = generatedData.length > 0;
+
+  const gen = useGenerator<Record<string, string>[]>({
+    view: 'testdata',
+    toolType: 'testcase',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    buildInput: () => buildTestDataMessage(formData),
+    onStart: () => { setGeneratedData([]); setGeneratedModel(undefined); },
+    parse: (fullText) => {
+      const jsonArray = extractJsonArray(fullText);
+      if (!jsonArray || jsonArray.length === 0) throw new Error('error.noTestData');
+      return validateTestDataRows(jsonArray);
+    },
+    onResult: (rows, { input: sent, fullText, model: usedModel }) => {
+      setGeneratedData(rows);
+      onSaveArtifact?.(sent as string, fullText);
+      setGeneratedModel(usedModel);
+    },
+  });
 
   const marketOptions = useMemo(
     () => SUPPORTED_MARKETS.map(m => ({ value: m.code, label: `${m.label} (${m.code})` })),
@@ -137,65 +150,14 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
     setFormData(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
-    if (isLoading || isStreaming) return;
-    setIsLoading(true);
-    setError(null);
-    setGeneratedData([]);
-    setGeneratedModel(undefined);
-    try {
-      const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('testdata'), 'testcase', profile, effectiveMap, baseUrl);
-      await stream(gen, (fullText) => {
-        const jsonArray = extractJsonArray(fullText);
-        if (!jsonArray || jsonArray.length === 0) {
-          throw new Error(t('error.noTestData'));
-        }
-        setGeneratedData(validateTestDataRows(jsonArray));
-        onSaveArtifact?.(effectiveInput, fullText);
-        setGeneratedModel(model);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-    } finally {
-      setIsLoading(false);
-      setConf(null);
-    }
-  }, [isLoading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || isLoading || isStreaming) return;
-    const userMessage = buildTestDataMessage(formData);
-    if (localStorage.getItem('acgen_confidential_testdata') === 'true') {
-      const { text, map } = anonymize(userMessage);
-      if (Object.keys(map).length > 0) {
-        setConf({ text, map });
-        return;
-      }
-    }
-    await doGenerate(userMessage);
-  }, [canGenerate, isLoading, isStreaming, formData, doGenerate]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !isLoading) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, isLoading, handleGenerate]);
-
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prevForm = formData;
     const prevData = generatedData;
     const prevModel = generatedModel;
     setFormData(DEFAULT_FORM);
     setGeneratedData([]);
     setGeneratedModel(undefined);
-    setError(null);
     setCopied(false);
     setCopiedRowIndex(null);
     showToast(t('common.cleared'), () => {
@@ -203,7 +165,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setGeneratedData(prevData);
       setGeneratedModel(prevModel);
     });
-  }, [formData, generatedData, generatedModel, resetStream, showToast, t]);
+  }, [formData, generatedData, generatedModel, gen, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     setGeneratedData(JSON.parse(DEMO_DATA.testdata.output));
@@ -307,7 +269,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         <ConfidentialToggle
           view="testdata"
           text={buildTestDataMessage(formData)}
-          onReview={() => setConf(anonymize(buildTestDataMessage(formData)))}
+          onReview={gen.openReview}
         />
         <div className="td-actions-bar-right">
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
@@ -321,9 +283,9 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
           </button>
           <span className="td-actions-sep" aria-hidden="true" />
           <GenerateButton
-            onClick={handleGenerate}
-            disabled={!canGenerate || isStreaming}
-            loading={isLoading}
+            onClick={gen.handleGenerate}
+            disabled={!canGenerate || gen.isStreaming}
+            loading={gen.status === 'loading'}
           />
         </div>
       </div>
@@ -396,18 +358,10 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
-      {conf && (
-        <AnonymizerReview
-          map={conf.map}
-          onCancel={() => setConf(null)}
-          onConfirm={(edits) => {
-            const { text, map } = applyPlaceholderEdits(conf.text, conf.map, edits);
-            doGenerate(text, map);
-            setConf(null);
-          }}
-        />
+      {gen.review && (
+        <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />
       )}
     </div>
   );
