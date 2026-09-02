@@ -43,7 +43,6 @@ No hay backend, ni base de datos, ni cuenta de usuario. **Tu API key se guarda s
 - **i18n**: interfaz completa en Espanol/Ingles con deteccion automatica del idioma del navegador.
 - **PWA**: instalable, con precache offline de los assets estaticos. Cuando hay un nuevo despliegue, un aviso "Hay una nueva version disponible" permite recargar a la ultima version con un clic.
 - **Tema oscuro**: Alterna entre modo claro y oscuro. Persistencia en localStorage, aplicado antes del primer paint (sin parpadeo).
-- **Text-to-speech**: Lectura en voz alta del razonamiento del modelo en Criterios y Bug Report.
 
 ---
 
