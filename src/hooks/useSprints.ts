@@ -132,7 +132,8 @@ export function useSprints() {
     setSprints((prev) => prev.map((s) => {
       if (s.id !== id) return s;
       const grid = gridFor(s, tabId);
-      if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow >= grid.length) return s;
+      // toRow es "insertar ANTES de"; grid.length significa "al final".
+      if (fromRow < 0 || fromRow >= grid.length || toRow < 0 || toRow > grid.length) return s;
       if (fromRow === toRow) return s;
       const newGrid = [...grid];
       const [movedRow] = newGrid.splice(fromRow, 1);

@@ -534,3 +534,24 @@ describe('TrackerGrid — tabColumns por indice de datos (columnas ocultas)', ()
     expect(screen.getByDisplayValue('visible')).toBeInTheDocument();
   });
 });
+
+describe('TrackerGrid — drop por mitades y busqueda', () => {
+  it('soltar en la mitad inferior de una fila inserta DESPUES de ella (la ultima posicion es alcanzable)', () => {
+    const props = renderGrid();
+    const rows = document.querySelectorAll('tbody tr');
+    vi.spyOn(rows[2], 'getBoundingClientRect').mockReturnValue({ top: 100, height: 20 } as DOMRect);
+    fireEvent.dragStart(rows[0].querySelector('td')!, { dataTransfer: { effectAllowed: '', setData: vi.fn() } });
+    fireEvent.dragOver(rows[2], { dataTransfer: { dropEffect: '' }, clientY: 118 });
+    fireEvent.drop(rows[2]);
+    expect(props.onMoveRow).toHaveBeenCalledWith('one', 0, 3);
+  });
+
+  it('la busqueda ignora los espacios al principio y al final', async () => {
+    const grid = makeGrid();
+    grid[0][0] = 'ABC-1';
+    grid[1][0] = 'Login';
+    renderGrid({ tabGrid: { one: grid, two: makeGrid() } });
+    fireEvent.change(screen.getByPlaceholderText('buscar'), { target: { value: ' Login' } });
+    await waitFor(() => expect(document.querySelectorAll('tbody tr')).toHaveLength(1));
+  });
+});

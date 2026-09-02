@@ -5,7 +5,7 @@ import { useSchema } from '../hooks/useSchema';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../config/constants';
 import { DEFAULT_SCHEMA, resolveLabel, visibleEntries, type SprintTabSchema } from '../types/schema';
-import { formatDate, localTodayISO } from '../utils/dates';
+import { formatDate, localTodayISO, daysBetween } from '../utils/dates';
 import { jiraTicketUrl, parseCellDate } from '../utils/ticketLink';
 
 const RECENT_LIMIT = 6;
@@ -74,10 +74,7 @@ function countRows(grid: string[][] | undefined): number {
 
 // Dias transcurridos desde el inicio, contando el dia de inicio como dia 1.
 function dayNumber(startDate: string): number {
-  const start = new Date(`${startDate}T00:00:00`);
-  const today = new Date(`${localTodayISO()}T00:00:00`);
-  const diff = Math.floor((today.getTime() - start.getTime()) / 86400000);
-  return Math.max(1, diff + 1);
+  return Math.max(1, daysBetween(startDate, localTodayISO()) + 1);
 }
 
 export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprint, onRenameSprint, onArchiveSprint, onUnarchiveSprint }: SprintListProps) {
@@ -138,7 +135,8 @@ export function SprintList({ sprints, onAddSprint, onSelectSprint, onDeleteSprin
 
   const handleAdd = () => {
     if (!name.trim()) return;
-    onAddSprint(name.trim(), startDate);
+    // Un <input type="date"> vaciado devuelve '' y el hero pintaria "dia NaN".
+    onAddSprint(name.trim(), startDate || localTodayISO());
     setName('');
     setStartDate(localTodayISO());
     setShowForm(false);

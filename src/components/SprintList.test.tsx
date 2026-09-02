@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } 
 import { I18nProvider } from '../i18n/I18nContext';
 import { SprintList } from './SprintList';
 import type { Sprint } from '../hooks/useSprints';
+import { localTodayISO } from '../utils/dates';
 
 const ORIGINAL_TZ = process.env.TZ;
 
@@ -345,5 +346,17 @@ describe('SprintList redesigned layout', () => {
     })]);
     // 2 filas reales en Resueltos; el total del panel y el tile coinciden.
     expect(screen.getByText('2 filas en 5 pestañas')).toBeInTheDocument();
+  });
+});
+
+describe('SprintList — formulario de alta', () => {
+  it('crea el sprint con la fecha de hoy si el campo de fecha se vacio (antes: "dia NaN")', () => {
+    const onAddSprint = vi.fn();
+    renderList([], { onAddSprint });
+    fireEvent.click(screen.getByText('Nuevo Sprint'));
+    fireEvent.change(document.getElementById('sprint-name')!, { target: { value: 'Sprint 31' } });
+    fireEvent.change(document.getElementById('sprint-start')!, { target: { value: '' } });
+    fireEvent.click(screen.getByText('Crear'));
+    expect(onAddSprint).toHaveBeenCalledWith('Sprint 31', localTodayISO());
   });
 });

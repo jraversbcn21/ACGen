@@ -87,7 +87,7 @@ export function TrackerGrid<T extends string>({
   const [isResizing, setIsResizing] = useState(false);
   const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
   const [dragSourceRow, setDragSourceRow] = useState<number | null>(null);
-  const [dragTargetRow, setDragTargetRow] = useState<number | null>(null);
+  const [dragTargetRow, setDragTargetRow] = useState<{ row: number; half: 'top' | 'bottom' } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showUrlConfig, setShowUrlConfig] = useState(false);
@@ -179,8 +179,8 @@ export function TrackerGrid<T extends string>({
   );
 
   const filteredRowIndices = useMemo(() => {
-    if (!debouncedQuery.trim()) return null;
-    const q = debouncedQuery.toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
+    if (!q) return null;
     const indices: number[] = [];
     for (let ri = 0; ri < grid.length; ri++) {
       const row = grid[ri];
@@ -243,19 +243,25 @@ export function TrackerGrid<T extends string>({
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(ri));
     setDragSourceRow(ri);
-    setDragTargetRow(ri);
+    setDragTargetRow({ row: ri, half: 'top' });
   };
 
   const handleDragOver = (e: React.DragEvent, ri: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragSourceRow !== null) setDragTargetRow(ri);
+    if (dragSourceRow === null) return;
+    // Mitad superior = antes de la fila; inferior = despues. Sin esto la ultima
+    // posicion era inalcanzable. Mismo gesto que el rail del Regression Tracker.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const half = e.clientY <= rect.top + rect.height / 2 ? 'top' : 'bottom';
+    setDragTargetRow((prev) => (prev?.row === ri && prev.half === half ? prev : { row: ri, half }));
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (dragSourceRow !== null && dragTargetRow !== null && dragSourceRow !== dragTargetRow) {
-      onMoveRow(safeTab, dragSourceRow, dragTargetRow);
+    if (dragSourceRow !== null && dragTargetRow !== null) {
+      const to = dragTargetRow.half === 'top' ? dragTargetRow.row : dragTargetRow.row + 1;
+      if (to !== dragSourceRow && to !== dragSourceRow + 1) onMoveRow(safeTab, dragSourceRow, to);
     }
     setDragSourceRow(null);
     setDragTargetRow(null);
@@ -417,7 +423,7 @@ export function TrackerGrid<T extends string>({
           <tbody>
             {displayRowIndices.map((ri, pos) => {
               const isDragging = dragSourceRow === ri;
-              const isDropTarget = dragTargetRow === ri && dragSourceRow !== ri;
+              const dropHalf = dragTargetRow?.row === ri && dragSourceRow !== ri ? dragTargetRow.half : null;
               return (
               <tr
                 key={ri}
@@ -425,7 +431,8 @@ export function TrackerGrid<T extends string>({
                 onDrop={handleDrop}
                 style={{
                   opacity: isDragging ? 0.4 : undefined,
-                  borderTop: isDropTarget ? '2px solid var(--accent)' : undefined,
+                  borderTop: dropHalf === 'top' ? '2px solid var(--accent)' : undefined,
+                  borderBottom: dropHalf === 'bottom' ? '2px solid var(--accent)' : undefined,
                 }}
               >
                 <td

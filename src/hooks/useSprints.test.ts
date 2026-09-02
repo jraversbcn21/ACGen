@@ -499,3 +499,14 @@ describe('useSprints — multi-pestana', () => {
     expect(spy.mock.calls.filter(([k]) => k === 'acgen_sprints')).toHaveLength(0);
   });
 });
+
+describe('useSprints — moveRow al final', () => {
+  it('toRow === grid.length deja la fila en la ultima posicion (antes era inalcanzable)', () => {
+    const { result } = renderHook(() => useSprints());
+    act(() => { result.current.addSprint('Sprint 24', '2026-07-08'); });
+    const id = result.current.sprints[0].id;
+    act(() => { result.current.setTabGrid(id, 'resolved', [['A'], ['B'], ['C']]); });
+    act(() => { result.current.moveRow(id, 'resolved', 0, 3); });
+    expect(result.current.sprints[0].tabGrid.resolved.map((r) => r[0])).toEqual(['B', 'C', 'A']);
+  });
+});
