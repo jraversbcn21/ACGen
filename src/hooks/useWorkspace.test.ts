@@ -233,3 +233,11 @@ describe('useWorkspace', () => {
     });
   });
 });
+
+describe('useWorkspace — storage corrupto', () => {
+  it('un acgen_workspaces que no es array se trata como vacio en vez de reventar la cabecera', () => {
+    localStorage.setItem('acgen_workspaces', '{}');
+    const { result } = renderHook(() => useWorkspace());
+    expect(result.current.workspaces).toEqual([]);
+  });
+});

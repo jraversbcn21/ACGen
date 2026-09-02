@@ -427,3 +427,11 @@ describe('isBackupDue', () => {
     expect(BACKUP_REMINDER_DAYS).toBe(7);
   });
 });
+
+describe('hasSignificantData — biblioteca de documentacion', () => {
+  it('cuenta los enlaces guardados como dato que da pena perder', () => {
+    localStorage.clear();
+    localStorage.setItem('acgen_doclinks', JSON.stringify({ links: [{ id: '1', name: 'Doc', url: 'https://x', category: '', favorite: false }] }));
+    expect(hasSignificantData()).toBe(true);
+  });
+});

@@ -97,3 +97,15 @@ describe('App — migracion de la API key legada', () => {
     expect(localStorage.getItem('acgen_api_key')).toBeNull();
   });
 });
+
+describe('App — aviso de cuota de almacenamiento', () => {
+  it('avisa una sola vez cuando una escritura a localStorage falla', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<App />);
+    const fire = () => window.dispatchEvent(new CustomEvent('acgen-storage-error', { detail: { key: 'acgen_sprints' } }));
+    act(() => { fire(); });
+    act(() => { fire(); });
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy.mock.calls[0][0]).toMatch(/espacio/i);
+  });
+});

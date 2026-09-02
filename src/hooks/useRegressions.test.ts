@@ -423,3 +423,16 @@ describe('useRegressions guiado por esquema', () => {
     expect(filledTicketCount(regression, ['status'])).toBe(1);
   });
 });
+
+describe('useRegressions — multi-pestana', () => {
+  it('resincroniza desde otra pestana (evento storage) sin reescribir localStorage', () => {
+    const { result } = renderHook(() => useRegressions());
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    const incoming = { regressions: { ios: [{ id: 'r1', version: '9.9.9', url: '', fecha: '', tickets: [] }] }, archived: [] };
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'acgen_regressions', newValue: JSON.stringify(incoming) }));
+    });
+    expect(result.current.regressions.ios.map((r) => r.version)).toEqual(['9.9.9']);
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_regressions')).toHaveLength(0);
+  });
+});

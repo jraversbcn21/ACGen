@@ -406,6 +406,7 @@
   "backup.importError": "Invalid backup file.",
   "backup.futureVersion": "This backup was created by a newer version of ACGen.",
   "backup.quotaError": "Not enough storage space to restore the backup.",
+  "storage.quotaError": "The browser has no room to save your latest changes. Export a backup and free up space.",
   "backup.legacyImported": "Workspace imported (legacy format).",
   "backup.autoTitle": "Auto-backup to disk",
   "backup.autoEnable": "Choose auto-backup file",

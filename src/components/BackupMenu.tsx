@@ -159,26 +159,19 @@ export function BackupMenu({ onImportLegacyWorkspace, onRestored }: BackupMenuPr
                   {t('backup.autoEnable')}
                 </button>
               )}
-              {autoBackup.status === 'active' && (
-                <>
-                  <div className="backup-last">{t('backup.autoActive')}</div>
-                  <button type="button" className="btn-ghost" onClick={() => void autoBackup.disable()}>
-                    {t('backup.autoDisable')}
-                  </button>
-                </>
-              )}
-              {autoBackup.status === 'permissionNeeded' && (
+              {autoBackup.status === 'active' && <div className="backup-last">{t('backup.autoActive')}</div>}
+              {autoBackup.status === 'error' && <div className="backup-warning">{t('backup.autoError')}</div>}
+              {(autoBackup.status === 'permissionNeeded' || autoBackup.status === 'error') && (
                 <button type="button" className="btn-ghost" onClick={() => void autoBackup.reconnect()}>
                   {t('backup.autoReconnect')}
                 </button>
               )}
-              {autoBackup.status === 'error' && (
-                <>
-                  <div className="backup-warning">{t('backup.autoError')}</div>
-                  <button type="button" className="btn-ghost" onClick={() => void autoBackup.reconnect()}>
-                    {t('backup.autoReconnect')}
-                  </button>
-                </>
+              {/* Desactivar en TODO estado con fichero: un fichero borrado o un
+                  permiso denegado dejaban Reconectar como unica salida, en bucle. */}
+              {autoBackup.status !== 'off' && (
+                <button type="button" className="btn-ghost" onClick={() => void autoBackup.disable()}>
+                  {t('backup.autoDisable')}
+                </button>
               )}
             </div>
           )}

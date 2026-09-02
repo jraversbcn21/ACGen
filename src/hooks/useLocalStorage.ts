@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-
-const LOCAL_SYNC_EVENT = 'acgen-local-storage';
+import { writeStorage, LOCAL_SYNC_EVENT } from '../services/persistence';
 
 interface LocalSyncDetail {
   key: string;
@@ -24,12 +23,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     (value: T | ((prev: T) => T)) => {
       setStoredValue((prev) => {
         const nextValue = value instanceof Function ? value(prev) : value;
-        try {
-          localStorage.setItem(key, JSON.stringify(nextValue));
-        } catch (err) {
-          console.error(`No se pudo guardar "${key}" en localStorage:`, err);
-        }
-        window.dispatchEvent(new CustomEvent<LocalSyncDetail>(LOCAL_SYNC_EVENT, { detail: { key, value: nextValue } }));
+        writeStorage(key, nextValue);
         return nextValue;
       });
     },

@@ -8,13 +8,10 @@
 // false})); writeSnapshot itself never rejects, so failures surface as the
 // 'error' status rather than a thrown exception.
 //
-// Known limitation (accepted): only 'acgen-local-storage' (same-tab, fired
-// by useLocalStorage) and the native 'storage' (cross-tab) events are
-// observed. useSprints/useRegressions/useHistory write directly via
-// localStorage.setItem without dispatching either event, so a change made
-// only through those hooks won't trigger an immediate snapshot — it will be
-// captured by the next change that does dispatch, or once the page
-// reconnects. Patching those domain hooks is out of scope for this task.
+// Every hook writes through writeStorage (services/persistence.ts), which
+// fires 'acgen-local-storage' on each write, so sprint/regression/history
+// edits schedule a snapshot too. A pending debounced snapshot is flushed on
+// 'pagehide' so closing the tab right after an edit doesn't lose it.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -95,18 +92,29 @@ export function useAutoBackup(onSnapshot?: () => void): AutoBackupState {
     [onSnapshot],
   );
 
+  // The menu calls these with `void`: a rejection here (picker error, IndexedDB
+  // failure) would otherwise be an unhandled promise with zero UI feedback.
   const enable = useCallback(async () => {
-    const handle = await chooseBackupFile();
-    if (!handle) return;
-    handleRef.current = handle;
-    await saveHandle(handle);
-    await snapshotNow(handle);
+    try {
+      const handle = await chooseBackupFile();
+      if (!handle) return;
+      handleRef.current = handle;
+      await saveHandle(handle);
+      await snapshotNow(handle);
+    } catch {
+      handleRef.current = null;
+      setStatus('error');
+    }
   }, [snapshotNow]);
 
   const disable = useCallback(async () => {
-    await clearHandle();
-    handleRef.current = null;
-    setStatus('off');
+    try {
+      await clearHandle();
+      handleRef.current = null;
+      setStatus('off');
+    } catch {
+      setStatus('error');
+    }
   }, []);
 
   const reconnect = useCallback(async () => {
@@ -148,10 +156,21 @@ export function useAutoBackup(onSnapshot?: () => void): AutoBackupState {
       }, DEBOUNCE_MS);
     };
 
+    // Closing/hiding the tab inside the debounce window would drop the last
+    // edits from the on-disk file until the next session's first change.
+    const flush = () => {
+      if (timerRef.current === null) return;
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+      void snapshotNow(handle);
+    };
+
     for (const event of SYNC_EVENTS) window.addEventListener(event, scheduleSnapshot);
+    window.addEventListener('pagehide', flush);
 
     return () => {
       for (const event of SYNC_EVENTS) window.removeEventListener(event, scheduleSnapshot);
+      window.removeEventListener('pagehide', flush);
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;

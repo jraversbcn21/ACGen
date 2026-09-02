@@ -486,3 +486,16 @@ describe('useSprints', () => {
     expect(result.current.sprints[0].tabGrid.resolved[0][0]).toBe('ACG-1');
   });
 });
+
+describe('useSprints — multi-pestana', () => {
+  it('resincroniza desde otra pestana (evento storage) sin reescribir localStorage', () => {
+    const { result } = renderHook(() => useSprints());
+    const spy = vi.spyOn(Storage.prototype, 'setItem');
+    const incoming = [{ id: 's1', name: 'Sprint 30', startDate: '2026-09-01', endDate: null, archived: false, tabGrid: {} }];
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'acgen_sprints', newValue: JSON.stringify(incoming) }));
+    });
+    expect(result.current.sprints.map((s) => s.name)).toEqual(['Sprint 30']);
+    expect(spy.mock.calls.filter(([k]) => k === 'acgen_sprints')).toHaveLength(0);
+  });
+});
