@@ -828,11 +828,11 @@ Particularidades: sin modo confidencial; entrada `ContentPart[]`; `canGenerate` 
   });
 ```
 
-`handleGenerate` hacía `setReport(null)` al arrancar. Para conservarlo sin tocar el hook, envuelve: `const handleGenerate = useCallback(() => { setReport(null); return gen.handleGenerate(); }, [gen]);` — pero OJO: eso vacía el informe aunque el guard del hook rechace la llamada (p. ej. sin imagen). Comprueba en `DesignValidatorTool.test.tsx` si algún test cubre "generar sin imagen conserva el informe anterior"; si no lo cubre y el comportamiento antiguo era `if (!canGenerate ...) return;` ANTES de `setReport(null)`, replica el guard: `if (!canGenerate || gen.status === 'loading' || gen.isStreaming) return; setReport(null); return gen.handleGenerate();`.
+`handleGenerate` hacía `setReport(null)` al arrancar. **NO lo envuelvas en un wrapper**: el atajo Ctrl+Enter vive en el hook y llama a su propio `handleGenerate`, así que un wrapper solo cubriría el clic (hallazgo de la review de la Tarea 10, decisión de Jorge). La regla es la misma que para el historial: lo que el tool necesita "al arrancar" va en `buildInput`, que el hook llama en TODOS los caminos y solo tras pasar su guard (así una llamada bloqueada — sin imagen, generación en curso — no vacía el informe anterior, igual que antes). Añade `setReport(null);` como primera línea de `buildInput` y pasa `onClick={gen.handleGenerate}` directo, como los otros ocho tools.
 
 - [ ] **Step 3: `handleClear`**: `resetStream()` → `gen.clearGeneration()`; quita `setError(null)`; deps.
 
-- [ ] **Step 4: JSX**: `GenerateButton onClick={handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`. (No hay toggle ni modal.)
+- [ ] **Step 4: JSX**: `GenerateButton onClick={gen.handleGenerate} disabled={!canGenerate || gen.isStreaming} loading={gen.status === 'loading'}`; `ErrorBanner message={gen.error} onDismiss={gen.dismissError}`. (No hay toggle ni modal.)
 
 - [ ] **Step 5: Gates**. **Step 6: Commit** `refactor(designvalidator): migrar a useGenerator`.
 

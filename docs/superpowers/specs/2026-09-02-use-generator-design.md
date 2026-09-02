@@ -161,6 +161,14 @@ Ver ejemplo, historial, exportar PDF/CSV/TSV, y **todo el JSX**.
 Regla: si un tool necesitara una opción nueva del hook que ninguno de los otros
 ocho usa, ese trozo no es común y se queda en el tool.
 
+Regla (de las reviews de las Tareas 5 y 10): **todo lo que el tool necesite
+hacer o capturar "al arrancar" una generación va dentro de `buildInput`** —
+el texto del historial, el texto del artefacto, vaciar el resultado anterior.
+El hook llama a `buildInput` en todos los caminos (clic, Ctrl+Enter, badge
+del anonimizador) y solo tras pasar su guard; un wrapper alrededor de
+`gen.handleGenerate` no cubre el atajo, y un `useEffect` no distingue una
+llamada bloqueada de una real.
+
 ## Migración
 
 Un commit por tool, en este orden; tras cada commit, los 785 tests siguen
