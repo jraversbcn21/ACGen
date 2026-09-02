@@ -6,6 +6,7 @@ import { streamWithGroq, extractJsonArray, validateTestCases, getPrompt } from '
 import type { I18nError } from '../services/apiService';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { copyText } from '../utils/clipboard';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
@@ -134,22 +135,9 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
 
   const handleCopyJira = useCallback(async () => {
     const table = generateJiraTable(testCases, t);
-    try {
-      await navigator.clipboard.writeText(table);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = table;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyText(table);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [testCases, t]);
 
   const handleDownloadPdf = useCallback(() => {

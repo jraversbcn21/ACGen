@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { copyText } from '../utils/clipboard';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
@@ -76,12 +77,7 @@ const DEFAULT_FORM: BugReportFormData = {
 export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact }: BugReportToolProps) {
   const [formData, setFormData] = useState<BugReportFormData>(DEFAULT_FORM);
   const [output, setOutput] = useState('');
-  const [reasoning, setReasoning] = useState<string | undefined>();
-  const [ttsLang, setTtsLang] = useState<'es-ES' | 'en-US'>('en-US');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -106,23 +102,11 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setFormData(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const reasoningRef = useRef<HTMLDetailsElement>(null);
-
-  const handleReasoningToggle = useCallback(() => {
-    const el = reasoningRef.current;
-    if (!el || !el.open) return;
-    requestAnimationFrame(() => {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
-    });
-  }, []);
-
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
     if (isLoading || isStreaming) return;
     setIsLoading(true);
     setError(null);
     setOutput('');
-    setReasoning(undefined);
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('bugreport'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
@@ -135,7 +119,6 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setError(message);
     } finally {
       setIsLoading(false);
-      setLoadingStatus('');
       setConf(null);
     }
   }, [isLoading, isStreaming, apiKey, model, formData.description, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
@@ -168,18 +151,15 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     resetStream();
     const prevForm = formData;
     const prevOutput = output;
-    const prevReasoning = reasoning;
     setFormData(DEFAULT_FORM);
     setOutput('');
-    setReasoning(undefined);
     setError(null);
     setCopied(false);
     showToast(t('common.cleared'), () => {
       setFormData(prevForm);
       setOutput(prevOutput);
-      setReasoning(prevReasoning);
     });
-  }, [formData, output, reasoning, resetStream, showToast, t]);
+  }, [formData, output, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.bugreport;
@@ -187,64 +167,10 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
     setOutput(demo.output);
   }, []);
 
-  const startSpeech = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = ttsLang;
-    const voices = window.speechSynthesis.getVoices();
-    const langPrefix = ttsLang.split('-')[0];
-    const match = voices
-      .filter(v => v.lang.startsWith(langPrefix))
-      .sort((a, b) => {
-        const quality = (v: SpeechSynthesisVoice): number => {
-          const n = v.name.toLowerCase();
-          if (n.includes('natural')) return 4;
-          if (n.includes('neural'))  return 3;
-          if (n.includes('online'))  return 2;
-          if (!v.localService)       return 1;
-          return 0;
-        };
-        return quality(b) - quality(a);
-      })[0];
-    if (match) utter.voice = match;
-    utter.onstart = () => setIsSpeaking(true);
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = () => setIsSpeaking(false);
-    synthRef.current = window.speechSynthesis;
-    window.speechSynthesis.speak(utter);
-  };
-
-  const stopSpeech = () => {
-    // Read-aloud is optional: without the API there is nothing to stop.
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isSpeaking) stopSpeech();
-  }, [reasoning]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(output);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.getElementById('br-output') as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.select();
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    }
+    await copyText(output);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [output]);
 
   const handlePlatformChange = useCallback((platform: string) => {
@@ -435,9 +361,6 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
               disabled={!canGenerate || isStreaming}
               loading={isLoading || isStreaming}
             />
-            {loadingStatus && (
-              <span className="loading-status">{loadingStatus}</span>
-            )}
           </div>
         </div>
 
@@ -475,55 +398,6 @@ export function BugReportTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
               placeholder={t('bugreport.outputPlaceholder')}
             />
           </div>
-
-          {reasoning && (
-            <div className="br-panel-reasoning">
-              <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
-                <summary>
-                  <span className="reasoning-label">Razonamiento del modelo</span>
-                  <span className="reasoning-tts" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className={`tts-lang-btn ${ttsLang === 'es-ES' ? 'active' : ''}`}
-                      onClick={() => { stopSpeech(); setTtsLang('es-ES'); }}
-                      title="Leer en español"
-                    >ES</button>
-                    <button
-                      type="button"
-                      className={`tts-lang-btn ${ttsLang === 'en-US' ? 'active' : ''}`}
-                      onClick={() => { stopSpeech(); setTtsLang('en-US'); }}
-                      title="Read in English"
-                    >EN</button>
-                    {!isSpeaking ? (
-                      <button
-                        type="button"
-                        className="tts-play-btn"
-                        onClick={() => startSpeech(reasoning ?? '')}
-                        title="Leer en voz alta"
-                        disabled={!reasoning}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                          <polygon points="5,3 19,12 5,21" />
-                        </svg>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="tts-stop-btn"
-                        onClick={stopSpeech}
-                        title="Detener lectura"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                          <rect x="4" y="4" width="16" height="16" rx="2" />
-                        </svg>
-                      </button>
-                    )}
-                  </span>
-                </summary>
-                <div className="reasoning-body">{reasoning}</div>
-              </details>
-            </div>
-          )}
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import { localTodayISO } from '../utils/dates';
 import { writeStorage } from '../services/persistence';
 import { useSchema } from './useSchema';
 
-const STORAGE_KEY = 'acgen_sprints';
+const STORAGE_KEY = STORAGE_KEYS.SPRINTS;
 
 /** Abierto desde la Fase 5: las pestanas salen del esquema, no de una union
  *  cerrada. Las pestanas retiradas del esquema conservan su grid en el objeto

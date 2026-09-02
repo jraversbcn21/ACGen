@@ -8,6 +8,8 @@ import type { I18nError } from '../services/apiService';
 import { SUPPORTED_MARKETS, DATA_TYPES } from '../config/constants';
 import { DEMO_DATA } from '../config/demoData';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { copyText } from '../utils/clipboard';
+import { downloadBlob } from '../utils/download';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
 import { AnonymizerReview } from './AnonymizerReview';
@@ -75,15 +77,7 @@ function downloadCSV(data: Record<string, string>[], dataType: string, market: s
     }).join(',')
   );
   const csv = '\uFEFF' + [header, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `datos-prueba-${dataType}-${market}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(`datos-prueba-${dataType}-${market}.csv`, csv, 'text/csv;charset=utf-8;');
 }
 
 function formatTableAsTSV(data: Record<string, string>[]): string {
@@ -123,7 +117,6 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   const [generatedData, setGeneratedData] = useState<Record<string, string>[]>([]);
   const [generatedModel, setGeneratedModel] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
@@ -166,7 +159,6 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setError(message);
     } finally {
       setIsLoading(false);
-      setLoadingStatus('');
       setConf(null);
     }
   }, [isLoading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
@@ -219,43 +211,15 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   }, []);
 
   const handleCopyRow = useCallback(async (row: Record<string, string>, index: number) => {
-    const text = formatRowAsText(row);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedRowIndex(index);
-      setTimeout(() => setCopiedRowIndex(null), 2000);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopiedRowIndex(index);
-      setTimeout(() => setCopiedRowIndex(null), 2000);
-    }
+    await copyText(formatRowAsText(row));
+    setCopiedRowIndex(index);
+    setTimeout(() => setCopiedRowIndex(null), 2000);
   }, []);
 
   const handleCopyTable = useCallback(async () => {
-    const text = formatTableAsTSV(generatedData);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyText(formatTableAsTSV(generatedData));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [generatedData]);
 
   const handleDownloadCsv = useCallback(() => {
@@ -346,9 +310,6 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
           onReview={() => setConf(anonymize(buildTestDataMessage(formData)))}
         />
         <div className="td-actions-bar-right">
-          {loadingStatus && (
-            <span className="loading-status">{loadingStatus}</span>
-          )}
           <button type="button" className="btn-ghost" onClick={handleLoadDemo}>{t('common.example')}</button>
           <button
             type="button"

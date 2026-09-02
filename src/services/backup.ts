@@ -13,8 +13,8 @@ export const BACKUP_REMINDER_DAYS = 7;
 const LAST_BACKUP_KEY = STORAGE_KEYS.LAST_BACKUP;
 const SENSITIVE_KEY_PATTERN = /^acgen_key_/;
 const LEGACY_API_KEY = 'acgen_api_key';
-const SPRINTS_KEY = 'acgen_sprints';
-const REGRESSIONS_KEY = 'acgen_regressions';
+const SPRINTS_KEY = STORAGE_KEYS.SPRINTS;
+const REGRESSIONS_KEY = STORAGE_KEYS.REGRESSIONS;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** True for the API key family (`acgen_key_*`) and the legacy `acgen_api_key`. */
@@ -181,23 +181,6 @@ export function restoreBackup(backup: BackupFile): RestoreResult {
   }
 
   return { ok: true };
-}
-
-/** Reads acgen_last_backup; null if absent or not parseable to a finite number. */
-export function getLastBackupAt(): number | null {
-  try {
-    const raw = localStorage.getItem(LAST_BACKUP_KEY);
-    if (raw === null) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Records that a backup was just made. */
-export function markBackupDone(now?: number): void {
-  localStorage.setItem(LAST_BACKUP_KEY, JSON.stringify(now ?? Date.now()));
 }
 
 function hasWorkspaceArtifact(): boolean {

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { STORAGE_KEYS } from '../config/constants';
 import { localTodayISO } from '../utils/dates';
 import { writeStorage } from '../services/persistence';
 import { useSchema } from './useSchema';
 
-const STORAGE_KEY = 'acgen_regressions';
+const STORAGE_KEY = STORAGE_KEYS.REGRESSIONS;
 
 // Los ids de plataforma y de campo son claves de almacenamiento definidas por
 // el esquema (`acgen_schema`), ya no uniones cerradas. 'ios' sigue siendo el id

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { HistoryModal } from './HistoryModal';
@@ -13,6 +13,7 @@ import { useHistory } from '../hooks/useHistory';
 import type { ProjectProfile } from '../types/context';
 import type { GenerationStatus } from '../types';
 import { useT } from '../i18n/I18nContext';
+import { copyText } from '../utils/clipboard';
 
 import { ChainMenu } from './ChainMenu';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
@@ -34,13 +35,8 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
   const [criteria, setCriteria] = useState('');
   const [status, setStatus] = useState<GenerationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [reasoning, setReasoning] = useState<string | undefined>();
-  const [ttsLang, setTtsLang] = useState<'es-ES' | 'en-US'>('en-US');
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [additionalContext, setAdditionalContext] = useState('');
-  const synthRef = useRef<SpeechSynthesis | null>(null);
   const [copied, setCopied] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const { history, addEntry, clearHistory } = useHistory(STORAGE_KEYS.CRITERIA_HISTORY);
   const { toast, showToast } = useToast();
@@ -62,12 +58,10 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
     setStatus('loading');
     setError(null);
     setCriteria('');
-    setReasoning(undefined);
     try {
       const gen = streamWithGroq(apiKey, model, effectiveInput, getPrompt('acceptance'), 'criteria', profile, effectiveMap, baseUrl);
       await stream(gen, (fullText) => {
         setCriteria(fullText);
-        setReasoning(undefined);
         onSaveArtifact?.(effectiveInput, fullText);
         addEntry(requirements, fullText);
         setStatus('success');
@@ -77,7 +71,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       setError(message);
       setStatus('error');
     } finally {
-      setLoadingStatus('');
       setConf(null);
     }
   }, [status, isStreaming, apiKey, model, requirements, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
@@ -105,15 +98,12 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
   }, [canGenerate, status, isStreaming, buildEffectiveInput, doGenerate]);
 
   const handleClear = useCallback(() => {
-    stopSpeech();
     resetStream();
     const prevRequirements = requirements;
     const prevCriteria = criteria;
-    const prevReasoning = reasoning;
     const prevContext = additionalContext;
     setRequirements('');
     setCriteria('');
-    setReasoning(undefined);
     setError(null);
     setStatus('idle');
     setCopied(false);
@@ -121,10 +111,9 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
     showToast(t('common.cleared'), () => {
       setRequirements(prevRequirements);
       setCriteria(prevCriteria);
-      setReasoning(prevReasoning);
       setAdditionalContext(prevContext);
     });
-  }, [requirements, criteria, reasoning, additionalContext, resetStream, showToast, t]);
+  }, [requirements, criteria, additionalContext, resetStream, showToast, t]);
 
   const handleLoadDemo = useCallback(() => {
     const demo = DEMO_DATA.acceptance;
@@ -133,61 +122,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
     setError(null);
     setStatus('success');
   }, []);
-
-  const reasoningRef = useRef<HTMLDetailsElement>(null);
-
-  const handleReasoningToggle = useCallback(() => {
-    const el = reasoningRef.current;
-    if (!el || !el.open) return;
-    requestAnimationFrame(() => {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
-    });
-  }, []);
-
-  const startSpeech = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = ttsLang;
-    const voices = window.speechSynthesis.getVoices();
-    const langPrefix = ttsLang.split('-')[0];
-    const match = voices
-      .filter(v => v.lang.startsWith(langPrefix))
-      .sort((a, b) => {
-        const quality = (v: SpeechSynthesisVoice): number => {
-          const n = v.name.toLowerCase();
-          if (n.includes('natural')) return 4;
-          if (n.includes('neural'))  return 3;
-          if (n.includes('online'))  return 2;
-          if (!v.localService)       return 1;
-          return 0;
-        };
-        return quality(b) - quality(a);
-      })[0];
-    if (match) utter.voice = match;
-    utter.onstart = () => setIsSpeaking(true);
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = () => setIsSpeaking(false);
-    synthRef.current = window.speechSynthesis;
-    window.speechSynthesis.speak(utter);
-  };
-
-  const stopSpeech = () => {
-    // Read-aloud is optional: without the API there is nothing to stop.
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isSpeaking) stopSpeech();
-  }, [reasoning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -201,19 +135,9 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
   }, [canGenerate, status, handleGenerate]);
 
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(criteria);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.getElementById('criteria-output') as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.select();
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    }
+    await copyText(criteria);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [criteria]);
 
   return (
@@ -264,9 +188,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
               </button>
             </div>
             <GenerateButton onClick={handleGenerate} disabled={!canGenerate || isStreaming} loading={status === 'loading' && !isStreaming} />
-            {loadingStatus && (
-              <span className="loading-status">{loadingStatus}</span>
-            )}
           </div>
         </div>
         <div className="criteria-right">
@@ -305,54 +226,6 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
               placeholder={!criteria ? t('acceptance.outputPlaceholder') : ''}
             />
           </div>
-          {reasoning && (
-            <div className="criteria-reasoning">
-            <details ref={reasoningRef} className="reasoning" onToggle={handleReasoningToggle}>
-              <summary>
-                <span className="reasoning-label">Razonamiento del modelo</span>
-                <span className="reasoning-tts" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className={`tts-lang-btn ${ttsLang === 'es-ES' ? 'active' : ''}`}
-                    onClick={() => { stopSpeech(); setTtsLang('es-ES'); }}
-                    title="Leer en español"
-                  >ES</button>
-                  <button
-                    type="button"
-                    className={`tts-lang-btn ${ttsLang === 'en-US' ? 'active' : ''}`}
-                    onClick={() => { stopSpeech(); setTtsLang('en-US'); }}
-                    title="Read in English"
-                  >EN</button>
-                  {!isSpeaking ? (
-                    <button
-                      type="button"
-                      className="tts-play-btn"
-                      onClick={() => startSpeech(reasoning ?? '')}
-                      title="Leer en voz alta"
-                      disabled={!reasoning}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <polygon points="5,3 19,12 5,21" />
-                      </svg>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="tts-stop-btn"
-                      onClick={stopSpeech}
-                      title="Detener lectura"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                      </svg>
-                    </button>
-                  )}
-                </span>
-              </summary>
-              <div className="reasoning-body">{reasoning}</div>
-            </details>
-            </div>
-          )}
         </div>
       </div>
 

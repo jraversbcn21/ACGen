@@ -345,70 +345,6 @@ body {
 .badge-negative { background: var(--danger-bg);  color: var(--danger); }
 .badge-info   { background: var(--accent-weak); color: var(--accent); }
 
-/* === SHARED REASONING SECTION === */
-.reasoning {
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); overflow: hidden;
-}
-.reasoning summary {
-  padding: 10px 14px; background: var(--surface-2); cursor: pointer;
-  font-family: var(--font-ui); font-size: 13px; font-weight: 700;
-  color: var(--text-3); user-select: none; list-style: none;
-  transition: background .18s var(--ease);
-}
-.reasoning summary:hover { background: color-mix(in srgb, var(--surface-2) 50%, var(--border)); }
-.reasoning summary::-webkit-details-marker { display: none; }
-.reasoning .reasoning-body {
-  padding: 14px; font-size: 13px; line-height: 1.6;
-  white-space: pre-wrap; color: var(--text-2);
-  border-top: 1px solid var(--border); max-height: 500px; overflow-y: auto;
-}
-
-/* === TTS CONTROLS === */
-.reasoning summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.reasoning-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.reasoning-tts {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.tts-lang-btn {
-  height: 24px; padding: 0 8px;
-  font-size: 11px; font-weight: 700; letter-spacing: .04em;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: transparent; color: var(--text-3);
-  cursor: pointer; font-family: var(--font-mono);
-  transition: all .15s var(--ease);
-}
-.tts-lang-btn:hover { border-color: var(--accent); color: var(--accent); }
-.tts-lang-btn.active { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
-
-.tts-play-btn,
-.tts-stop-btn {
-  display: grid; place-items: center;
-  width: 28px; height: 28px;
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface); color: var(--text-2);
-  cursor: pointer;
-  transition: all .15s var(--ease);
-}
-.tts-play-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); }
-.tts-play-btn:disabled { opacity: .35; cursor: not-allowed; }
-.tts-stop-btn { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
-.tts-stop-btn:hover { opacity: .8; }
-
 /* === HISTORY MODAL === */
 .history-overlay {
   position: fixed; inset: 0; z-index: 100;
@@ -571,12 +507,6 @@ body {
   }
 }
 
-.loading-status {
-  font-size: 13px;
-  color: var(--text-2);
-  animation: fadeIn 0.3s ease;
-}
-
 /* Titulo de pagina de cada herramienta */
 .tool-page-title {
   margin: 0 0 14px;
@@ -625,7 +555,6 @@ body {
 .criteria-actions-row { display: flex; gap: 8px; }
 .criteria-actions-row .btn-ghost { flex: 1; min-width: 0; padding: 9px 10px; }
 .criteria-actions .btn-primary { width: 100%; min-width: 0; }
-.criteria-actions .loading-status { text-align: center; }
 
 /* --- columna derecha: panel de resultado a toda la altura --- */
 .criteria-right {
@@ -652,7 +581,6 @@ body {
   border: none; background: transparent; resize: none;
 }
 .criteria-output-ta:focus { box-shadow: none; }
-.criteria-reasoning { flex: none; padding: 12px; border-top: 1px solid var(--border); }
 /* Bug Report compact row */
 /* La caja de resultados respira respecto al boton Generar y llena el alto sobrante */
 .br-root {
@@ -1159,7 +1087,6 @@ td:hover .cell-open-link {
 .br-actions-row { display: flex; gap: 8px; }
 .br-actions-row .btn-ghost { flex: 1; min-width: 0; padding: 9px 10px; }
 .br-card .btn-primary { width: 100%; min-width: 0; }
-.br-card .loading-status { text-align: center; }
 
 .br-panel {
   min-width: 0; min-height: 0;
@@ -1185,7 +1112,6 @@ td:hover .cell-open-link {
   border: none; background: transparent; resize: none;
 }
 .br-panel-ta:focus { box-shadow: none; }
-.br-panel-reasoning { flex: none; padding: 12px; border-top: 1px solid var(--border); }
 
 @media (max-width: 900px) {
   .br-grid { grid-template-columns: 1fr; }
@@ -1785,7 +1711,6 @@ td:hover .cell-open-link {
 /* botonera a la derecha de la entrada, centrada verticalmente */
 .ec-actions { flex: 0 0 220px; display: flex; flex-direction: column; gap: 9px; justify-content: center; }
 .ec-actions .btn-primary, .ec-actions .btn-ghost { width: 100%; }
-.ec-actions .loading-status { text-align: center; }
 
 /* panel de resultados: ocupa todo el alto restante */
 .ec-panel {

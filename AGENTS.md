@@ -317,7 +317,7 @@ Run `npm test` before committing when modifying hooks or services.
 
 ### Design Validator
 
-- System prompt (`DESIGN_VALIDATOR_PROMPT`) — multimodal: compares an attached screenshot against existing acceptance criteria and returns a JSON report of uncovered flows, contradictions and suggested criteria. Parsed by `src/services/designReport.ts` (`extractJsonObject` + `validateDesignReport`).
+- System prompt (`DESIGN_VALIDATOR_PROMPT`) — multimodal: compares an attached screenshot against existing acceptance criteria and returns a JSON report of uncovered flows, contradictions and suggested criteria. Parsed by `src/services/apiService.ts` (`extractJsonObject` + `validateDesignReport`).
 - Layout (PRs #40/#41): `.dv-root` → `.dv-grid` with an input column and a full-height `.dv-panel` report (counter chips per category, one-click copy of a suggestion as Dado/Cuando/Entonces). **The left column splits its spare height 3:2** — `.dv-field--crit { flex: 3 1 0 }` for the criteria textarea and `.dv-field--img { flex: 2 1 0 }` for the dropzone, which stretches its preview with `object-fit: contain`. Jorge asked for criteria to stay the larger of the two; don't flip it.
 - Image handling in `ImageDropzone.tsx`: file picker, drag-and-drop or **Ctrl+V anywhere on the page** (global `paste` listener). Downscaled to 1568px / 4MB by `src/utils/image.ts`. **The base64 never touches localStorage** — pinned by a test.
 - **No confidential mode here, deliberately**: the anonymizer only processes text and cannot mask an image, so the screen shows a privacy note instead of a toggle. It is also the one LLM tool without a `ConfidentialToggle`, which is why "8 LLM tools" is right for confidential mode while `getPrompt()` has 9 callers.
