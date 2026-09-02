@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_PROMPTS } from '../config/constants';
 import { getPrompt } from '../services/apiService';
 import { useT } from '../i18n/I18nContext';
+import { Modal } from './Modal';
 
 const TOOLS = [
   { key: 'acceptance', labelKey: 'sidebar.criterios' },
@@ -55,10 +56,9 @@ export function PromptEditor({ onClose }: PromptEditorProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, maxHeight: '90vh' }}>
+    <Modal label={t('prompts.title')} onClose={onClose} style={{ maxWidth: 800, maxHeight: '90vh' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>Editor de Prompts</h2>
+          <h2 style={{ margin: 0 }}>{t('prompts.title')}</h2>
           <button type="button" className="btn-ghost" onClick={onClose}>{t('common.close')}</button>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -76,7 +76,7 @@ export function PromptEditor({ onClose }: PromptEditorProps) {
           ))}
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-          Variables: &#123;dominio&#125;, &#123;tipoProducto&#125;, &#123;mercados&#125;, &#123;terminologia&#125;, &#123;tono&#125;, &#123;entornos&#125;, &#123;mercadoPrincipal&#125;, &#123;mapaSitio&#125;, &#123;idiomaSalida&#125;, &#123;convencionesDatos&#125;
+          {t('prompts.variables', { vars: '{dominio}, {tipoProducto}, {mercados}, {terminologia}, {tono}, {entornos}, {mercadoPrincipal}, {mapaSitio}, {idiomaSalida}, {convencionesDatos}' })}
         </p>
         <textarea
           value={text}
@@ -86,13 +86,12 @@ export function PromptEditor({ onClose }: PromptEditorProps) {
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn-ghost" onClick={handleReset}>
-            Restaurar por defecto
+            {t('prompts.reset')}
           </button>
           <button type="button" className="btn-primary" onClick={handleSave}>
-            {saved ? 'Guardado!' : t('common.save')}
+            {saved ? t('prompts.saved') : t('common.save')}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

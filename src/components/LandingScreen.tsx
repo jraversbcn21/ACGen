@@ -72,7 +72,8 @@ export function LandingScreen({ onSelect, provider, onProviderChange, apiKey, on
      dos teclas y solo la etiqueta depende de la plataforma (Windows aqui). */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      // Sin Shift/Alt: Ctrl+Shift+K es la consola de Firefox.
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();

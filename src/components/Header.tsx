@@ -1,7 +1,7 @@
 import { Icon } from './Icons';
 import { WorkspacePicker } from './WorkspacePicker';
 import { BackupMenu } from './BackupMenu';
-import { useLang } from '../i18n/I18nContext';
+import { useLang, useT } from '../i18n/I18nContext';
 import type { Workspace } from '../types/workspace';
 
 interface HeaderProps {
@@ -36,13 +36,14 @@ export function Header({
   onImportLegacyWorkspace,
 }: HeaderProps) {
   const { lang, setLang } = useLang();
+  const t = useT();
 
     return (
     <header className="topbar">
       <div className="brand">
         <span className="brand-mark" style={{ width: 38, height: 38, fontSize: 17 }}>A</span>
         <span className="brand-name">ACGen</span>
-        <span className="brand-sub">Workbench de artefactos QA</span>
+        <span className="brand-sub">{t('header.subtitle')}</span>
       </div>
       <div className="topbar-right">
         <WorkspacePicker
@@ -69,7 +70,7 @@ export function Header({
           type="button"
           className="theme-toggle"
           onClick={onToggleTheme}
-          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          title={theme === 'dark' ? t('header.themeLight') : t('header.themeDark')}
         >
           {theme === 'dark' ? <Icon.sun size={18} /> : <Icon.moon size={18} />}
         </button>

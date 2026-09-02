@@ -34,3 +34,13 @@ describe('UpdateBanner', () => {
     expect(onReload).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('UpdateBanner — accesible y descartable', () => {
+  it('es una region de estado y se puede posponer sin recargar', () => {
+    const { onReload } = renderBanner(true);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Más tarde'));
+    expect(screen.queryByText(/nueva versión/i)).not.toBeInTheDocument();
+    expect(onReload).not.toHaveBeenCalled();
+  });
+});

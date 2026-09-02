@@ -3,6 +3,7 @@ import { useSchema } from '../hooks/useSchema';
 import { DEFAULT_SCHEMA, resolveLabel, SchemaEntry, SprintTabSchema } from '../types/schema';
 import { useT } from '../i18n/I18nContext';
 import { SchemaEntryRow } from './SchemaEntryRow';
+import { Modal } from './Modal';
 
 interface SprintSchemaEditorProps {
   onClose: () => void;
@@ -66,8 +67,7 @@ export function SprintSchemaEditor({ onClose }: SprintSchemaEditorProps) {
   const visibleTabCount = tabs.filter((tab) => !tab.hidden).length;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
+    <Modal label={t('schema.sprintTitle')} onClose={onClose} style={{ maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h2 style={{ margin: 0 }}>{t('schema.sprintTitle')}</h2>
           <button type="button" className="btn-ghost" onClick={onClose}>{t('common.close')}</button>
@@ -136,7 +136,6 @@ export function SprintSchemaEditor({ onClose }: SprintSchemaEditorProps) {
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" className="btn-ghost" onClick={reset}>{t('schema.reset')}</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

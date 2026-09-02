@@ -43,7 +43,7 @@ export function Sidebar({ activeView, onNavigate, activeWorkspaceName }: Sidebar
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <button type="button" className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expandir' : 'Colapsar'}>
+      <button type="button" className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)} title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}>
         <Icon.chevron style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
       </button>
       {activeWorkspaceName && !collapsed && (

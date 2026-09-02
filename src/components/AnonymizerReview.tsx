@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n/I18nContext';
 import { placeholderEditErrors } from '../services/anonymizer';
+import { Modal } from './Modal';
 
 interface AnonymizerReviewProps {
   /** placeholder -> original value detected in the input. */
@@ -24,8 +25,7 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+    <Modal label={t('confidential.title')} onClose={onCancel} style={{ maxWidth: 640 }}>
         <h2 style={{ margin: '0 0 4px' }}>{t('confidential.title')}</h2>
         <p style={{ margin: '0 0 16px', color: 'var(--text-2)', fontSize: 14 }}>
           {t('confidential.subtitle', { count: entries.length })}
@@ -66,7 +66,6 @@ export function AnonymizerReview({ map, onConfirm, onCancel }: AnonymizerReviewP
             {t('confidential.confirmSend')}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

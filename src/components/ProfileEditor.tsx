@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useProfile } from './ContextProfile';
 import { DEFAULT_PROFILE, ProjectProfile } from '../types/context';
 import { useT } from '../i18n/I18nContext';
+import { Modal } from './Modal';
 
 const FIELDS: { key: keyof ProjectProfile; labelKey: string; multiline?: boolean }[] = [
   { key: 'domain', labelKey: 'profile.domain' },
@@ -42,8 +43,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, maxHeight: '90vh', overflowY: 'auto' }}>
+    <Modal label={t('profile.title')} onClose={onClose} style={{ maxWidth: 800, maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h2 style={{ margin: 0 }}>{t('profile.title')}</h2>
           <button type="button" className="btn-ghost" onClick={onClose}>{t('common.close')}</button>
@@ -79,7 +79,6 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
             {saved ? t('profile.saved') : t('common.save')}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

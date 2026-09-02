@@ -58,3 +58,12 @@ describe('Header — BackupMenu integration', () => {
     await waitFor(() => expect(onImportLegacyWorkspace).toHaveBeenCalledWith(legacyJson));
   });
 });
+
+describe('Header — i18n', () => {
+  it('el subtitulo de la marca y el tooltip del tema se traducen', () => {
+    localStorage.setItem('acgen_lang', JSON.stringify('en'));
+    renderHeader();
+    expect(screen.getByText('QA artifact workbench')).toBeInTheDocument();
+    expect(screen.getByTitle('Dark mode')).toBeInTheDocument();
+  });
+});

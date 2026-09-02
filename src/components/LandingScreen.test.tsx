@@ -198,3 +198,18 @@ describe('LandingScreen — Perfil y Prompts', () => {
     expect(document.querySelector('.modal-overlay')).toBeNull();
   });
 });
+
+describe('LandingScreen — atajo Ctrl+K', () => {
+  afterEach(() => localStorage.clear());
+
+  it('Ctrl+K enfoca el buscador; Ctrl+Shift+K (consola de Firefox) y Ctrl+Alt+K no lo secuestran', () => {
+    renderLanding();
+    const search = screen.getByPlaceholderText(/necesitas|need/);
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true, shiftKey: true });
+    expect(search).not.toHaveFocus();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true, altKey: true });
+    expect(search).not.toHaveFocus();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    expect(search).toHaveFocus();
+  });
+});
