@@ -58,6 +58,15 @@ export default function App() {
   const workspace = useWorkspace();
   const { needRefresh, reload } = useAppUpdate();
 
+  // La key legada se lee en el inicializador de arriba; una vez persistida
+  // bajo la clave nueva, la copia en claro vieja sobra (y borrarla desde la
+  // UI no la tocaba).
+  useEffect(() => {
+    if (localStorage.getItem('acgen_api_key') === null) return;
+    setApiKey(apiKey);
+    localStorage.removeItem('acgen_api_key');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [prefill, setPrefill] = useState<{ view: ViewType; text: string } | null>(null);
 
   const currentApiKey = useMemo(() => {

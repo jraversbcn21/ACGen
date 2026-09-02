@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { validateTestCases, validateTestDataRows, isModelDecommissioned, streamWithGroq, extractJsonArray, interpolateProfile } from './apiService';
+import { validateTestCases, validateTestDataRows, validateEdgeCases, isModelDecommissioned, streamWithGroq, extractJsonArray, interpolateProfile } from './apiService';
 import type { I18nError } from './apiService';
 import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { DEFAULT_PROMPTS } from '../config/constants';
@@ -416,7 +416,7 @@ describe('streamWithGroq multimodal input', () => {
     let captured: Record<string, unknown> = {};
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
       captured = JSON.parse(init.body as string);
-      return sseResponse([]);
+      return sseResponse(['ok']); // un 200 sin tokens ya es error.emptyResponse
     }));
     const gen = streamWithGroq('key', 'model', userInput, 'prompt', 'criteria');
     for await (const chunk of gen) { void chunk; }
@@ -437,5 +437,80 @@ describe('streamWithGroq multimodal input', () => {
     const body = await captureBody(parts);
     const messages = body.messages as { role: string; content: unknown }[];
     expect(messages[1]).toEqual({ role: 'user', content: parts });
+  });
+});
+
+describe('streamWithGroq — cierre del stream y respuestas vacias', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  function rawBody(chunks: string[], close = true): Response {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        chunks.forEach((c) => controller.enqueue(encoder.encode(c)));
+        if (close) controller.close();
+      },
+    });
+    return { ok: true, body } as unknown as Response;
+  }
+
+  it('cancela el reader cuando el consumidor deja de iterar (Limpiar, otra generacion, unmount)', async () => {
+    const encoder = new TextEncoder();
+    const reader = {
+      read: vi.fn()
+        .mockResolvedValueOnce({ done: false, value: encoder.encode('data: {"choices":[{"delta":{"content":"hola"}}]}\n') })
+        .mockReturnValue(new Promise(() => {})),
+      cancel: vi.fn(async () => {}),
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, body: { getReader: () => reader } })));
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+    expect((await gen.next()).value).toMatchObject({ token: 'hola' });
+    await gen.return(undefined);
+    expect(reader.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('un 200 sin ningun token es error.emptyResponse, no un exito vacio', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sseResponse([])));
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+    await expect((async () => { for await (const _ of gen) { void _; } })()).rejects.toThrow('error.emptyResponse');
+  });
+
+  it('no pierde la ultima linea si el servidor cierra sin \n final', async () => {
+    const payload = JSON.stringify({ choices: [{ delta: { content: 'fin' } }] });
+    vi.stubGlobal('fetch', vi.fn(async () => rawBody([`data: ${payload}`])));
+    const gen = streamWithGroq('key', 'model', 'input', 'prompt', 'criteria');
+    let out = '';
+    for await (const { token, done } of gen) if (!done) out += token;
+    expect(out).toBe('fin');
+  });
+
+  it('rechaza un modelo vacio antes de llamar a la API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const gen = streamWithGroq('key', '  ', 'input', 'prompt', 'criteria');
+    await expect(gen.next()).rejects.toThrow('error.modelMissing');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('interpolateProfile — valores con patrones de replace', () => {
+  it('no interpreta $&, $$ ni $` de un campo del perfil', () => {
+    const profile: ProjectProfile = { ...DEFAULT_PROFILE, domain: 'coste $& y $$ y $` fin' };
+    expect(interpolateProfile('Dominio: {dominio}.', profile)).toBe('Dominio: coste $& y $$ y $` fin.');
+  });
+});
+
+describe('validateEdgeCases', () => {
+  it('coacciona los tres campos a string y rellena los ausentes', () => {
+    const rows = validateEdgeCases([{ categoria: 'Concurrencia', escenario: 42, resultadoEsperado: null }, { escenario: 'x' }]);
+    expect(rows).toEqual([
+      { categoria: 'Concurrencia', escenario: '42', resultadoEsperado: '' },
+      { categoria: '', escenario: 'x', resultadoEsperado: '' },
+    ]);
+  });
+
+  it('rechaza un escenario anidado en vez de reventar al pintar', () => {
+    expect(() => validateEdgeCases([{ categoria: 'a', escenario: { descripcion: 'x' }, resultadoEsperado: 'y' }]))
+      .toThrow('error.recordNestedValue');
   });
 });

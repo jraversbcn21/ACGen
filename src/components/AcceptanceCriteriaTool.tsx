@@ -57,6 +57,8 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
   const canGenerate = apiKey.trim().length > 0 && requirements.trim().length > 0;
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    // Tambien entra por el modal confidencial, que no pasa por handleGenerate.
+    if (status === 'loading' || isStreaming) return;
     setStatus('loading');
     setError(null);
     setCriteria('');
@@ -78,7 +80,7 @@ export function AcceptanceCriteriaTool({ apiKey, model, profile, baseUrl, onChai
       setLoadingStatus('');
       setConf(null);
     }
-  }, [apiKey, model, requirements, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
+  }, [status, isStreaming, apiKey, model, requirements, profile, baseUrl, stream, onSaveArtifact, addEntry, t]);
 
   const buildEffectiveInput = useCallback(() => {
     const inputText = additionalContext.trim()

@@ -56,6 +56,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   const hasOutput = testCases.length > 0;
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    if (status === 'loading' || isStreaming) return;
     setStatus('loading');
     setError(null);
     setTestCases([]);
@@ -81,7 +82,7 @@ export function TestCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
     } finally {
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
+  }, [status, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || status === 'loading' || isStreaming) return;

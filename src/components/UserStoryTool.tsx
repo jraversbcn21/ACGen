@@ -60,6 +60,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
   const canGenerate = apiKey.trim().length > 0 && hasInput;
 
   const doGenerate = useCallback(async (input: string, effectiveMap?: Record<string, string>) => {
+    if (loading || isStreaming) return;
     setLoading(true);
     setResult('');
     try {
@@ -78,7 +79,7 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
+  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;

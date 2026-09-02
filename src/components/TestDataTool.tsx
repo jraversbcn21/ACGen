@@ -139,6 +139,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
   }, []);
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    if (isLoading || isStreaming) return;
     setIsLoading(true);
     setError(null);
     setGeneratedData([]);
@@ -162,7 +163,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
       setLoadingStatus('');
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
+  }, [isLoading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || isLoading || isStreaming) return;

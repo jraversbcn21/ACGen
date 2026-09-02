@@ -6,6 +6,12 @@ export interface GroqApiError {
 
 export type GenerationStatus = 'idle' | 'loading' | 'success' | 'error';
 
+export interface EdgeCase {
+  categoria: string;
+  escenario: string;
+  resultadoEsperado: string;
+}
+
 export interface TestCaseData {
   key: string;
   summary: string;
