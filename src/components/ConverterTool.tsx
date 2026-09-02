@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { GenerateButton } from './GenerateButton';
-import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
@@ -211,7 +210,6 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
         </div>
       </div>
 
-      <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
       {gen.review && (
         <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />

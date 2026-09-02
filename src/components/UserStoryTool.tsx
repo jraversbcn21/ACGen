@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
-import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
@@ -243,7 +242,6 @@ export function UserStoryTool({ apiKey, model, profile, baseUrl, onChain, prefil
         </div>
       </div>
 
-      <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
       {gen.review && (
         <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />

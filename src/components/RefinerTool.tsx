@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GenerateButton } from './GenerateButton';
-import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
 import { useGenerator } from '../hooks/useGenerator';
 import { copyText } from '../utils/clipboard';
@@ -185,7 +184,6 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
         </div>
       </div>
 
-      <ErrorBanner message={null} onDismiss={() => {}} />
       <Toast toast={toast} />
       {gen.review && (
         <AnonymizerReview map={gen.review.map} onCancel={gen.cancelReview} onConfirm={gen.confirmReview} />

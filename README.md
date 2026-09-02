@@ -93,7 +93,7 @@ Como toda la app vive en el localStorage del navegador, un menu dedicado en la c
 - La app tambien solicita almacenamiento persistente al navegador (`navigator.storage.persist()`) al arrancar, para reducir el riesgo de que el sistema operativo purgue el localStorage por falta de espacio.
 
 ### Perfil del proyecto
-Editable desde el sidebar o, en la portada, desde la franja de configuracion, define 12 campos: 10 (dominio, tipo de producto, mercados, terminologia, tono, entorno, mercado principal, idioma de salida, mapa del sitio, convenciones de datos de prueba) que se inyectan como variables en los prompts de todas las herramientas, mas los dispositivos iOS y Android disponibles para probar (listas separadas por comas) que alimentan el selector de dispositivo del Bug Report Generator en lugar de un prompt. Los valores por defecto reproducen el comportamiento clasico de la app; un campo dejado vacio se omite del prompt (o, en el caso de los dispositivos, cae a la lista por defecto) en lugar de recuperar su valor por defecto.
+Editable desde el sidebar o, en la portada, desde la franja de configuracion, define 12 campos: 10 (dominio, tipo de producto, mercados, terminologia, tono, entorno, mercado principal, idioma de salida, mapa del sitio, convenciones de datos de prueba) que se inyectan como variables en los prompts de todas las herramientas, mas los dispositivos iOS y Android disponibles para probar (listas separadas por comas) que alimentan el selector de dispositivo del Bug Report Generator en lugar de un prompt. Los valores por defecto reproducen el comportamiento clasico de la app; un campo dejado vacio vuelve a su valor por defecto (los placeholders van dentro de frases del prompt, asi que un valor vacio no omitia nada: dejaba la frase rota), igual que los dispositivos caen a su lista por defecto.
 
 ---
 
@@ -184,8 +184,8 @@ ACGen/
 ├── src/
 │   ├── components/         # Componentes React (uno por herramienta + compartidos)
 │   ├── config/             # Constantes, prompts, proveedores, datos de demo
-│   ├── hooks/              # useLocalStorage, useHistory, useSprints, useRegressions, useSchema, useWorkspace...
-│   ├── services/           # Servicio API (multi-proveedor), anonimizador, backup
+│   ├── hooks/              # useGenerator (nucleo de los 9 generadores), useLocalStorage, useHistory, useSprints, useRegressions, useSchema, useWorkspace...
+│   ├── services/           # Servicio API (multi-proveedor), anonimizador, backup, persistence (unica puerta de escritura)
 │   ├── utils/              # stripMarkdown, ticketLink, dates, image, download, highlight...
 │   ├── i18n/               # Contexto de idioma, es.json / en.json
 │   ├── types/              # Interfaces TypeScript
