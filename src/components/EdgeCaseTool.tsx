@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonArray, getPrompt } from '../services/apiService';
+import { streamWithGroq, extractJsonArray, validateEdgeCases, getPrompt } from '../services/apiService';
 import type { I18nError } from '../services/apiService';
+import type { EdgeCase } from '../types';
 import { useStreamingResponse } from '../hooks/useStreamingResponse';
 import { anonymize, applyPlaceholderEdits } from '../services/anonymizer';
 import { ConfidentialToggle } from './ConfidentialToggle';
@@ -12,8 +13,6 @@ import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import { categoryBadge } from '../utils/categoryBadge';
 import { generateShortcutLabel } from '../utils/shortcut';
-
-type EdgeCase = { categoria: string; escenario: string; resultadoEsperado: string };
 
 /**
  * 10b: la entrada es una tarjeta compacta arriba con la botonera a su derecha y
@@ -71,6 +70,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
   }, [edgeCases]);
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    if (loading || isStreaming) return;
     setLoading(true);
     setError(null);
     setEdgeCases([]);
@@ -82,7 +82,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
         if (!items || items.length === 0) {
           throw new Error(t('error.noEdgeCases'));
         }
-        setEdgeCases(items as EdgeCase[]);
+        setEdgeCases(validateEdgeCases(items));
         setGeneratedModel(model);
         onSaveArtifact?.(effectiveInput, fullText);
       });
@@ -93,7 +93,7 @@ export function EdgeCaseTool({ apiKey, model, profile, prefill, onSaveArtifact, 
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
+  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;

@@ -64,6 +64,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
   const canGenerate = apiKey.trim().length > 0 && requirement.trim().length > 0;
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    if (loading || isStreaming) return;
     setLoading(true);
     setResult('');
     try {
@@ -84,7 +85,7 @@ export function RefinerTool({ apiKey, model, profile, baseUrl, onChain, prefill,
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
+  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate || loading || isStreaming) return;

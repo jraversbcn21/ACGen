@@ -43,6 +43,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
   const canGenerate = apiKey.trim().length > 0 && input.trim().length > 0;
 
   const doGenerate = useCallback(async (effectiveInput: string, effectiveMap?: Record<string, string>) => {
+    if (loading || isStreaming) return;
     setLoading(true);
     setResult('');
     try {
@@ -55,7 +56,7 @@ export function ConverterTool({ apiKey, model, profile, baseUrl, onSaveArtifact 
       setLoading(false);
       setConf(null);
     }
-  }, [apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
+  }, [loading, isStreaming, apiKey, model, profile, baseUrl, stream, onSaveArtifact, showToast, t]);
 
   const buildEffectiveInput = useCallback(
     () => `Formato de entrada: ${inputFormat}\nFormato de salida: ${outputFormat}\n\nTexto a convertir:\n${input}`,

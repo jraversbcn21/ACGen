@@ -377,6 +377,8 @@
   "schema.newColumnPlaceholder": "New column name",
   "schema.resetSprintConfirm": "Restore the Sprint Tracker's default tabs and columns?",
   "error.noEdgeCases": "No edge cases were generated. Try a more detailed description.",
+  "error.emptyResponse": "The model returned no text. Try again.",
+  "error.modelMissing": "Set the custom provider model before generating.",
   "workspace.none": "No workspace",
   "workspace.new": "+ New workspace",
   "workspace.create": "Create",

@@ -377,6 +377,8 @@
   "schema.newColumnPlaceholder": "Nombre de la columna nueva",
   "schema.resetSprintConfirm": "¿Restaurar las pestañas y columnas por defecto del Sprint Tracker?",
   "error.noEdgeCases": "No se generaron casos limite. Intenta con una descripcion mas detallada.",
+  "error.emptyResponse": "El modelo no devolvio ningun texto. Intenta de nuevo.",
+  "error.modelMissing": "Indica el modelo del proveedor custom antes de generar.",
   "workspace.none": "Sin workspace",
   "workspace.new": "+ Nuevo workspace",
   "workspace.create": "Crear",

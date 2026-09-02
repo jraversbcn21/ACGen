@@ -88,3 +88,12 @@ describe('App — landing view', () => {
     expect(document.querySelector('aside.sidebar')).toBeNull();
   });
 });
+
+describe('App — migracion de la API key legada', () => {
+  it('mueve acgen_api_key a acgen_key_groq y borra la clave vieja', () => {
+    localStorage.setItem('acgen_api_key', JSON.stringify('gsk_vieja'));
+    render(<App />);
+    expect(JSON.parse(localStorage.getItem('acgen_key_groq')!)).toBe('gsk_vieja');
+    expect(localStorage.getItem('acgen_api_key')).toBeNull();
+  });
+});

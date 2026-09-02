@@ -1,6 +1,6 @@
 import { API_URL, TEMPERATURE, DEFAULT_PROMPTS } from '../config/constants';
 import { baseUrlStatus } from '../config/providers';
-import type { ContentPart, DesignReport, GroqApiError, TestCaseData } from '../types';
+import type { ContentPart, DesignReport, EdgeCase, GroqApiError, TestCaseData } from '../types';
 import { DEFAULT_PROFILE, type ProjectProfile } from '../types/context';
 import { deanonymize, splitPendingPlaceholder } from './anonymizer';
 
@@ -13,22 +13,30 @@ function i18nError(key: string, params?: Record<string, string | number>): I18nE
   return params ? Object.assign(new Error(key), { params }) : new Error(key);
 }
 
+const PROFILE_PLACEHOLDERS = new Map<string, keyof ProjectProfile>([
+  ['dominio', 'domain'],
+  ['tipoProducto', 'productType'],
+  ['mercados', 'markets'],
+  ['terminologia', 'terminology'],
+  ['tono', 'tone'],
+  ['entornos', 'environments'],
+  ['mercadoPrincipal', 'mainMarket'],
+  ['mapaSitio', 'siteMap'],
+  ['idiomaSalida', 'outputLanguage'],
+  ['convencionesDatos', 'testDataConventions'],
+]);
+
 export function interpolateProfile(prompt: string, profile: ProjectProfile): string {
   const p = (key: keyof ProjectProfile): string => {
     const value = profile[key];
     return typeof value === 'string' ? value : DEFAULT_PROFILE[key];
   };
-  return prompt
-    .replace(/\{dominio\}/g, p('domain'))
-    .replace(/\{tipoProducto\}/g, p('productType'))
-    .replace(/\{mercados\}/g, p('markets'))
-    .replace(/\{terminologia\}/g, p('terminology'))
-    .replace(/\{tono\}/g, p('tone'))
-    .replace(/\{entornos\}/g, p('environments'))
-    .replace(/\{mercadoPrincipal\}/g, p('mainMarket'))
-    .replace(/\{mapaSitio\}/g, p('siteMap'))
-    .replace(/\{idiomaSalida\}/g, p('outputLanguage'))
-    .replace(/\{convencionesDatos\}/g, p('testDataConventions'));
+  // Replacer en funcion: un `$&` o `$$` escrito en el perfil se copia literal
+  // en vez de interpretarse como patron de String.replace.
+  return prompt.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const key = PROFILE_PLACEHOLDERS.get(name);
+    return key ? p(key) : match;
+  });
 }
 
 function getReasoningParams(model: string, tool: ToolType): Record<string, unknown> {
@@ -234,6 +242,9 @@ export async function* streamWithGroq(
     if (status === 'missing') throw i18nError('error.baseUrlMissing');
     if (status === 'invalid') throw i18nError('error.baseUrlInvalid');
   }
+  // Solo el proveedor custom deja el modelo en blanco; un "model": "" llega al
+  // endpoint y vuelve como un 404 que se disfraza de "modelo retirado".
+  if (!model.trim()) throw i18nError('error.modelMissing');
 
   const effectivePrompt = profile ? interpolateProfile(systemPrompt, profile) : systemPrompt;
   const reasoningParams = getReasoningParams(model, tool);
@@ -269,22 +280,19 @@ export async function* streamWithGroq(
   let pending = '';
   const anonymizeKeys = anonymizeMap ? Object.keys(anonymizeMap) : undefined;
   let lastModel: string | undefined;
+  let gotToken = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
+  try {
+    reading: while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const lines = buffer.split('\n');
+      // Al cerrar la conexion, la ultima linea sin \n tambien cuenta.
+      buffer = done ? '' : (lines.pop() || '');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
         const data = line.slice(6);
-        if (data === '[DONE]') {
-          if (pending && anonymizeMap) {
-            yield { token: deanonymize(pending, anonymizeMap), done: false, model: lastModel };
-          }
-          return;
-        }
+        if (data === '[DONE]') break reading;
         let parsed;
         try {
           parsed = JSON.parse(data);
@@ -296,22 +304,31 @@ export async function* streamWithGroq(
           throw mappedApiError(parsed, typeof parsed.error.code === 'number' ? parsed.error.code : 0);
         }
         const rawToken: string | undefined = parsed.choices?.[0]?.delta?.content;
-        if (rawToken) {
-          lastModel = parsed.model ?? lastModel;
-          if (!anonymizeMap) {
-            yield { token: rawToken, done: false, model: parsed.model };
-          } else {
-            pending += rawToken;
-            const [emit, rest] = splitPendingPlaceholder(pending, anonymizeKeys);
-            pending = rest;
-            if (emit) {
-              yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
-            }
-          }
+        if (!rawToken) continue;
+        gotToken = true;
+        lastModel = parsed.model ?? lastModel;
+        if (!anonymizeMap) {
+          yield { token: rawToken, done: false, model: parsed.model };
+          continue;
+        }
+        pending += rawToken;
+        const [emit, rest] = splitPendingPlaceholder(pending, anonymizeKeys);
+        pending = rest;
+        if (emit) {
+          yield { token: deanonymize(emit, anonymizeMap), done: false, model: parsed.model };
         }
       }
+      if (done) break;
     }
+  } finally {
+    // Si el consumidor deja de leer (Limpiar, otra generacion, unmount), el
+    // for-await cierra este generador y esto corta la descarga de verdad, en
+    // vez de dejar el fetch bajando la respuesta entera en segundo plano.
+    reader.cancel().catch(() => {});
   }
+  // Un 200 sin ningun delta (endpoint que ignora stream:true, solo reasoning,
+  // moderacion) no es un exito con texto vacio.
+  if (!gotToken) throw i18nError('error.emptyResponse');
   if (pending && anonymizeMap) {
     yield { token: deanonymize(pending, anonymizeMap), done: false, model: lastModel };
   }
@@ -331,6 +348,15 @@ export function validateTestDataRows(items: unknown[]): Record<string, string>[]
     });
     return Object.fromEntries(entries);
   });
+}
+
+/** Mismo criterio que los datos de prueba: tres campos de texto, nada anidado. */
+export function validateEdgeCases(items: unknown[]): EdgeCase[] {
+  return validateTestDataRows(items).map((row) => ({
+    categoria: row.categoria ?? '',
+    escenario: row.escenario ?? '',
+    resultadoEsperado: row.resultadoEsperado ?? '',
+  }));
 }
 
 export function getPrompt(tool: string): string {
