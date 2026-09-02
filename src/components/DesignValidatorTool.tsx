@@ -45,6 +45,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
     canGenerate,
     confidential: false,
     buildInput: () => {
+      setReport(null);
       // canGenerate garantiza image !== null; el `!` es solo para el tipo.
       artifactInputRef.current = `${criteria}\n\n[Imagen adjunta: ${image!.name}]`;
       const parts: ContentPart[] = [
@@ -59,12 +60,6 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
       onSaveArtifact?.(artifactInputRef.current, fullText);
     },
   });
-
-  const handleGenerate = useCallback(() => {
-    if (!canGenerate || gen.status === 'loading' || gen.isStreaming) return;
-    setReport(null);
-    return gen.handleGenerate();
-  }, [canGenerate, gen]);
 
   const handleClear = useCallback(() => {
     gen.clearGeneration();
@@ -157,7 +152,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
               {t('common.clear')}
             </button>
             <GenerateButton
-              onClick={handleGenerate}
+              onClick={gen.handleGenerate}
               disabled={!canGenerate || gen.isStreaming}
               loading={gen.status === 'loading'}
             />
