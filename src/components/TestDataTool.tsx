@@ -55,9 +55,15 @@ function formatRowAsText(row: Record<string, string>): string {
     .join('\n');
 }
 
+/** Union de claves de todas las filas: el modelo puede omitir un campo en la
+ *  primera y traerlo en las demas, y con Object.keys(data[0]) se perdia. */
+function columnsOf(rows: Record<string, string>[]): string[] {
+  return [...new Set(rows.flatMap((r) => Object.keys(r)))];
+}
+
 function downloadCSV(data: Record<string, string>[], dataType: string, market: string) {
   if (data.length === 0) return;
-  const keys = Object.keys(data[0]);
+  const keys = columnsOf(data);
   const header = keys.map(k => `"${LABEL_MAP[k] || k}"`).join(',');
   const rows = data.map(row =>
     keys.map(k => {
@@ -82,7 +88,7 @@ function downloadCSV(data: Record<string, string>[], dataType: string, market: s
 
 function formatTableAsTSV(data: Record<string, string>[]): string {
   if (data.length === 0) return '';
-  const keys = Object.keys(data[0]);
+  const keys = columnsOf(data);
   const header = keys.map(k => LABEL_MAP[k] || k).join('\t');
   const rows = data.map(row =>
     keys.map(k => (row[k] || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t')
@@ -256,7 +262,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
     downloadCSV(generatedData, formData.dataType, formData.market);
   }, [generatedData, formData.dataType, formData.market]);
 
-  const columns = hasOutput ? Object.keys(generatedData[0]) : [];
+  const columns = columnsOf(generatedData);
 
   return (
     <div className="td-root">
@@ -348,7 +354,7 @@ export function TestDataTool({ apiKey, model, profile, baseUrl, onSaveArtifact }
             type="button"
             className="btn-ghost"
             onClick={handleClear}
-            disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !hasOutput}
+            disabled={formData.dataType === DEFAULT_FORM.dataType && formData.market === DEFAULT_FORM.market && formData.quantity === DEFAULT_FORM.quantity && !formData.additionalContext && !hasOutput}
           >
             {t('common.clear')}
           </button>

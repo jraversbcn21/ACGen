@@ -94,3 +94,30 @@ describe('BugReportTool — confidential mode', () => {
     expect(sentMap()).toBeUndefined();
   });
 });
+
+describe('BugReportTool — URL por defecto', () => {
+  beforeEach(() => {
+    streamMock.mockReset();
+    streamMock.mockImplementation(async function* () {
+      yield { token: 'reporte generado', done: false };
+      yield { token: '', done: true };
+    });
+  });
+
+  it('con el formulario por defecto y una descripcion limpia no salta el modal de revision', async () => {
+    localStorage.setItem('acgen_confidential_bugreport', 'true');
+    renderTool({ description: 'El boton de pagar no responde en el checkout' });
+    generate();
+    await waitFor(() => expect(streamMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('button', { name: /confirmar y enviar/i })).not.toBeInTheDocument();
+    expect(sentInput()).not.toContain('URL:');
+  });
+
+  it('web -> app -> web conserva la URL escrita', () => {
+    renderTool({ description: 'x', url: 'https://mi.sitio/x' });
+    const url = () => document.getElementById('br-url') as HTMLInputElement;
+    fireEvent.change(document.getElementById('br-platform')!, { target: { value: 'app-ios' } });
+    fireEvent.change(document.getElementById('br-platform')!, { target: { value: 'web-desktop' } });
+    expect(url().value).toBe('https://mi.sitio/x');
+  });
+});

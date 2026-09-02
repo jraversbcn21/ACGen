@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { targetDimensions, MAX_BASE64_BYTES, assertDataUrlWithinLimit, fileToProcessedDataUrl } from './image';
+import { targetDimensions, MAX_BASE64_BYTES, MAX_FILE_BYTES, assertDataUrlWithinLimit, fileToProcessedDataUrl } from './image';
 
 describe('targetDimensions', () => {
   it('no toca imágenes dentro del límite', () => {
@@ -135,5 +135,13 @@ describe('fileToProcessedDataUrl - recompresión por tope de tamaño', () => {
     const file = new File(['x'], 'foo.png', { type: 'image/png' });
     const result = await fileToProcessedDataUrl(file);
     expect(result).toBe('data:image/jpeg;base64,SCALED_SMALL');
+  });
+});
+
+describe('fileToProcessedDataUrl — tope de tamaño en bruto', () => {
+  it('rechaza el fichero antes de leerlo y decodificarlo si pesa mas que el tope', async () => {
+    const file = new File(['x'], 'enorme.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: MAX_FILE_BYTES + 1 });
+    await expect(fileToProcessedDataUrl(file)).rejects.toThrow('error.imageFileTooLarge');
   });
 });

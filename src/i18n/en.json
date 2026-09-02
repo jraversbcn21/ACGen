@@ -298,6 +298,7 @@
   "error.baseUrlMissing": "Set the custom provider base URL before generating.",
   "error.baseUrlInvalid": "The custom provider base URL is not a valid URL.",
   "error.imageTooLarge": "The image exceeds the 4 MB limit after compression. Use a smaller image.",
+  "error.imageFileTooLarge": "The file is over 30 MB. Use a smaller image.",
   "error.notAnImage": "The file is not an image.",
   "acceptance.additionalContextPlaceholder": "Additional context (optional — paste ticket description, notes, etc. here)",
   "acceptance.copyCriteria": "Copy Criteria",

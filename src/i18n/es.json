@@ -298,6 +298,7 @@
   "error.baseUrlMissing": "Configura la URL base del proveedor custom antes de generar.",
   "error.baseUrlInvalid": "La URL base del proveedor custom no es una URL valida.",
   "error.imageTooLarge": "La imagen supera el límite de 4 MB tras la compresión. Usa una imagen más pequeña.",
+  "error.imageFileTooLarge": "El fichero pesa más de 30 MB. Usa una imagen más pequeña.",
   "error.notAnImage": "El archivo no es una imagen.",
   "acceptance.additionalContextPlaceholder": "Contexto adicional (opcional — pega aqui la descripcion del ticket, notas, etc.)",
   "acceptance.copyCriteria": "Copiar Criterio",

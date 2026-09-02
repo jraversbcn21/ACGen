@@ -80,3 +80,10 @@ describe('stripMarkdown', () => {
     expect(stripMarkdown('**Como** cliente\n**Quie')).toBe('Como cliente\n**Quie');
   });
 });
+
+describe('stripMarkdown — asteriscos que no son cursiva', () => {
+  it('conserva comodines y globs como *.jpg y *.png', () => {
+    expect(stripMarkdown('Acepta *.jpg y *.png')).toBe('Acepta *.jpg y *.png');
+    expect(stripMarkdown('SELECT * FROM pedidos WHERE total > 0')).toBe('SELECT * FROM pedidos WHERE total > 0');
+  });
+});

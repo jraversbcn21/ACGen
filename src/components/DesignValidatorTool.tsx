@@ -10,6 +10,7 @@ import { ImageDropzone } from './ImageDropzone';
 import { useT } from '../i18n/I18nContext';
 import type { ProjectProfile } from '../types/context';
 import type { ContentPart, DesignReport } from '../types';
+import { copyText } from '../utils/clipboard';
 import { generateShortcutLabel } from '../utils/shortcut';
 
 interface DesignValidatorToolProps {
@@ -91,8 +92,8 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
     return () => window.removeEventListener('keydown', handler);
   }, [canGenerate, loading, isStreaming, handleGenerate]);
 
-  const copySuggestion = useCallback((s: DesignReport['sugerencias'][number]) => {
-    void navigator.clipboard.writeText(`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`);
+  const copySuggestion = useCallback(async (s: DesignReport['sugerencias'][number]) => {
+    await copyText(`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`);
     showToast(t('common.copied'));
   }, [showToast, t]);
 
