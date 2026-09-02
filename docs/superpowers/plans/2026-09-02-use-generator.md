@@ -16,6 +16,7 @@
 - **El JSX de cada tool no se toca** salvo cambiar la prop a `gen.*`. `App.css` no se toca.
 - **La config del hook se lee siempre desde `configRef.current`**, nunca desde deps. Regla no negociable (es lo que elimina la clase de bug H1).
 - **Lo que necesite el valor de entrada "al arrancar" la generación (historial, texto del artefacto del Validador) lo captura el tool dentro de `buildInput` en un ref**, no en `onResult` — así el comportamiento es idéntico aunque el usuario edite durante el stream.
+- **Lo que cada `doGenerate` HACÍA al arrancar (vaciar el resultado anterior y el modelo mostrado) va en `onStart`** (corrección de la review final): el hook lo llama solo cuando `run` arranca de verdad, tras el guard. NO en `buildInput` (corre al abrir el modal de revisión y no corre en `confirmReview`).
 - Comandos desde `acgen/`: `npm test`, `npm run typecheck` (NO `npx tsc --noEmit`), `npm run lint`.
 - Commits con el pie de atribución de la sesión (ver mensaje de commit de cada tarea).
 

@@ -62,6 +62,8 @@ interface GeneratorConfig<T> {
   buildInput: () => string | ContentPart[];
   /** Del texto completo al resultado tipado. Puede lanzar `Error(i18nKey)`. */
   parse: (fullText: string) => T;
+  /** Solo cuando una generación arranca de verdad (tras el guard): vaciar el resultado anterior. */
+  onStart?: () => void;
   /** El tool guarda SU estado, su artefacto, su historial y su modelo. */
   onResult: (result: T, ctx: { input: string | ContentPart[]; fullText: string; model: string }) => void;
   /** Si está, el error va aquí (toast) y `error` queda null; si no, al banner. */
@@ -122,8 +124,9 @@ const gen = useGenerator<TestCaseData[]>({
   activo y `anonymize(buildInput())` encuentra algo, abre `review` y para; si
   no, llama a `run(input)`.
 - `run(input, map?)`: mismo guard de carga (también protege a
-  `confirmReview`, que entra por aquí — M2). Pone `status='loading'`, limpia
-  `error`, llama a `streamWithGroq(apiKey, model, input, getPrompt(view),
+  `confirmReview`, que entra por aquí — M2). Llama a `onStart()` (el tool
+  vacía su resultado anterior, como hacía cada `doGenerate`), pone
+  `status='loading'`, limpia `error`, llama a `streamWithGroq(apiKey, model, input, getPrompt(view),
   toolType, profile, map, baseUrl)` y consume el stream con
   `useStreamingResponse`. En `onComplete`: `parse(fullText)` →
   `onResult(result, ctx)` → `status='success'`. En `catch`: mensaje =
@@ -161,13 +164,23 @@ Ver ejemplo, historial, exportar PDF/CSV/TSV, y **todo el JSX**.
 Regla: si un tool necesitara una opción nueva del hook que ninguno de los otros
 ocho usa, ese trozo no es común y se queda en el tool.
 
-Regla (de las reviews de las Tareas 5 y 10): **todo lo que el tool necesite
-hacer o capturar "al arrancar" una generación va dentro de `buildInput`** —
-el texto del historial, el texto del artefacto, vaciar el resultado anterior.
-El hook llama a `buildInput` en todos los caminos (clic, Ctrl+Enter, badge
-del anonimizador) y solo tras pasar su guard; un wrapper alrededor de
-`gen.handleGenerate` no cubre el atajo, y un `useEffect` no distingue una
-llamada bloqueada de una real.
+Regla (de las reviews de las Tareas 5 y 10, corregida por la review final):
+hay dos momentos distintos y cada uno tiene su sitio.
+
+- **Capturar** (leer algo que se necesita después: el texto del historial, el
+  texto del artefacto) va en **`buildInput`**. Es idempotente y el hook lo
+  llama en todos los caminos que construyen la entrada — clic, Ctrl+Enter y
+  el badge del anonimizador — así el badge también captura.
+- **Actuar** (vaciar el resultado anterior, quitar el modelo mostrado) va en
+  **`onStart`**, que el hook llama **solo cuando `run` arranca de verdad**,
+  tras su guard. `buildInput` NO vale para esto: corre también cuando
+  `handleGenerate` abre el modal de revisión y se detiene (y al pulsar el
+  badge), y NO corre en `confirmReview`, que entra en `run` directamente.
+  Con la limpieza en `buildInput`, abrir el modal vaciaría la pantalla y
+  cancelar la dejaría vacía; confirmar no la vaciaría.
+
+Un wrapper alrededor de `gen.handleGenerate` no cubre el atajo (vive en el
+hook), y un `useEffect` no distingue una llamada bloqueada de una real.
 
 ## Migración
 
