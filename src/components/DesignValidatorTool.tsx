@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GenerateButton } from './GenerateButton';
 import { ErrorBanner } from './ErrorBanner';
 import { useToast, Toast } from './Toast';
-import { streamWithGroq, extractJsonObject, validateDesignReport, getPrompt } from '../services/apiService';
-import type { I18nError } from '../services/apiService';
-import { useStreamingResponse } from '../hooks/useStreamingResponse';
+import { extractJsonObject, validateDesignReport } from '../services/apiService';
+import { useGenerator } from '../hooks/useGenerator';
 import { supportsVision } from '../config/providers';
 import { ImageDropzone } from './ImageDropzone';
 import { useT } from '../i18n/I18nContext';
@@ -28,9 +27,6 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
   const [criteria, setCriteria] = useState('');
   const [image, setImage] = useState<{ dataUrl: string; name: string } | null>(null);
   const [report, setReport] = useState<DesignReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { isStreaming, stream, reset: resetStream } = useStreamingResponse();
   const { toast, showToast } = useToast();
   const t = useT();
 
@@ -41,56 +37,49 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
   const vision = supportsVision(provider, model);
   const canGenerate = apiKey.trim().length > 0 && criteria.trim().length > 0 && image !== null && vision !== 'no';
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate || loading || isStreaming || !image) return;
-    setLoading(true);
-    setError(null);
+  const artifactInputRef = useRef('');
+  const gen = useGenerator<DesignReport>({
+    view: 'designvalidator',
+    toolType: 'testcase',
+    apiKey, model, profile, baseUrl,
+    canGenerate,
+    confidential: false,
+    buildInput: () => {
+      // canGenerate garantiza image !== null; el `!` es solo para el tipo.
+      artifactInputRef.current = `${criteria}\n\n[Imagen adjunta: ${image!.name}]`;
+      const parts: ContentPart[] = [
+        { type: 'text', text: `Criterios de aceptación existentes:\n\n${criteria}` },
+        { type: 'image_url', image_url: { url: image!.dataUrl } },
+      ];
+      return parts;
+    },
+    parse: (fullText) => validateDesignReport(extractJsonObject(fullText)),
+    onResult: (parsed, { fullText }) => {
+      setReport(parsed);
+      onSaveArtifact?.(artifactInputRef.current, fullText);
+    },
+  });
+
+  const handleGenerate = useCallback(() => {
+    if (!canGenerate || gen.status === 'loading' || gen.isStreaming) return;
     setReport(null);
-    const parts: ContentPart[] = [
-      { type: 'text', text: `Criterios de aceptación existentes:\n\n${criteria}` },
-      { type: 'image_url', image_url: { url: image.dataUrl } },
-    ];
-    try {
-      const gen = streamWithGroq(apiKey, model, parts, getPrompt('designvalidator'), 'testcase', profile, undefined, baseUrl);
-      await stream(gen, (fullText) => {
-        const parsed = validateDesignReport(extractJsonObject(fullText));
-        setReport(parsed);
-        onSaveArtifact?.(`${criteria}\n\n[Imagen adjunta: ${image.name}]`, fullText);
-      });
-    } catch (err) {
-      const message = err instanceof Error ? t(err.message, (err as I18nError).params) : t('error.unexpected');
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [canGenerate, loading, isStreaming, image, criteria, apiKey, model, profile, baseUrl, stream, onSaveArtifact, t]);
+    return gen.handleGenerate();
+  }, [canGenerate, gen]);
 
   const handleClear = useCallback(() => {
-    resetStream();
+    gen.clearGeneration();
     const prevCriteria = criteria;
     const prevImage = image;
     const prevReport = report;
     setCriteria('');
     setImage(null);
     setReport(null);
-    setError(null);
     showToast(t('common.cleared'), () => {
       setCriteria(prevCriteria);
       setImage(prevImage);
       setReport(prevReport);
     });
-  }, [criteria, image, report, resetStream, showToast, t]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (canGenerate && !loading && !isStreaming) handleGenerate();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canGenerate, loading, isStreaming, handleGenerate]);
+  }, [criteria, image, report, gen, showToast, t]);
 
   const copySuggestion = useCallback(async (s: DesignReport['sugerencias'][number]) => {
     await copyText(`Dado ${s.dado}\nCuando ${s.cuando}\nEntonces ${s.entonces}`);
@@ -141,7 +130,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
               imageUrl={image?.dataUrl ?? null}
               onImage={(dataUrl, name) => setImage({ dataUrl, name })}
               onRemove={() => setImage(null)}
-              disabled={loading || isStreaming}
+              disabled={gen.status === 'loading' || gen.isStreaming}
             />
             <p className="dv-note">{t('designvalidator.privacyNote')}</p>
           </div>
@@ -169,8 +158,8 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
             </button>
             <GenerateButton
               onClick={handleGenerate}
-              disabled={!canGenerate || isStreaming}
-              loading={loading || isStreaming}
+              disabled={!canGenerate || gen.isStreaming}
+              loading={gen.status === 'loading'}
             />
           </div>
         </div>
@@ -247,7 +236,7 @@ export function DesignValidatorTool({ apiKey, model, provider, profile, baseUrl,
         </div>
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={gen.error} onDismiss={gen.dismissError} />
       <Toast toast={toast} />
     </div>
   );
